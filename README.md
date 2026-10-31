@@ -116,7 +116,7 @@ Kyuhachi/
 
 Kyuhachi ships **no** game images, NEC BIOS or font ROMs, and no font without a redistribution license.
 Dump what you own and drop it in. A font BMP in `res/fonts/` is required to start a game (the menu itself uses a built-in font).
-Korean patches / Korean editions need the Korean font ROM that matches the game — you can pick any font per game.
+Korean patches / Korean editions need a Korean font BMP (a Korean font ROM saved as anex86 BMP) that matches the game — you can pick any font per game.
 
 ## 100% AI-coded
 
@@ -164,7 +164,7 @@ PC-98 BOOTLOADER · 코드 100% AI 작성
 - **자동 실행법** — 게임 이미지를 넣으면 실행 파일을 알아서 고릅니다(D88 변환 · FAT12 직접 읽기 · 도구류 제외 · 하위 폴더 진입 · 압축 디스크 풀기). 수천 개 PC-98 이미지로 다듬었고, 회귀 24작품 무결 · 크래시 61건 해소. 저절로 안 뜨는 작품은 화면에서 한 번 정해 두면 됩니다.
 
 게임 이미지·NEC 바이오스·폰트 롬은 들어 있지 않습니다. 가진 게임 이미지를 `games/` 에 넣으세요.
-`res/fonts/` 에 anex86 형식 글꼴 BMP(524,350 B)가 있어야 게임이 시작됩니다. TTF/OTF 는 안 됩니다. 한글패치·한국판은 그 작품에 맞는 한글 글꼴 롬이 필요합니다.
+`res/fonts/` 에 anex86 형식 글꼴 BMP(524,350 B)가 있어야 게임이 시작됩니다. TTF/OTF 는 안 됩니다. 한글패치·한국판은 그 작품에 맞는 한글 글꼴 BMP(한글 글꼴 롬을 anex86 BMP 로 뽑은 것)가 필요합니다.
 
 ### 조작
 

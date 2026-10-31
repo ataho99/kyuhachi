@@ -34,6 +34,31 @@ Kyuhachi takes the battle-tested DOSBox-X core, cuts it down to just what PC-98 
 | 🌗 **Feels native** | Title bar follows your Windows dark / light theme. Dark by default. |
 | 🧳 **Portable** | One folder. Unzip anywhere — Korean paths included. Writes nothing to the registry. |
 
+## Auto-launch — tuned on a full PC-98 library
+
+Add a disk image and Kyuhachi works out how to boot it. No per-game config for the common case.
+
+How it decides (rules R1–R7, built and tuned against thousands of real PC-98 disk images):
+
+| Step | What it does |
+|---|---|
+| Read the disk | D88 is flattened to a raw floppy, then the FAT12 file system is read directly |
+| Find the launcher | Picks the real game EXE / BAT; skips tools (BASIC, N88, mouse drivers, DEBUG, XREF …) |
+| Prefer the small launcher | When several BATs exist, the short launcher BAT wins over long scripts |
+| Step into folders | If the root has no launcher and exactly one sub-folder does, it goes there |
+| Self-extracting disks | Unpacks SFX archives across all disks in order before booting |
+| Installers last | SETUP / INST-style names are used only when nothing better exists |
+| Nothing found | Shows a clear "no launch candidate" notice instead of crashing |
+
+Where it stands today (internal test runs):
+
+- **Regression set** — 24 titles boot identically on every build: 0 crashes, 0 errors.
+- **Crash sweep** — 61 images that used to crash the loader now all start cleanly.
+- **Auto-run sample** — 14 of 26 reach the game screen with zero setup; the rest wait for input, need a driver, or are installers.
+- **Self-extracting sets** — 32 of 34 unpack and boot.
+
+Titles that don't boot by themselves aren't dead ends: set the boot order and per-disk steps once in the UI, and Kyuhachi remembers.
+
 ## Quick start
 
 ```
@@ -106,6 +131,7 @@ PC-98 BOOTLOADER · 코드 100% AI 작성
 - **문구는 내 마음대로** — 화면 문구가 전부 `strings.txt` 에. 메모장으로 고치고 다시 켜면 끝.
 - **윈도우와 한 몸** — 제목표시줄이 다크·라이트 테마를 따라갑니다. 기본은 다크.
 - **포터블** — 폴더 하나. 한글 경로 포함 어디에 풀어도 됩니다.
+- **자동 실행법** — 게임 이미지를 넣으면 실행 파일을 알아서 고릅니다(D88 변환 · FAT12 직접 읽기 · 도구류 제외 · 하위 폴더 진입 · 압축 디스크 풀기). 수천 개 PC-98 이미지로 다듬었고, 회귀 24작품 무결 · 크래시 61건 해소. 저절로 안 뜨는 작품은 화면에서 한 번 정해 두면 됩니다.
 
 게임 이미지·NEC 바이오스·폰트 롬은 들어 있지 않습니다. 가진 게임 이미지를 `games/` 에 넣으세요. 글꼴은 내장 글꼴이 있어 `res/fonts/` 가 비어도 됩니다.
 

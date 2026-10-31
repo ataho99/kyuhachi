@@ -1,0 +1,30 @@
+# build output
+/out/
+/build/
+*.obj
+*.pdb
+*.ilk
+*.exe
+!tools/*.exe
+
+# user-supplied files — never commit
+/games/*
+!/games/README.txt
+/fonts/ja/*
+!/fonts/ja/README.txt
+*.rom
+*.ROM
+*.d88
+*.D88
+*.hdi
+*.HDI
+*.fdi
+*.FDI
+*.nfd
+*.hdm
+FREECG98.*
+font.bmp
+
+# user data
+/save/
+*.log

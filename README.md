@@ -9,7 +9,7 @@
 **Double-click. Pick a game. Play.**
 No config files. No mapper menus. No BIOS hunting at 2 a.m.
 
-![version](https://img.shields.io/badge/version-v0.5.0--t52a-ff4d6d)
+![version](https://img.shields.io/badge/version-v0.5.0--t52c-ff4d6d)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078d4)
 ![engine](https://img.shields.io/badge/engine-DOSBox--X%20core-6c5ce7)
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)

@@ -117,6 +117,7 @@ Kyuhachi/
 Kyuhachi ships **no** game images, NEC BIOS or font ROMs, and no font without a redistribution license.
 Dump what you own and drop it in. A font BMP in `res/fonts/` is required to start a game (the menu itself uses a built-in font).
 Korean patches / Korean editions need a Korean font BMP (a Korean font ROM saved as anex86 BMP) that matches the game — you can pick any font per game.
+Rhythm (drum) sounds: put the six YM2608 rhythm samples (`2608_bd.wav`, `2608_sd.wav`, `2608_top.wav`, `2608_hh.wav`, `2608_tom.wav`, `2608_rim.wav`) in `res/rhythm/`. They are not bundled (copyright). Without them only the drums of the FM music are silent; everything else works.
 
 ## 100% AI-coded
 
@@ -165,6 +166,7 @@ PC-98 BOOTLOADER · 코드 100% AI 작성
 
 게임 이미지·NEC 바이오스·폰트 롬은 들어 있지 않습니다. 가진 게임 이미지를 `games/` 에 넣으세요.
 `res/fonts/` 에 anex86 형식 글꼴 BMP(524,350 B)가 있어야 게임이 시작됩니다. TTF/OTF 는 안 됩니다. 한글패치·한국판은 그 작품에 맞는 한글 글꼴 BMP(한글 글꼴 롬을 anex86 BMP 로 뽑은 것)가 필요합니다.
+리듬(드럼) 음원: YM2608 리듬 음원 6개(`2608_bd/sd/top/hh/tom/rim.wav`)를 `res/rhythm/` 에 넣으세요. 저작권 때문에 동봉하지 않으며, 없으면 FM 음악의 드럼 소리만 빠지고 나머지는 정상입니다.
 
 ### 조작
 

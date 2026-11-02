@@ -1,0 +1,171 @@
+
+extern unsigned int preventcap;
+
+bool CheckPreventCap(void);
+void ApplyPreventCap(void);
+void ApplyPreventCapMenu(void);
+
+#endif /* DOSBOX_DOSBOX_H */
+
+#ifndef SAVE_STATE_H_INCLUDED
+#define SAVE_STATE_H_INCLUDED
+
+#define WRITE_POD(x,y) \
+	stream.write(reinterpret_cast<const char*>( (x) ), sizeof( (y) ) );
+
+#define WRITE_POD_SIZE(x,y) \
+	stream.write(reinterpret_cast<const char*>( (x) ), (y) );
+
+#define READ_POD(x,y) \
+	stream.read(reinterpret_cast<char*>( (x) ), sizeof( (y) ) );
+
+#define READ_POD_SIZE(x,y) \
+	stream.read(reinterpret_cast<char*>( (x) ), (y) );
+
+
+
+class SaveState
+{
+public:
+    static SaveState& instance();
+
+   typedef std::string Error;
+    static const size_t MAX_PAGE = 10, SLOT_COUNT = 10; //slot: [0,...,SLOT_COUNT - 1]
+
+    void save   (size_t slot);       //throw (Error)
+    void load   (size_t slot) const; //throw (Error)
+    bool isEmpty(size_t slot) const;
+    void removeState(size_t slot) const;
+    std::string getName(size_t slot, bool nl=false) const;
+
+    //initialization: register relevant components on program startup
+    struct Component
+    {
+        virtual ~Component() noexcept = default;
+        virtual void getBytes(std::ostream& stream) = 0;
+        virtual void setBytes(std::istream& stream) = 0;
+    };
+
+    void registerComponent(const std::string& uniqueName, Component& comp); //comp must have global lifetime!
+
+private:
+    SaveState() {}
+    SaveState(const SaveState&);
+    SaveState& operator=(const SaveState&);
+
+    struct CompData
+    {
+        CompData(Component& cmp) : comp(cmp) {}
+        Component& comp;
+    };
+
+    typedef std::map<std::string, CompData> CompEntry;
+    CompEntry components;
+};
+
+
+//some helper functions
+template <class T>
+void writePOD(std::ostream& stream, const T& data);
+
+template <class T>
+void readPOD(std::istream& stream, T& data);
+
+void writeString(std::ostream& stream, const std::string& data);
+void readString(std::istream& stream, std::string& data);
+
+
+//Implementation of SaveState::Component for saving POD types only
+class SerializeGlobalPOD : public SaveState::Component
+{
+public:
+    SerializeGlobalPOD(const std::string& compName)
+    {
+        SaveState::instance().registerComponent(compName, *this);
+    }
+
+    template <class T>
+    void registerPOD(T& pod) //register POD for serialization
+    {
+        podRef.push_back(POD(pod));
+    }
+
+protected:
+    void getBytes(std::ostream& stream) override
+    {
+        for (auto& x : podRef) { WriteGlobalPOD(stream, x); }
+    }
+
+    void setBytes(std::istream& stream) override
+    {
+        for (auto& x : podRef) { ReadGlobalPOD(stream, x); }
+    }
+
+
+private:
+    struct POD
+    {
+        template <class T>
+        POD(T& pod) : address(&pod), size(sizeof(T)) {}
+        void* address;
+        size_t size;
+    };
+
+    static inline void WriteGlobalPOD(std::ostream& stream, const POD& data)
+    {
+        stream.write(static_cast<const char*>(data.address), data.size);
+    }
+
+    static inline void ReadGlobalPOD(std::istream& stream, POD& data)
+    {
+        stream.read(static_cast<char*>(data.address), data.size);
+    }
+
+    std::vector<POD> podRef;
+};
+
+//---------------- inline implementation -------------------------
+template <class T>
+inline
+void writePOD(std::ostream& stream, const T& data)
+{
+    stream.write(reinterpret_cast<const char*>(&data), sizeof(T));
+}
+
+
+template <class T>
+inline
+void readPOD(std::istream& stream, T& data)
+{
+    stream.read(reinterpret_cast<char*>(&data), sizeof(T));
+}
+
+
+inline
+void writeString(std::ostream& stream, const std::string& data)
+{
+    const size_t stringSize = data.size();
+    writePOD(stream, stringSize);
+    stream.write(data.c_str(), stringSize * sizeof(std::string::value_type));
+}
+
+
+inline
+void readString(std::istream& stream, std::string& data)
+{
+    size_t stringSize = 0;
+    readPOD(stream, stringSize);
+    data.resize(stringSize);
+    stream.read(&data[0], stringSize * sizeof(std::string::value_type));
+}
+#endif //SAVE_STATE_H_INCLUDED
+
+#if defined (WIN32)
+int _wmkdir_p(const wchar_t *pathname);
+#else
+int mkdir_p(const char *pathname, mode_t mode);
+#endif
+
+#if defined(C_HAVE_DUKTAPE)
+# include "duktape.h"
+

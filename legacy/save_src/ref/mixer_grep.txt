@@ -1,0 +1,39 @@
+mixer: /mnt/c/dbx_build/r004b/src/src/hardware/mixer.cpp
+100:    uint32_t          blocksize;
+107:    bool            prebuffer_wait;
+108:    Bitu            prebuffer_samples;
+676:static void MIXER_MixData(Bitu fracs/*render up to*/) {
+766:static void MIXER_Mix(void) {
+790:    thr = mixer.blocksize;
+809:static void SDLCALL MIXER_CallBack(void * userdata, Uint8 *stream, int len) {
+824:    if (mixer.prebuffer_wait) {
+829:        if ((unsigned int)remains >= mixer.prebuffer_samples)
+830:            mixer.prebuffer_wait = false;
+833:    if (!mixer.prebuffer_wait && !mixer.mute && need > 0) {
+854:        mixer.prebuffer_wait = true;
+865:    if ((unsigned long)remains >= (mixer.blocksize*2UL)) {
+869:        if ((unsigned long)remains >= (mixer.blocksize*3UL)) // hard drop
+870:            drop = ((unsigned int)remains - (unsigned int)(mixer.blocksize));
+872:            drop = (((unsigned int)remains - (unsigned int)(mixer.blocksize*2)) / 50U) + 1;
+1142:    mixer.blocksize=(unsigned int)section->Get_int("blocksize");
+1150:    mixer.prebuffer_samples=0;
+1151:    mixer.prebuffer_wait=true;
+1166:    SDL_AudioSpec spec;
+1167:    SDL_AudioSpec obtained;
+1172:    spec.callback=MIXER_CallBack;
+1174:    spec.samples=(Uint16)mixer.blocksize;
+1187:    } else if ((SDL2_AudioDevice=SDL_OpenAudioDevice(NULL, 0, &spec, &obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_SAMPLES_CHANGE)) == 0) {
+1189:    } else if (SDL_OpenAudio(&spec, &obtained) <0 ) {
+1205:        if(((Bitu)mixer.freq != (Bitu)obtained.freq) || ((Bitu)mixer.blocksize != (Bitu)obtained.samples))
+1206:            LOG(LOG_MISC,LOG_DEBUG)("MIXER:Got different values from SDL: freq %d, blocksize %d",(int)obtained.freq,(int)obtained.samples);
+1209:        mixer.blocksize=obtained.samples;
+1213:        SDL_PauseAudioDevice(SDL2_AudioDevice, 0);
+1215:        SDL_PauseAudio(0);
+1222:    if (mixer.work_wrap <= mixer.blocksize) E_Exit("blocksize too large");
+1225:        int ms = section->Get_int("prebuffer");
+1229:        mixer.prebuffer_samples = ((unsigned int)ms * (unsigned int)mixer.freq) / 1000u;
+1230:        if (mixer.prebuffer_samples > (mixer.work_wrap / 2))
+1231:            mixer.prebuffer_samples = (mixer.work_wrap / 2);
+1248:    LOG(LOG_MISC,LOG_DEBUG)("Mixer: sample_accurate=%u blocksize=%u sdl_rate=%uHz mixer_rate=%uHz channels=%u samples=%u min/max/need=%u/%u/%u per_ms=%u %u/%u samples prebuffer=%u dcadj=%.10f(en=%u)",
+1250:        (unsigned int)mixer.blocksize,
+1261:        (unsigned int)mixer.prebuffer_samples,

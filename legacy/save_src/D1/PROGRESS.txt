@@ -1,0 +1,3 @@
+PROGRESS.txt — D1 (pc98_fdc) 중간 저장
+한 것: 설계서 §1.1·§2.11·§4.0·§4.1 D1행·§4.2 1·8번 및 선례(A vga_pc98_state.cpp, FE E_events.txt) 읽기. floppy.cpp 실제 필드 목록화(FloppyController 106-166행, FloppyDevice 45-62행, MotorStep 224행, ProcessReadID 290행, MAX_FLOPPY_CONTROLLERS=1 39행·생성 455-458행 확인). 산출 6종 저장: pc98_fdc_state.cpp(약 50줄), floppy.cpp.D1(1631+104줄, 끝에 Write/Read 2함수 추가·기존 로직 무수정·friend 불필요), floppy.cpp.D1.diff(순수 추가 106줄), D1_inventory.txt(필드 표+이벤트 점검+8번 고지문), D1_deferred.txt(없음).
+안 한 것: 없음 (빌드·컴파일·실행은 지시서 금지에 따라 eye-check만 수행).

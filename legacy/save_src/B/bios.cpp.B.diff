@@ -1,0 +1,33 @@
+--- /mnt/c/dbx_build/r004b/src/src/ints/bios.cpp	2026-10-23 17:58:00.644100900 +0900
++++ "/mnt/h/RETRO_SET/_\352\270\260\353\241\235/_jobs/\354\273\264\355\214\214\354\235\274\352\262\214\354\236\204\355\217\254\355\214\205_20261021/W/save_src/B/bios.cpp.B"	2026-10-23 20:15:48.707719200 +0900
+@@ -5087,8 +5087,29 @@
+     } while (v >= 0x60);
+ }
+ 
++// ---- B run (pc98_sys save-state support, draft, eye-checked, not compiled) ----
++// INT 1Bh multi-sector progress lived in function-local statics (see below).
++// Storage moved to file scope so save/load helpers can reach it; every use
++// line inside PC98_BIOS_FDC_CALL is unchanged (pointer aliases index the same).
++unsigned int pc98_bios_fdc_cyl[2] = {0,0}, pc98_bios_fdc_head[2] = {0,0}, pc98_bios_fdc_sect[2] = {0,0}, pc98_bios_fdc_sz[2] = {0,0};
++
++void PC98_BIOS_FDC_SaveProgress(std::ostream& stream) {
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_cyl, sizeof(pc98_bios_fdc_cyl));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_head, sizeof(pc98_bios_fdc_head));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_sect, sizeof(pc98_bios_fdc_sect));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_sz, sizeof(pc98_bios_fdc_sz));
++}
++
++void PC98_BIOS_FDC_LoadProgress(std::istream& stream) {
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_cyl), sizeof(pc98_bios_fdc_cyl));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_head), sizeof(pc98_bios_fdc_head));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_sect), sizeof(pc98_bios_fdc_sect));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_sz), sizeof(pc98_bios_fdc_sz));
++}
++
+ void PC98_BIOS_FDC_CALL(unsigned int flags) {
+-    static unsigned int fdc_cyl[2]={0,0},fdc_head[2]={0,0},fdc_sect[2]={0,0},fdc_sz[2]={0,0}; // FIXME: Rename and move out. Making "static" is a hack here.
++    static unsigned int *fdc_cyl = pc98_bios_fdc_cyl, *fdc_head = pc98_bios_fdc_head, *fdc_sect = pc98_bios_fdc_sect, *fdc_sz = pc98_bios_fdc_sz; // B run: was function-local static arrays (FIXME line kept as comment below)
++    // static unsigned int fdc_cyl[2]={0,0},fdc_head[2]={0,0},fdc_sect[2]={0,0},fdc_sz[2]={0,0}; // FIXME: Rename and move out. Making "static" is a hack here.
+     uint32_t img_heads=0,img_cyl=0,img_sect=0,img_ssz=0;
+     unsigned int drive;
+     unsigned int status;

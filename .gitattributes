@@ -1,0 +1,9 @@
+* text=auto eol=lf
+legacy/** -text
+*.bat text eol=crlf
+*.png binary
+*.fnt binary
+*.bmp binary
+*.ico binary
+*.g98s binary
+*.obj binary

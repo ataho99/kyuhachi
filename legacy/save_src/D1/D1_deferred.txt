@@ -1,0 +1,3 @@
+D1_deferred.txt — floppy.cpp 이외 파일에 필요한 변경 (형식: 파일:줄 · 필요한 변경)
+없음.
+근거: FDC 이벤트(FDC_MotorStep, FDC_ProcessReadID)의 PIC 표 등록은 FE 범위이며 FE/E_events.txt 5·6번에 GENSEI_SAVE_PIC_FDC 매크로로 이미 정리됨. FDC_MotorStep/FDC_ProcessReadID는 이미 non-static이라 static 제거 불필요. 그 외 pic.cpp/ide.cpp/keyboard.cpp/bios_disk.cpp에 D1이 요구하는 변경 없음.

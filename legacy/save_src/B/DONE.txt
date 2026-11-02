@@ -1,0 +1,1 @@
+# DONE.txt — B런 완료 (산출 12개: pc98_sys_state.cpp, *.cpp.B 4개, *.cpp.B.diff 4개, B_inventory.txt, B_deferred.txt, PROGRESS.txt, 본 파일)

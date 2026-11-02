@@ -1,0 +1,34 @@
+# B_inventory.txt — pc98_sys (§2.8~§2.12·§2.14 PC-98 시스템 쪽)
+# 형식: 변수 · 파일:줄 · 크기(x86-64 추정치, sizeof로 확정 요망) · 값형 여부 · static 여부 · 저장 방식 · 필요한 원본 수정
+# 값형 확인: 직렬화에 가상함수·std::string·원시 포인터 멤버 없음. const char* 이름표·malloc 버퍼·컨트롤러 객체는 제외.
+# S = /mnt/c/dbx_build/r004b/src/src (DOSBox-X v2026.10.01). 줄 번호는 grep 실측.
+
+## 저장 (pc98_sys_state.cpp get/setBytes 동일 순서)
+1. pc98_8251_keyboard_uart_state(data, txdata, state, mode_byte, keyboard_reset, rx_enable, tx_enable, valid_state, rx_busy, rx_ready, tx_busy, tx_empty, io_delay_ms, tx_load_ms, recv_buffer[32], recv_in, recv_out) · keyboard.cpp:2190-2385 · 약 70B · 값형(익명 struct, 포인터 없음) · static · keyboard.cpp.B 내 PC98_8251_Save/LoadState 로 필드별 저장 · keyboard.cpp.B 추가(기존 로직 무수정)
+2. pc98_keyboard_state(caps, kana, num) · keyboard.cpp:2160-2164 · 3B · 값형 · static(익명 struct) · keyboard.cpp.B 내 PC98_Keyboard_State_Save/LoadState · keyboard.cpp.B 추가
+3. pc98_sys_8255 (Intel8255 값 멤버: latchOutPortA/B/C, mode, portA/B/CWriteMask, IBF_A/B, OBF_A/B, INTR_A/B, pINTR_A/B, INTE_1/2/A/B) · keyboard.cpp:2132(클래스 2065) / include/8255.h:115-170 · 약 19B · 값형(ppiName/pinNames/portNames const char* 제외) · static · keyboard.cpp.B 내 PC98_Sys8255_Save/LoadState (outPortC 호출 없이 직접 복원) · keyboard.cpp.B 추가
+4. pc98_prn_8255 (동일 값 멤버) · keyboard.cpp:2023(클래스 1973) · 약 19B · 값형(이름표 제외; inPortB는 계산값이라 저장 불필요) · static · keyboard.cpp.B 내 PC98_Prn8255_Save/LoadState · keyboard.cpp.B 추가
+5. PC98_SHUT0, PC98_SHUT1 · keyboard.cpp:2025 · 각 1B · 값형(bool) · non-static · extern 직접 WRITE_POD/READ_POD · 사본 불필요
+6. 마우스 8255 일식(p7fd9_8255_mouse_x/y/x_latch/y_latch/sel/latch, p7fd8_8255_mouse_int_enable, pc98_mouse_8255 latch/mode, pc98_mouse_rate_hz) · keyboard.cpp:2432-2438,2452,2465,2651,2669-2712 · 15B(11 regs + rate u32) · 값형 · 혼합(p7fd9계·rate는 non-static, tick_scheduled·mouse_8255는 static) · 기존 PC98_Mouse_Save/LoadState 그대로 호출 · 사본 불필요(단 mouse.obj 제거 시 이 컴포넌트가 책임 — 코드 내 주석)
+7. pc98_mem_msw_m[8] · vga_memory.cpp:1535 · 8B · 값형 · non-static · extern 직접 저장 · 사본 불필요(A런도 vga_memory.cpp 미수정)
+8. pc98_port_29h · dma.cpp:170 · 1B · 값형(uint8_t) · static · PC98_Get/SetPort29h 경유 (setter가 DmaControllers[0] 채널 wraparound도 함께 복원, DMA_Write_Port 0x29 분기와 동일식) · dma.cpp.B 추가
+9. pc98_ide_select · ide.cpp:4254 · 4B · 값형(unsigned int) · non-static 확인됨 · extern 직접 저장 · 사본 불필요(ide.cpp 금지 준수)
+10. INT1B 진행값 fdc_cyl/head/sect/sz[2] · bios.cpp:5091 · 32B(4 배열×2×4B) · 값형 · 함수-지역 static이었음 · 파일범위 pc98_bios_fdc_* 로 이동 + PC98_BIOS_FDC_Save/LoadProgress (함수 본문 사용처는 포인터 별칭으로 무수정) · bios.cpp.B 수정
+11. lio_work · pc98_lio.cpp:101(형 30-44행) · 약 24B · 값형(POD) · static · PC98_LIO_Save/LoadState 내 통째 저장 · pc98_lio.cpp.B 추가
+12. lio_draw 값부(x1,y1,x2,y2,flag,palette_max,planes) · pc98_lio.cpp:102(형 46-55행) · 11B · 값형(paint_work uint8_t* 포인터 제외) · static · 필드별 저장 · pc98_lio.cpp.B 추가
+13. lio_palette_mode · pc98_lio.cpp:103 · 1B · 값형 · static · 직접 저장(위와 동일 함수) · pc98_lio.cpp.B 추가
+
+## 제외 (저장하지 않음 — 사유)
+- 8255 ppiName/pinNames/portNames (const char* 상수표) · 저장 불필요
+- prn inPortB 계산값(클럭·기종, PIT_TICK_RATE 파생) · 재계산됨
+- sys outPortC 부작용(스피커 inhibit→port_61_data/TIMER/PCSPEAKER, SHUT 플래그) · SHUT은 별도 저장, 스피커는 기존 Keyboard/Mixer 컴포넌트 소관. 로드 시 outPortC를 호출하지 않으므로 부작용 미재생(가정 — 결과문 참조)
+- lio_draw.paint_work (640x400 malloc) · 사용처(878/996행)에서 NULL이면 할당 + 매 LIO 진입시 lio_updatedraw() 갱신 → 제외
+- paint_point(queue)/paint_line(vector)/paint_tile(vector) · 호출 중 일시 컨테이너(설계서 §2.14) → 제외
+- PC98_BIOS_FLOPPY_BUFFER[32768] · 일시 버퍼(설계서 §2.11) → 제외
+- uart_rx_load/tx_load/pc98_keyboard_recv_byte PIC 핸들러 자체 · 값 아님. E런 표 + 로드 후 PC98_Sys_RearmEvents로 재무장(표에 없던 항목). 핸들러 3개 non-static 확인(keyboard.cpp:2387,2392,2401, 전방선언 2186-2188)
+- FDC/IDE 컨트롤러·디바이스 본문 · D1/D2런 소관. 단 pc98_ide_select 값만 여기 저장
+
+## 원본 수정 사본 판정
+- .cpp.B 사본 4개: keyboard.cpp.B(8251·키상태·8255×2·Rearm 추가), dma.cpp.B(Get/SetPort29h 추가), bios.cpp.B(진행값 파일범위 이동+Save/Load 추가, 함수 본문 인덱싱 무수정), pc98_lio.cpp.B(LIO Save/Load 추가)
+- 사본 없음: vga_memory.cpp(msw non-static extern), ide.cpp(ide_select non-static extern), mouse.cpp·pic.cpp·floppy.cpp·pc98_fm.cpp(금지 준수, 손대지 않음)
+- uart 핸들러 non-static 확인 → 노출 사본 불필요 (E런 표 추가와 짝)

@@ -1,0 +1,1 @@
+DONE — 2026-10-23, 산출 6개 (pc98_fdc_state.cpp, floppy.cpp.D1, floppy.cpp.D1.diff, D1_inventory.txt, D1_deferred.txt, PROGRESS.txt)

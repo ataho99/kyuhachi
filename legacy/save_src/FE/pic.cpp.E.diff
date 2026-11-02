@@ -1,0 +1,81 @@
+--- /mnt/c/dbx_build/r004b/src/src/hardware/pic.cpp	2026-10-23 17:58:00.528073100 +0900
++++ "/mnt/h/RETRO_SET/_\352\270\260\353\241\235/_jobs/\354\273\264\355\214\214\354\235\274\352\262\214\354\236\204\355\217\254\355\214\205_20261021/W/save_src/FE/pic.cpp.E"	2026-10-23 20:08:55.010133100 +0900
+@@ -1129,6 +1129,32 @@
+ extern void *VGA_VerticalTimer_PIC_Event;
+ extern void *PIC_IRQCheckDelayed_PIC_Event;
+ 
++// GENSEI save-state extensions (E). Default off: enable per component with -D
++// when that component exposes its handler non-static. See E_events.txt.
++#ifdef GENSEI_SAVE_PIC_GDC
++extern void GDC_ProcDelay(Bitu); // vga_pc98_gdc.cpp (already non-static)
++#endif
++#ifdef GENSEI_SAVE_PIC_UART
++extern void uart_rx_load(Bitu); // keyboard.cpp (already non-static)
++extern void uart_tx_load(Bitu); // keyboard.cpp (already non-static)
++#endif
++#ifdef GENSEI_SAVE_PIC_KEYB
++extern void pc98_keyboard_recv_byte(Bitu); // keyboard.cpp (already non-static)
++#endif
++#ifdef GENSEI_SAVE_PIC_FDC
++extern void FDC_MotorStep(Bitu); // floppy.cpp (already non-static)
++extern void FDC_ProcessReadID(Bitu); // floppy.cpp (already non-static)
++#endif
++#ifdef GENSEI_SAVE_PIC_IDE
++extern void IDE_DelayedCommand(Bitu); // ide.cpp (static now: drop static when enabling)
++extern void IDE_ATAPI_SpinDown(Bitu); // ide.cpp (static now: drop static when enabling)
++extern void IDE_ATAPI_SpinUpComplete(Bitu); // ide.cpp (static now: drop static when enabling)
++extern void IDE_ATAPI_CDInsertion(Bitu); // ide.cpp (static now: drop static when enabling)
++#endif
++#ifdef GENSEI_SAVE_PIC_FM
++/* FM handlers (fmport_a/b_pic_event) are already in the table below; no entry needed. */
++#endif
++
+ //extern void *NE2000_TX_Event_PIC_Event;						// Ne2000.cpp
+ 
+ 
+@@ -1149,6 +1175,9 @@
+ extern void *PC98_Mouse_Tick_PIC_Event;						// Keyboard.cpp
+ void PC98_Mouse_RestoreTick(void);
+ 
++/* GENSEI T10 diagnostic: number of PIC_State_FindEvent misses (0xffff path). */
++unsigned g_pic_state_unknown_events = 0;
++
+ const void *pic_state_event_table[] = {
+ 	NULL,
+ 	cmos_timerevent_PIC_Event,
+@@ -1180,6 +1209,26 @@
+ 	fmport_a_pic_event_PIC_Event,
+ 	fmport_b_pic_event_PIC_Event,
+ 	PIC_IRQCheckDelayed_PIC_Event,
++#ifdef GENSEI_SAVE_PIC_GDC
++	(const void *)((uintptr_t)GDC_ProcDelay),
++#endif
++#ifdef GENSEI_SAVE_PIC_UART
++	(const void *)((uintptr_t)uart_rx_load),
++	(const void *)((uintptr_t)uart_tx_load),
++#endif
++#ifdef GENSEI_SAVE_PIC_KEYB
++	(const void *)((uintptr_t)pc98_keyboard_recv_byte),
++#endif
++#ifdef GENSEI_SAVE_PIC_FDC
++	(const void *)((uintptr_t)FDC_MotorStep),
++	(const void *)((uintptr_t)FDC_ProcessReadID),
++#endif
++#ifdef GENSEI_SAVE_PIC_IDE
++	(const void *)((uintptr_t)IDE_DelayedCommand),
++	(const void *)((uintptr_t)IDE_ATAPI_SpinDown),
++	(const void *)((uintptr_t)IDE_ATAPI_SpinUpComplete),
++	(const void *)((uintptr_t)IDE_ATAPI_CDInsertion),
++#endif
+ 
+ 	//NE2000_TX_Event_PIC_Event,
+ 	PC98_Mouse_Tick_PIC_Event,	// last, so the indexes of the others stay as older states have them
+@@ -1214,6 +1263,8 @@
+ 
+ 	// ERROR!! (place debug breakpoint here)
+ 	//MessageBox(0,"PIC - State FindEvent",0,0);
++	g_pic_state_unknown_events++;
++	LOG(LOG_MISC,LOG_WARN)("PIC: State FindEvent unknown handler %p, returning 0xffff",(void *)((uintptr_t)addr));
+ 	return 0xffff;
+ }
+ 

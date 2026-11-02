@@ -1,0 +1,46 @@
+F_required_symbols.txt — savestates.obj 제거 시 서브셋 obj 가 요구하는 외부 심볼
+(S = DOSBox-X 소스 트리. S 경로 표기는 저장소 루트 기준: S=.../r004b/src)
+(rsp = W/sub_r005b/r005_objs.rsp, 90개 obj. 아래 "서브셋" = rsp 에 있는 obj)
+
+원본 정의 위치: S/src/misc/savestates.cpp (선언: S/include/dosbox.h:356-393)
+원본 savestates.cpp 가 정의하고 dosbox.h 에 선언만 있는 SaveState 멤버 전부:
+
+1. SaveState::instance() — 선언 dosbox.h:359, 정의 savestates.cpp:362
+   부르는 파일(서브셋): dosbox.h:413 SerializeGlobalPOD 생성자(인라인) 경유 —
+   S/src/cpu/cpu.cpp:4944, S/src/fpu/fpu.cpp:1672, S/src/hardware/memory.cpp:2827,
+   S/src/hardware/pic.cpp:1254, S/src/hardware/timer.cpp:1276, S/src/hardware/dma.cpp:929,
+   S/src/hardware/keyboard.cpp:3024, S/src/ints/mouse.cpp:2812, S/src/hardware/vga.cpp:2050,
+   S/src/hardware/mixer.cpp:1323, S/src/hardware/iohandler.cpp:836,
+   S/src/hardware/cmos.cpp:616, S/src/ints/int10.cpp:1943, S/src/dosbox.cpp:5571
+   (등록 이름: CPU/FPU/Memory/Pic/IntTimer10/DMA/Keyboard/Mouse/Vga/Mixer/"IO handler"/CMOS/Int10/Dosbox-x)
+
+2. SaveState::registerComponent(const std::string&, Component&) — 선언 dosbox.h:378, 정의 savestates.cpp:367
+   부르는 파일(서브셋): 위와 동일(dosbox.h:413 인라인 생성자가 직접 호출)
+
+3. SaveState::save(size_t) — 선언 dosbox.h:364, 정의 savestates.cpp:422
+   부르는 파일(서브셋): 없음(호출자는 savestates.cpp 내부 매퍼 + S/src/gui/menu_callback.cpp 로 둘 다 서브셋 밖).
+   savestates.obj 없이는 정의 없는 선언이 되므로 새 드라이버가 정의해야 링크가 닫힘.
+
+4. SaveState::load(size_t) const — 선언 dosbox.h:365, 정의 savestates.cpp:595 — 위와 동일(서브셋 내 호출자 없음, 정의 필요)
+
+5. SaveState::isEmpty(size_t) const — 선언 dosbox.h:366, 정의 savestates.cpp:789 — 위와 동일
+
+6. SaveState::removeState(size_t) const — 선언 dosbox.h:367, 정의 savestates.cpp:817 — 위와 동일
+
+7. SaveState::getName(size_t, bool) const — 선언 dosbox.h:368, 정의 savestates.cpp:859 — 위와 동일
+
+8. AddSaveStateMapper() — 선언 S/src/dosbox.cpp:224(extern), 호출 S/src/dosbox.cpp:1169(서브셋 obj dosbox.obj),
+   정의 savestates.cpp:317. MAPPER 의존이므로 새 드라이버에서는 빈 몸통(no-op)으로 정의.
+
+정의가 필요 없는 것(확인됨):
+- Component::getBytes/setBytes — 순수가상, 각 컴포넌트 obj 가 정의(서브셋 내). savestates.cpp 정의 아님.
+- SaveState 생성자/대입 — private 인라인 선언(dosbox.h:381-383), savestates.cpp 정의 아님.
+- writePOD/readPOD/writeString/readString — dosbox.h:457-489 전부 인라인. 링크 요구 없음.
+- flagged_backup/flagged_restore — 정의 S/src/dos/dos_programs.cpp:9886,9950(dos_programs.obj 는 서브셋 밖). savestates.cpp:408-409는 선언만.
+- auto_save_state/noremark_save_state/force_load_state/saveloaderr/GetGameState/SetGameState/refresh_slots/loadstateconfirm/savestatecorrupt —
+  참조자가 savestates.cpp 내부 또는 menu_callback.cpp(서브셋 밖)에만 있음. 서브셋 obj 참조 없음.
+- 서브셋 밖이라 자동 탈락하는 등록: Dos(dos.cpp:5934), EMS(ems.cpp:2187), XMS(xms.cpp:1064), Midi(midi.cpp:734),
+  Joystick(joystick.cpp:296), Render(render.cpp:1739) — 해당 obj 가 rsp 에 없음.
+
+주의(S 경로): 지시서의 S=/mnt/c/dbx_build/r004b/src/src 는 한 단계 깊음. 실제 저장소 루트는 /mnt/c/dbx_build/r004b/src
+(include/·src/ 직하). 위 행번호는 실제 파일 기준이며 "S/src/..." 표기는 지시서 관례(=저장소 루트/src/...)를 따름.

@@ -1,0 +1,12 @@
+PROGRESS (FE 런)
+한 것:
+- F_required_symbols.txt: SaveState 7종(instance/registerComponent/save/load/isEmpty/removeState/getName)+AddSaveStateMapper 를
+  선언·정의·호출 위치와 함께 목록화. 서브셋(rsp 90 obj) 등록 14건(CPU/FPU/Memory/Pic/IntTimer10/DMA/Keyboard/Mouse/Vga/Mixer/IO handler/CMOS/Int10/Dosbox-x) 확인.
+- pc98_savestate.h/.cpp(209줄): TLV 컨테이너, 헤더 4종 불일치 거부, 실패 시 전체 롤백, PC98_ 4함수, 저장/로드 로그, T10 카운터 판독.
+- pic.cpp.E: 원본 복사 후 extern 10종(매크로 5종), 표 항목 10종(PC98_Mouse_Tick 마지막 유지), 0xffff 경로 카운터+LOG, 전역 정의.
+- E_events.txt: 핸들러 10종 전수(정의·호출·static 여부·서명·매크로). E.diff 생성(diff -u).
+안 한 것:
+- 빌드·컴파일·실행 일체(지시서 금지). 문법은 눈으로만 점검.
+- 설계서 §4.1 A/B/C/D1/D2 본문(pc98_video·sys·fm·FDC·IDE)은 이 런 범위 밖이라 손대지 않음.
+주의: 지시서의 S=/mnt/c/dbx_build/r004b/src/src 는 한 단계 깊고 실제 저장소 루트는 /mnt/c/dbx_build/r004b/src.
+행번호는 실제 파일 기준, "S/src/..." 표기는 지시서 관례(루트/src/...)를 따름.

@@ -1,0 +1,35 @@
+E_events.txt — PC-98 관련 PIC_AddEvent 핸들러 전수 (S 에서 grep 으로 확인한 것만. 추측 없음)
+(S = DOSBox-X 소스 트리, 표기는 저장소 루트 기준. S 경로는 지시서 관례를 따름)
+
+표에 추가한 항목 (pic.cpp.E, 컴포넌트별 매크로로 감쌈. 기본 꺼짐):
+1. GDC_ProcDelay | 정의 S/src/hardware/vga_pc98_gdc.cpp:716 (void GDC_ProcDelay(Bitu), non-static; 전방선언 :103)
+   | PIC_AddEvent S/src/hardware/vga_pc98_gdc.cpp:687 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_GDC
+2. uart_rx_load | 정의 S/src/hardware/keyboard.cpp:2392 (void uart_rx_load(Bitu), non-static; 전방선언 :2186)
+   | PIC_AddEvent keyboard.cpp:2249,2257,2289 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_UART
+3. uart_tx_load | 정의 S/src/hardware/keyboard.cpp:2387 (void uart_tx_load(Bitu), non-static; 전방선언 :2187)
+   | PIC_AddEvent keyboard.cpp:2270 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_UART
+4. pc98_keyboard_recv_byte | 정의 S/src/hardware/keyboard.cpp:2401 (void pc98_keyboard_recv_byte(Bitu), non-static; 전방선언 :2188)
+   | PIC_AddEvent keyboard.cpp:2271 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_KEYB
+5. FDC_MotorStep | 정의 S/src/hardware/floppy.cpp:224 (void FDC_MotorStep(Bitu), non-static; 전방선언 :216)
+   | PIC_AddEvent floppy.cpp:266,1091,1227 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_FDC
+6. FDC_ProcessReadID | 정의 S/src/hardware/floppy.cpp:290 (void FDC_ProcessReadID(Bitu), non-static; 전방선언 :217)
+   | PIC_AddEvent floppy.cpp:1149 | 서명 void(Bitu) | 매크로 GENSEI_SAVE_PIC_FDC
+7. IDE_DelayedCommand | 정의 S/src/hardware/ide.cpp:3755 (static void IDE_DelayedCommand(Bitu); 전방선언 :390)
+   | PIC_AddEvent ide.cpp:1068,1684,1724,1854,1861,1890,1897,2041,2048,2055,2062,2071,2087,2145,2207 +다수
+   | 서명 void(Bitu) | 현재 static → 매크로 켤 때 static 제거 필요 | 매크로 GENSEI_SAVE_PIC_IDE
+8. IDE_ATAPI_SpinDown | 정의 S/src/hardware/ide.cpp:393 (static void IDE_ATAPI_SpinDown(Bitu))
+   | PIC_AddEvent ide.cpp:471,497 | 서명 void(Bitu) | 현재 static → 매크로 켤 때 static 제거 필요 | 매크로 GENSEI_SAVE_PIC_IDE
+9. IDE_ATAPI_SpinUpComplete | 정의 S/src/hardware/ide.cpp:450 (static void IDE_ATAPI_SpinUpComplete(Bitu); 전방선언 :419)
+   | PIC_AddEvent ide.cpp:442,490 | 서명 void(Bitu) | 현재 static → 매크로 켤 때 static 제거 필요 | 매크로 GENSEI_SAVE_PIC_IDE
+10. IDE_ATAPI_CDInsertion | 정의 S/src/hardware/ide.cpp:421 (static void IDE_ATAPI_CDInsertion(Bitu))
+    | PIC_AddEvent ide.cpp:2899,2958 | 서명 void(Bitu) | 현재 static → 매크로 켤 때 static 제거 필요 | 매크로 GENSEI_SAVE_PIC_IDE
+
+이미 표에 있어 추가하지 않은 PC-98 관련 항목:
+- fmport_a/b_pic_event (S/src/hardware/pc98_fm.cpp:176,181 static; void* 별칭 :187-188 경유 등록, 표 pic.cpp:1180-1181) — 매크로 GENSEI_SAVE_PIC_FM 은 빈 분기로만 둠(추가 항목 없음)
+- PC98_Mouse_Tick (S/src/hardware/keyboard.cpp:2467 static pc98_mouse_tick_event; void* 별칭 :2667 경유 등록, 표 pic.cpp:1185, 마지막 고정)
+- PIT0_Event (표 pic.cpp:1170; PIT 는 timer.cpp IntTimer10 컴포넌트에 저장됨)
+
+표 형식 주의: 실제 표는 const void* 배열이라 지시서 예시의 {핸들러, "이름"} 2요소 형식을 그대로 쓸 수 없음.
+같은 요소형이 되게 (const void*)((uintptr_t)핸들러) 로 넣음(keyboard.cpp:2667, pc98_fm.cpp:187-188 의 기존 관용과 동일).
+
+IDE 값 패킹 참고: IDE 핸들러 인자는 IDEEventPack(interface,device) 정수(ide.cpp:59-75)라 표 인덱스 복원 후 그대로 전달됨.

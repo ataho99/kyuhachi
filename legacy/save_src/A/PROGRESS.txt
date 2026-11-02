@@ -1,0 +1,2 @@
+한 것: vga_pc98_state.cpp(228줄, pc98_video 컴포넌트 get/setBytes 초안) + A_inventory.txt(§2.5·§2.6 이미 저장됨 vs 새로 저장 표) 저장. S 전수 확인으로 .cpp.A 사본 불필요 판정(후처리 6함수·GDC_ProcDelay 모두 non-static).
+안 한 것: 빌드·컴파일·실행(지시서 금지). .cpp.A/.diff 없음(필요 없음). PIC 표 추가 없음(E런 소관).

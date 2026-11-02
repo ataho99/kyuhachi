@@ -1,0 +1,20 @@
+# C_inventory — pc98_fm 컴포넌트 변수·구조체 표 (S 실측, DOSBox-X v2026.10.01)
+# 설계서 §2.13 표 + §4.2 2·3·4·9 대응. 크기는 x86-64 추정치(패딩 포함).
+# 형식: 이름 | 파일:줄 | 크기 | 포인터 포함 여부 | 저장 방식 | 필요한 도우미
+usesound | snd_pc98/sound/fmboard.h:49 (정의 fmboard.c:122 usesound=type) | 4B | 없음 | 원시 | 없음 (보드 종류 분기용)
+OPN_T opn | snd_pc98/sound/fmboard.h:15-26 | 약 1.04KB (reg[0x400]=1024 + 헤더 16B) | 없음 | 원시 (복원의 원본 reg) | 없음
+_OPNGEN opngen | snd_pc98/sound/opngen.h:136-147 | 약 52B (keyreg[12] 포함) | 없음 (feedback/outdl/dc/dr은 복원 타깃) | 원시 | 없음
+OPNCH opnch[12] | snd_pc98/sound/opngen.h:115-134 (OPNCH_MAX=12, opngen.h:6) | 약 5.5KB (456B×12, 설계 추정치) | 있음 — 슬롯당 detune1/attack/decay1/decay2/release 5개(opngenc.c:28-32 정적표 지향) + 채널당 connect1-4(opngenc.c:207-281, opngen.feedback*/outd 지향) | 원시 + 레지스터 재적용(0x30-0x9F, 0xB4-0xB7→0xB0-0xB3, 양 뱅크 chbase 0/3)으로 포인터·env_inc 재계산 | pc98_fm_restore_ptrs (신규, fmboard_fmrestore에서 keyon 제외 변형; opngen_setreg는 공개 extern이므로 .C 사본 불필요)
+_PSGGEN __psg[3] (psg1-3) | snd_pc98/sound/psggen.h:40-52 | 약 100B×3 | 있음 — tone[3].pvol (psggenc.c:136-139: volume 테이블 또는 &evol) | 원시 + 레지스터 8-10만 psggen_setreg 재적용해 pvol 재계산 (psggen_restore 78-85는 reg13 경유 envcnt=1 리셋하므로 사용 금지) | psggen_setreg (공개 extern, .C 사본 불필요)
+_FMTIMER fmtimer | snd_pc98/sound/fmtimer.h:2-10 | 8B | 없음 | 원시 + 로드 후 fmtimer_setreg(0x27, reg) 재적용으로 nevent 재 armed | fmtimer_set_nevent_flags라는 이름의 함수는 S에 없음(확인: fmtimer.h는 fmtimer_reset/setreg만). static nevent_is_set[2](fmtimer.c:11)는 fmtimer_setreg 경유로 정합되므로 별도 접근자 없이 재적용으로 대체. PIC 이벤트 fmport_a/b는 표 등록됨(pc98_fm.cpp:187-188, pic.cpp:1186-1187)
+_RHYTHM rhythm | snd_pc98/sound/rhythm.h:2-7 + sound.h:57-73 | 약 300B | 있음 — trk[6].pcm (trk[i].data.sample 내부 지향, rhythmc.c:131-133) | 원시 + trk[i].pcm은 샘플 버퍼 시작에서의 오프셋(int32, 없으면 -1)으로 별도 저장, 복원 시 NULL 검사 후 재결합. data.sample 자체는 rhythm_bind 시 유지분 사용 | rhythm_setreg + fmboard_rhyrestore (둘 다 공개 extern, keyon 없음). 2608_*.wav 미로드(sample==NULL) 시 오프셋 -1 저장
+_ADPCM adpcm | snd_pc98/sound/adpcm.h:27-50 | 약 256KB (buf[0x40000]) | 없음 | 원시 통째 | 없음
+_PCM86 pcm86 | snd_pc98/sound/pcm86.h:23-58 | 약 64KB (buffer[0x10000]) | 없음 | 원시 통째 | 없음 (86 PCM IRQ는 믹서 콜백 폴링, pcm86c.c:121)
+lrclock | snd_pc98/cbus/pcm86io.c:153 (static uint8_t) | 1B | 없음 | 원시 1B로 저장 | getter/setter가 S에 없음 → C_deferred.txt 참조 (pcm86io.c.C 사본에 extern C 접근자 추가가 통합 시 필요)
+_TMS3631 tms3631 | snd_pc98/sound/tms3631.h:7-10 + fmboard.h:54 | 약 68B (ch[8]×8B+enable) | 없음 | 원시 (fmboard_reset이 항상 리셋하므로 존재) | 없음
+AMD98 amd98 | snd_pc98/sound/fmboard.h:28-32 | 약 4B | 없음 | 원시 (존재, fmboard_reset에서 ZeroMemory) | 없음
+MUSICGEN musicgen | snd_pc98/sound/fmboard.h:34-43 | 약 20B | 없음 | 원시 (존재, fmboard_reset에서 ZeroMemory) | 없음
+보드 있음/없음 플래그 | src/hardware/pc98_fm.cpp:41 MixerChannel *pc98_mixer (전역, non-static), :241 static bool pc98fm_init (접근 불가), :406 board=="off" 조기 복귀 | 1B | — | 첫 바이트로 저장, 없음이면 아무것도 안 함 | 판단용 전역은 pc98_mixer (NULL이면 보드 없음). pc98fm_init은 static이라 사용 불가
+믹서 버퍼·채널 위치 (MixTemp/pc98_mixer 채널, pc98_fm.cpp:41,203-239) | — | — | — | 저장하지 않음 (§4.2 9번, 로드 직후 수 ms 무음 허용) | 없음
+avsdrv_*/pcb_data[] (pc98_fm.cpp:569-584) | — | — | — | 저장하지 않음 (DOS 드라이버 에뮬, 미니 에뮬 제외) | 없음
+SUPPORT_PX 확장 (opn2/3, rhythm2/3, adpcm2/3, fmboard.h:68-75) | — | — | — | 저장하지 않음 (OPNCH_MAX=12 빌드 기준, PX 미정의) | 없음

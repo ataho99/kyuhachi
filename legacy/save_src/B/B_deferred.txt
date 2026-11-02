@@ -1,0 +1,8 @@
+# B_deferred.txt — B런에서 손대지 않은 파일에 필요한 변경 (다른 런/통합 소관)
+# 형식: 파일:줄 · 필요한 변경. B런 금지 파일(ide.cpp·floppy.cpp·pc98_fm.cpp·pic.cpp·mouse.cpp)은 읽기만 하고 적지 않음.
+
+1. mouse.cpp:2866 (PC98_Mouse_SaveState 호출부) · INT33 드라이버 파일 제거(G런/통합) 시 이 호출도 함께 사라짐. pc98_sys 컴포넌트가 PC98_Mouse_Save/Load/RestoreTick을 직접 부르므로 기능상 대체됨. 통합 시 mouse.obj 제외 + 이 호출 삭제(또는 파일 통째 제거) 확인 요망. B런에서 mouse.cpp 사본 없음.
+2. pic.cpp:1158-1192 표 · uart_rx_load/uart_tx_load/pc98_keyboard_recv_byte 항목 추가는 E런 소관(E_events.txt 확인). B런의 PC98_Sys_RearmEvents는 표 유무와 무관하게 동작(PIC_RemoveEvents 후 플래그 기준 재등록)하므로 표 중복 등록 시에도 이중 스케줄 없음.
+3. ide.cpp — B런 필요 변경 없음. pc98_ide_select가 non-static(ide.cpp:4254)임을 grep 확인했으므로 extern 직접 저장. static이었다면 접근자 필요했을 것이나 해당 없음. IDE 컨트롤러/디바이스 본문은 D2런 소관.
+4. floppy.cpp·pc98_fm.cpp — B런 범위 밖. 손대지 않음.
+5. (참고) speaker inhibit 정합성: sys8255 PortC bit3(buzzer inhibit) 복원은 latch 직접 복원이라 TIMER_SetGate2/PCSPEAKER_SetType을 다시 부르지 않음. port_61_data는 기존 Keyboard 컴포넌트가 저장. 두 값 불일치 시 부저 상태 1비트 어긋남 가능 → 통합 테스트(T8 회귀)에서 확인 요망. B런에서 추가 조치 없음.

@@ -1,0 +1,58 @@
+D1_inventory.txt — pc98_fdc 필드 인벤토리 (S = /mnt/c/dbx_build/r004b/src/src, 크기 x86-64)
+형식: 필드 · 파일:줄 · 크기 · 저장/제외 · 이유
+
+[FloppyDevice — floppy.cpp:45-62]
+controller · floppy.cpp:47 · 8B · 제외 · FloppyController* 포인터. Read 시 live 객체 것을 그대로 둠(호스트가 부팅 시 device 생성).
+current_track · floppy.cpp:49 · 1B · 저장 · 드라이브 헤드 위치.
+select · floppy.cpp:50 · 1B · 저장 · 드라이브 선택 상태.
+motor · floppy.cpp:50 · 1B · 저장 · 모터 on/off.
+track0 · floppy.cpp:51 · 1B · 저장 · 트랙0 신호 (MotorStep 종료 조건).
+int13_disk · floppy.cpp:53 · 4B · 저장 · INT13 매핑 번호. 이미지 자체(FILE*/imageDisk)는 호스트가 부팅 시 다시 붙임.
+
+[FloppyController — floppy.cpp:106-166]
+IRQ · floppy.cpp:108 · 4B · 제외 · 설정값. FDC_Init(560-625)이 config에서 재적용 (PC-98: IRQ 11/10).
+DMA · floppy.cpp:109 · 4B · 제외 · 설정값. FDC_Init이 재적용 (PC-98: DMA 2/3).
+base_io · floppy.cpp:110 · 2B · 제외 · 설정값. FDC_Init이 재적용 (PC-98 1차: 0x90, 포트 90/92/94h는 627-637에서 설치).
+interface_index · floppy.cpp:111 · 1B · 제외 · 설정값. MAX_FLOPPY_CONTROLLERS=1(39행)이므로 항상 0, 1차 컨트롤러(0x90/92/94h)만 존재. 2차(0xC8)는 생성 코드 없음(FDC_OnReset:455-458은 index 0만 Init).
+ReadHandler[8] · floppy.cpp:112 · 제외 · IO 핸들러 객체. install_io_port(627-647)가 재설치, 저장 불필요.
+WriteHandler[8] · floppy.cpp:113 · 제외 · 동상.
+digital_output_register · floppy.cpp:114 · 1B · 저장 · DOR (드라이브 선택/모터/DMA·IRQ 인에이블).
+int13fakev86io · floppy.cpp:115 · 1B · 제외 · 설정값. FDC_Init이 config에서 재적용.
+instant_mode · floppy.cpp:116 · 1B · 제외 · 설정값. FDC_Init이 config에서 재적용.
+data_register_ready · floppy.cpp:117 · 1B · 저장 · 상태 포트 bit7 (90h읽기:1489). ReadID/MotorStep 진행 중 0.
+data_read_expected · floppy.cpp:118 · 1B · 저장 · 상태 포트 bit6 (DIO).
+non_dma_mode · floppy.cpp:119 · 1B · 저장 · 상태 포트 bit5 (NDMA).
+busy_status · floppy.cpp:120 · 1B · 저장 · 상태 포트 bit4 (BUSY). 진행 중 명령 플래그.
+positioning[4] · floppy.cpp:121 · 4B · 저장 · 상태 포트 bit0-3.
+irq_pending · floppy.cpp:122 · 1B · 저장 · IRQ 보류 (raise_irq:1615/lower_irq:1620).
+register_pnp · floppy.cpp:123 · 1B · 제외 · 설정값. FDC_Init이 config에서 재적용.
+ST[4] · floppy.cpp:125 · 4B · 저장 · ST0~ST3.
+current_cylinder[4] · floppy.cpp:126 · 4B · 저장 · 드라이브별 실린더.
+in_cmd[16] · floppy.cpp:128 · 16B · 저장 · 진행 중 명령 바이트.
+in_cmd_len · floppy.cpp:129 · 1B · 저장 · 명령 길이.
+in_cmd_pos · floppy.cpp:130 · 1B · 저장 · 명령 수신 위치.
+out_res[16] · floppy.cpp:131 · 16B · 저장 · 응답 바이트.
+out_res_len · floppy.cpp:132 · 1B · 저장 · 응답 길이.
+out_res_pos · floppy.cpp:133 · 1B · 저장 · 응답 읽기 위치.
+motor_steps · floppy.cpp:134 · 4B · 저장 · 남은 모터 스텝 (MotorStep 진행 플래그).
+motor_dir · floppy.cpp:135 · 4B · 저장 · 스텝 방향.
+fdc_motor_step_delay · floppy.cpp:136 · 4B · 저장 · 스텝 간격 (생성자 564행 400.0f/80 고정이나 값 그대로 저장).
+in_cmd_state · floppy.cpp:137 · 1B · 저장 · 명령 수신 중 상태.
+out_res_state · floppy.cpp:138 · 1B · 저장 · 응답 송신 중 상태.
+dma · floppy.cpp:158 · 8B · 제외 · DmaChannel* 포인터. Read 시 live 객체 것을 그대로 둠(GetDMAChannel 재연결 불필요).
+device[4] · floppy.cpp:159 · 8Bx4 · 제외(포인터 자체) · FloppyDevice* 배열. 각 원소의 값 필드는 dev_present 플래그와 함께 저장, 포인터는 live 유지.
+
+[전역 — floppycontroller 배열]
+floppycontroller[1] · floppy.cpp:168 · 8B · 제외(배열 자체) · static 컨트롤러 포인터. ctl_present 1B 플래그(.D1 추가 함수에서 기록)로 NULL 유무만 저장. 컨트롤러 수 1개 확인 (MAX_FLOPPY_CONTROLLERS=1:39, FDC_OnReset은 0번만 생성:457).
+ctl_present · .D1 추가 · 1B · 저장 · 위 NULL 유무 플래그.
+dev_present x4 · .D1 추가 · 1B x4 · 저장 · 드라이브별 NULL 유무 플래그.
+
+[PIC 이벤트 핸들러 점검 — 지시 3번]
+FDC_MotorStep · floppy.cpp:224(정의), 216(전방선언) · non-static 확인 · FE/E_events.txt 5번과 일치.
+FDC_ProcessReadID · floppy.cpp:290(정의), 217(전방선언) · non-static 확인 · FE/E_events.txt 6번과 일치.
+static 제거 불필요 (둘 다 이미 non-static).
+대기 플래그 점검: MotorStep 보류 ⇔ busy_status=1 && motor_steps>0 && data_register_ready=0 (Seek 1216-1230 / Calibrate 1080-1094 설정, MotorStep 완료 시 270-277에서 해제+IRQ). ReadID 보류 ⇔ busy_status=1 && data_register_ready=0 && out_res_state=false (1143-1149 설정, ProcessReadID 311-326 prepare_res_phase에서 data_ready=1/out_res_state=true로 전환). 두 조건의 모든 필드(busy_status, motor_steps, data_register_ready, out_res_state, in_cmd/out_res 일체)를 같은 컴포넌트에서 함께 저장하므로 «이벤트는 있는데 플래그가 꺼짐» 불가. 재걸기 불필요 (PIC 표 GENSEI_SAVE_PIC_FDC로 이벤트 자체가 복원됨).
+※ ReadID 보류 중 in_cmd[0..1] (MFM/헤드 조건, 307행)은 함께 저장됨.
+
+[지시 4번 — §4.2 8번 고지문]
+디스크 이미지 내용·쓰기본은 저장하지 않는다 (호스트 UI 고지 사항).

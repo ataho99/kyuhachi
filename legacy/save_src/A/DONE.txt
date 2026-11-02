@@ -1,0 +1,1 @@
+완료 2026-10-23T11:09:50Z, 산출 4개(vga_pc98_state.cpp, A_inventory.txt, PROGRESS.txt, DONE.txt; .cpp.A 0개).

@@ -1,0 +1,15 @@
+# t52i 시험: B1~B3 화면 + 동작 환경 ×
+shot:t52i_main
+D O shot:t52i_pick
+startpick shot:t52i_startpop_from_pick
+C shot:t52i_pick_back
+home E shot:t52i_extra
+D D D O shot:t52i_help
+home D D O shot:t52i_screen_row0
+D D D D D D D D D shot:t52i_screen_fullscreen_row
+home D D D O shot:t52i_conf
+valdump
+D L L valdump shot:t52i_conf_changed
+C valdump
+save
+shot:t52i_after_back

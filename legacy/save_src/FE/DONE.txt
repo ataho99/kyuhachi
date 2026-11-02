@@ -1,0 +1,1 @@
+DONE — 2026-10-23, 산출 8개(F_required_symbols.txt, pc98_savestate.h/.cpp, pic.cpp.E, pic.cpp.E.diff, E_events.txt, PROGRESS.txt, DONE.txt).

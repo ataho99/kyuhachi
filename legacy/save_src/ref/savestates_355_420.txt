@@ -1,0 +1,66 @@
+		*ptr--= *ptr1;
+		*ptr1++ = tmp_char;
+	}
+	return str;
+}
+#endif
+
+SaveState& SaveState::instance() {
+	static SaveState singleton;
+	return singleton;
+}
+
+void SaveState::registerComponent(const std::string& uniqueName, Component& comp) {
+	components.insert(std::make_pair(uniqueName, CompData(comp)));
+}
+
+#define CASESENSITIVITY (0)
+#define MAXFILENAME (256)
+
+void zipSetCurrentTime(zip_fileinfo &zi) {
+	zi.dosDate = 0;
+	zi.internal_fa = 0;
+	zi.external_fa = 0;
+	zi.tmz_date.tm_sec = 0;
+	zi.tmz_date.tm_min = 0;
+	zi.tmz_date.tm_hour = 0;
+	zi.tmz_date.tm_mday = 0;
+	zi.tmz_date.tm_mon = 0;
+	zi.tmz_date.tm_year = 0;
+
+	time_t tm_t = time(NULL);
+	struct tm* filedate = localtime(&tm_t);
+	if (filedate != NULL) {
+		zi.tmz_date.tm_sec  = filedate->tm_sec;
+		zi.tmz_date.tm_min  = filedate->tm_min;
+		zi.tmz_date.tm_hour = filedate->tm_hour;
+		zi.tmz_date.tm_mday = filedate->tm_mday;
+		zi.tmz_date.tm_mon  = filedate->tm_mon;
+		zi.tmz_date.tm_year = filedate->tm_year;
+	}
+}
+
+#ifdef __APPLE__
+// In darwin and perhaps other BSD variants off_t is a 64 bit value, hence no need for specific 64 bit functions
+#define FOPEN_FUNC(filename, mode) fopen(filename, mode)
+#define FTELLO_FUNC(stream) ftello(stream)
+#define FSEEKO_FUNC(stream, offset, origin) fseeko(stream, offset, origin)
+#else
+#define FOPEN_FUNC(filename, mode) fopen64(filename, mode)
+#define FTELLO_FUNC(stream) ftello64(stream)
+#define FSEEKO_FUNC(stream, offset, origin) fseeko64(stream, offset, origin)
+#endif
+
+int flagged_backup(char *zip);
+int flagged_restore(char* zip);
+
+int zipOutOpenFile(zipFile zf,const char *zfname,zip_fileinfo &zi,const bool compress) {
+	const int opt_compress_level = compress ? 9 : 0;
+
+	return zipOpenNewFileInZip3_64(zf,zfname,&zi,
+		NULL,0,NULL,0,NULL/* comment*/,
+		(opt_compress_level != 0) ? Z_DEFLATED : 0,
+		opt_compress_level,0,
+		-MAX_WBITS, DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY,
+		NULL/*password*/,0/*crcFile*/,1/*zip64*/);
+}

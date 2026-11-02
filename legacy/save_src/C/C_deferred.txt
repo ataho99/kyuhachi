@@ -1,0 +1,2 @@
+cbus/pcm86io.c:153 · static uint8_t lrclock에 대한 extern "C" getter/setter 필요 — 통합 시 pcm86io.c.C 사본에 pcm86io_get_lrclock/pcm86io_set_lrclock 추가 후 pc98_fm_state.cpp와 링크 (본 런에서는 선언만 두고 정의는 deferred)
+snd_pc98/sound/fmtimer.c:11 · static unsigned char nevent_is_set[2]에 fmtimer_set_nevent_flags라는 이름의 함수는 S에 없음 (fmtimer.h에는 fmtimer_reset/setreg만) — 본 초안은 fmtimer_setreg(0x27, reg) 재적용으로 대체하므로 당장 사본 불필요, 엄밀한 플래그 직저장이 필요해지면 fmtimer.c.C에 접근자 추가

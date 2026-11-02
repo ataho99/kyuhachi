@@ -1,0 +1,82 @@
+# A_inventory.txt — pc98_video (§2.5·§2.6 "이미 저장됨" vs 이 컴포넌트가 새로 저장할 것)
+# 형식: 변수 · 파일:줄 · 크기(x86-64, sizeof로 확정 요망) · 값형 여부 · 저장 방식
+# 값형 확인: 저장 구조체에 가상함수·std::string 멤버·원시 포인터 멤버 없음. static const 표는 인스턴스 밖.
+
+## 새로 저장 (vga_pc98_state.cpp, get/setBytes 동일 순서)
+pc98_gdc[2] · vga_pc98_gdc.cpp:59 / 형 include/pc98_gdc.h:35-184 · 약 240B×2 · 값형(draw.base는 PhysPt 오프셋, static gdc_rt/vectdir/gram_base는 표라 제외) · 원시 바이트 덤프
+gdc_proc_delay_set · vga_pc98_gdc.cpp:58 · 1B · 값형(bool) · 원시
+gdc_clock_1, gdc_clock_2 · vga_pc98_crtc.cpp:59,60 · 각 1B · 값형 · 원시
+gdc_5mhz_mode · vga_pc98_crtc.cpp:62 · 1B · 값형 · 원시
+pc98_256kb_boundary · vga_pc98_crtc.cpp:69 · 1B · 값형 · 원시
+GDC_vsync_interrupt · vga_pc98_crtc.cpp:70 · 1B · 값형 · 원시
+gdc_5mhz_mode_initial · vga_pc98_crtc.cpp:71 · 1B · 값형 · 원시
+GDC_display_plane, GDC_display_plane_pending, GDC_display_plane_wait_for_vsync · vga_pc98_crtc.cpp:72-74 · 각 1B · 값형 · 원시
+pc98_gdc_tile_counter · vga_pc98_crtc.cpp:76 · 1B · 값형 · 원시
+pc98_gdc_modereg · vga_pc98_crtc.cpp:77 · 1B · 값형 · 원시
+pc98_gdc_vramop · vga_pc98_crtc.cpp:78 · 1B · 값형 · 원시
+pc98_gdc_tiles · vga_pc98_crtc.cpp:79 / 형 pc98_gdc.h:186(egc_quad) · 8B · 값형 · 원시
+egc_enable_enable · vga_pc98_crtc.cpp:167 · 1B · 값형 · 원시
+sel_9a0 · vga_pc98_crtc.cpp:309 · 1B · 값형 · 원시
+pc98_crt_mode · vga.cpp:198 · 1B · 값형 · 원시
+pc98_allow_scanline_effect · vga.cpp:231 · 1B · 값형 · 원시
+pc98_allow_4_display_partitions · vga.cpp:232 · 1B · 값형 · 원시
+pc98_graphics_hide_odd_raster_200line · vga.cpp:233 · 1B · 값형 · 원시
+pc98_attr4_graphic · vga.cpp:234 · 1B · 값형 · 원시
+pc98_40col_text · vga.cpp:235 · 1B · 값형 · 원시
+gdc_analog · vga.cpp:236 · 1B · 값형 · 원시(로드 후 update_gdc_analog로 재검증)
+pc98_31khz_mode · vga.cpp:237 · 1B · 값형 · 원시
+pc98_display_enable · vga_draw.cpp:273 · 1B · 값형 · 원시
+pc98_monochrome_mode · vga_draw.cpp:274 · 1B · 값형 · 원시
+pc98_text_first_row_scanline_start · vga_draw.cpp:3084 (70h) · 1B · 값형 · 원시
+pc98_text_first_row_scanline_end · vga_draw.cpp:3085 (72h) · 1B · 값형 · 원시
+pc98_text_row_scanline_blank_at · vga_draw.cpp:3086 (74h) · 1B · 값형 · 원시
+pc98_text_row_scroll_lines · vga_draw.cpp:3087 (76h) · 1B · 값형 · 원시
+pc98_text_row_scroll_count_start · vga_draw.cpp:3088 (78h) · 1B · 값형 · 원시
+pc98_text_row_scroll_num_lines · vga_draw.cpp:3089 (7Ah) · 1B · 값형 · 원시
+pc98_text_draw · vga_draw.cpp:3160 / 형 :3094-3158 · 8B(uint+uchar×4, 미러로 sizeof 확정) · 값형(메서드만, 멤버 포인터 없음) · 원시(미러 구조체, 최종 통합 시 헤더 이전 요망)
+pc98_egc_raw_values[8] · vga_pc98_egc.cpp:56 · 16B · 값형 · 원시
+pc98_egc_access · vga_pc98_egc.cpp:58 · 1B · 값형 · 원시
+pc98_egc_srcmask[2] · vga_pc98_egc.cpp:59 / 선언 pc98_gdc.h:202 · 2B · 값형 · 원시
+pc98_egc_maskef[2] · vga_pc98_egc.cpp:60 / 선언 pc98_gdc.h:203 · 2B · 값형 · 원시
+pc98_egc_mask[2] · vga_pc98_egc.cpp:61 / 선언 pc98_gdc.h:204 · 2B · 값형 · 원시
+pc98_egc_fgc · vga_pc98_egc.cpp:63 · 1B · 값형 · 원시
+pc98_egc_lead_plane · vga_pc98_egc.cpp:64 · 1B · 값형 · 원시
+pc98_egc_compare_lead · vga_pc98_egc.cpp:65 · 1B · 값형 · 원시
+pc98_egc_lightsource · vga_pc98_egc.cpp:66 · 1B · 값형 · 원시
+pc98_egc_shiftinput · vga_pc98_egc.cpp:67 · 1B · 값형 · 원시
+pc98_egc_regload · vga_pc98_egc.cpp:68 · 1B · 값형 · 원시
+pc98_egc_rop · vga_pc98_egc.cpp:69 · 1B · 값형 · 원시
+pc98_egc_foreground_color · vga_pc98_egc.cpp:70 · 1B · 값형 · 원시
+pc98_egc_background_color · vga_pc98_egc.cpp:71 · 1B · 값형 · 원시
+pc98_egc_shift_descend · vga_pc98_egc.cpp:73 · 1B · 값형 · 원시
+pc98_egc_shift_destbit · vga_pc98_egc.cpp:74 · 1B · 값형 · 원시
+pc98_egc_shift_srcbit · vga_pc98_egc.cpp:75 · 1B · 값형 · 원시
+pc98_egc_shift_length · vga_pc98_egc.cpp:76 · 2B · 값형 · 원시
+pc98_egc_src · vga_memory.cpp:1002 · 8B · 값형 · 원시
+pc98_egc_bgcm · vga_memory.cpp:1003 · 8B · 값형 · 원시
+pc98_egc_fgcm · vga_memory.cpp:1004 · 8B · 값형 · 원시
+pc98_egc_data · vga_memory.cpp:1005 · 8B · 값형 · 원시
+pc98_egc_last_vram · vga_memory.cpp:1006 · 8B · 값형 · 원시
+pc98_egc_shift · vga_memory.cpp:1008 / 형 :743-783 · 약 532B(buffer 512+카운터, 미러로 sizeof 확정) · 값형(템플릿 메서드·debug용 string 메서드만, 멤버 포인터·가상 없음) · 원시(미러 구조체, 최종 통합 시 헤더 이전 요망)
+pc98_text_palette[8] · vga_pc98_dac.cpp:50 / 선언 pc98_gdc.h:190 · 32B · 값형 · 원시
+pc98_16col_analog_rgb_palette_index · vga_pc98_dac.cpp:51 · 1B · 값형 · 원시
+pc98_pal_vga[768] · vga_pc98_dac.cpp:53 · 768B · 값형 · 원시
+pc98_pal_analog[768] · vga_pc98_dac.cpp:54 · 768B · 값형 · 원시
+pc98_pal_digital[8] · vga_pc98_dac.cpp:55 · 8B · 값형 · 원시
+pc98_pegc_mmio[0x200] · vga_memory.cpp:39 · 512B · 값형 · 원시
+pc98_pegc_banks[2] · vga_memory.cpp:40 · 8B · 값형 · 원시
+pc98_cg_kanji_dot_access_mode · vga_pc98_cg.cpp:49 · 1B · 값형 · 원시
+a1_font_load_addr · vga_pc98_cg.cpp:50 · 2B · 값형 · 원시
+a1_font_char_offset · vga_pc98_cg.cpp:51 · 1B · 값형 · 원시
+
+## 이미 저장됨 (Vga 컴포넌트가 저장 — 중복 저장 금지)
+텍스트·그래픽 VRAM 본체 vga.mem.linear 544KB(문자 8KB+속성 8KB+4플레인) · POD_Save_VGA_Memory(vga_memory.cpp:3020) · 이미 저장됨
+CG 폰트 RAM vga.draw.font[516KB](외자 포함) · POD_Save_VGA_Draw(vga_draw.cpp:8624, include/vga.h:199) · 이미 저장됨
+팔레트 결과물 vga.dac.rgb/xlat32 · POD_Save_VGA_Dac(vga_dac.cpp:481) · 이미 저장됨(원본 레지스터만 새로 저장 후 pc98_update_palette로 재생성)
+파생 포인터 pc98_pgraph_current_display_page/cpu_page · vga.cpp:184,186 · 저장 금지, pc98_update_page_ptrs()(vga_pc98_gdc.cpp:95)로 재계산
+vga.draw 그리기 상태(폰트 테이블 재배치·drawline 포함) · POD_Save_VGA_Draw 통째 + 로드 꼬리 VGA_SetupDrawing(0)(vga.cpp:2297) · 이미 저장됨(pc98_video 후처리에서 한 번 더 호출)
+
+## 원본 수정 사본 판정
+.cpp.A 사본 없음. 후처리 6함수(pc98_update_page_ptrs/update_gdc_analog/pc98_update_palette/VGA_SetupHandlers/VGA_SetupDrawing/gdc_proc_schedule_delay)와
+GDC_ProcDelay(vga_pc98_gdc.cpp:716) 모두 non-static 정의 확인 → vga_pc98_state.cpp 안 extern만으로 해결.
+GDC_ProcDelay는 이미 non-static이라 노출 사본 불필요 — PIC 이벤트 표 추가는 E런 소관.

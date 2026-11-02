@@ -1,0 +1,29 @@
+﻿Shinonome 16 dot Gothic (shnmk16.bdf, JIS X 0208) - used as res/fonts/shinonome16_jp.fnt (FONTX2)
+
+Source: http://openlab.ring.gr.jp/efont/dist/shinonome/shinonome-0.9.11p1.tar.bz2  (project: http://openlab.ring.gr.jp/efont/shinonome/)
+Archive size/sha256: 4814008 bytes / 95663c95c92ba5765f63ccbdf033eb93b707be01812a989c548db943479c838f
+The BDF header says: "Public Domain" (design: Yasuyuki Furukawa; maintained by /efont/, Electronic Font Open Laboratory).
+
+------------------------------------------------------------
+Original license wording (file LICENSE of the archive, converted from EUC-JP to UTF-8)
+------------------------------------------------------------
+●東雲フォントライセンス
+                                                                    2001
+                                     The Electronic Font Open Laboratory
+                                        http://openlab.ring.gr.jp/efont/
+
+このアーカイブに含まれるすべてのフォントデータ、ドキュメント、スクリプ
+ト類はすべて Public Domain で提供されています 。
+
+但し、日本に於いては現時点で著作権を放棄することは法律上不可能であり、
+AUTHORS に列挙されている作者がその権利を行使しないと宣言することで実質
+的な Public Domain であるとします。
+
+自由な改造、他フォーマットへの変換、組込み、再配布を行うことができます。
+同時に、これらはすべて完全に無保証です。
+------------------------------------------------------------
+
+In short: all font data, documents and scripts of the archive are provided as Public Domain; because Japanese law does not allow giving up copyright, the authors listed in AUTHORS declare that they do not exercise their rights, so it is effectively Public Domain. Modification, conversion to other formats, embedding and redistribution are free. NO WARRANTY.
+
+Changes made by Kyuhachi: (1) converted from BDF to FONTX2 (16x16, Shift_JIS layout, JIS X 0208 only). (2) The glyph positions that AUTHORS lists as taken from the X11 jiskan16 font (a few symbols) are left EMPTY so that this file contains only the public-domain Shinonome design; the program draws those few symbols with another font. Nothing else was changed.
+Conversion report: shinonome16_jp.fnt: 글리프 6772 · 비운 칸(JIS 빈 행·BDF에 없음) 1124 · jiskan16 유래라 일부러 뺀 자리 107(목록 107) · 규격 불일치 0 · 블록 84 · 크기 253026 B

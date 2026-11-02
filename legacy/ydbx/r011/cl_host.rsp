@@ -1,0 +1,8 @@
+/c /nologo /W3 /EHsc /MT /O2 /Zi /Zc:wchar_t /Zc:forScope /Zc:inline /fp:precise /GS /Gd /TP /FC
+/D WIN32 /D __WIN32__ /D _CRT_SECURE_NO_WARNINGS /D _FILE_OFFSET_BITS=64 /D C_SDL2=1 /D _MBCS
+/I"Y:\dbx_ws\r011"
+/I"Y:\dbx_ws\ana\src\vs\pcap" /I"Y:\dbx_ws\ana\src\vs" /I"Y:\dbx_ws\ana\src\vs\.." /I"Y:\dbx_ws\ana\src\vs\..\include" /I"Y:\dbx_ws\ana\src\vs\..\src" /I"Y:\dbx_ws\ana\src\vs\..\src\aviwriter"
+/I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\cbus" /I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\common" /I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\generic" /I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\sound" /I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\x11" /I"Y:\dbx_ws\ana\src\vs\..\src\hardware\snd_pc98\sound\getsnd"
+/I"Y:\dbx_ws\ana\src\vs\..\src\libs\mt32" /I"Y:\dbx_ws\ana\src\vs\libpdcurses" /I"Y:\dbx_ws\ana\src\vs\zlib" /I"Y:\dbx_ws\ana\src\vs\libpng" /I"Y:\dbx_ws\ana\src\vs\freetype\include" /I"Y:\dbx_ws\ana\src\vs\sdl2\include" /I"Y:\dbx_ws\ana\src\vs\sdlnet"
+/I"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um" /I"C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\shared"
+/Fd"Y:\dbx_ws\r011\vc143.pdb"

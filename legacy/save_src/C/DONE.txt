@@ -1,0 +1,1 @@
+완료 2026-10-23 11:15 UTC, 산출 5개(pc98_fm_state.cpp·C_inventory.txt·C_deferred.txt·PROGRESS.txt·DONE.txt).

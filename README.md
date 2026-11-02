@@ -1,4 +1,4 @@
-<div align="center">
+<img width="1282" height="958" alt="image" src="https://github.com/user-attachments/assets/861a0e54-91d8-419d-87cf-6bd1fb963b19" /><div align="center">
 
 # 九八 · Kyuhachi
 

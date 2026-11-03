@@ -658,7 +658,6 @@ struct Ui {
     }
     Act key2(UKey k) {
         Act a; if (k == UK_NONE) return a;
-        auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
         switch (scr) {
         case S_SORT: k_sort(k, a); break;
         case S_ENT: k_ent(k, a); break;

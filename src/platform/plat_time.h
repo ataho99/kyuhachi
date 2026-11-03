@@ -1,0 +1,21 @@
+/* platform/plat_time.h -- 시계 (S3). */
+#pragma once
+#include <stdint.h>
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+namespace plat {
+struct LocalTime { int year, month, day, hour, minute, second, ms; };
+#if defined(_WIN32)
+inline LocalTime local_now() { SYSTEMTIME st; GetLocalTime(&st); LocalTime t = { (int)st.wYear, (int)st.wMonth, (int)st.wDay, (int)st.wHour, (int)st.wMinute, (int)st.wSecond, (int)st.wMilliseconds }; return t; }
+/* 파일 시각(FILETIME 100ns 값) → 지역 시각 */
+inline LocalTime local_from_filetime(uint64_t ft) {
+    FILETIME f, l; SYSTEMTIME st; f.dwHighDateTime = (DWORD)(ft >> 32); f.dwLowDateTime = (DWORD)(ft & 0xFFFFFFFFu);
+    FileTimeToLocalFileTime(&f, &l); FileTimeToSystemTime(&l, &st); LocalTime t = { (int)st.wYear, (int)st.wMonth, (int)st.wDay, (int)st.wHour, (int)st.wMinute, (int)st.wSecond, (int)st.wMilliseconds }; return t;
+}
+inline void sleep_ms(unsigned ms) { Sleep(ms); }
+#endif
+}

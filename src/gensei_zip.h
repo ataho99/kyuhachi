@@ -6,6 +6,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include "platform/plat_fs.h" /* S3: platform layer */
 
 namespace zp {
 
@@ -20,11 +21,7 @@ inline uint32_t crc32_update(uint32_t crc, const uint8_t * p, size_t n) {
 
 /* ---- 64비트 파일 위치 */
 inline int seek64(FILE * f, uint64_t off) {
-#if defined(_WIN32)
-    return _fseeki64(f, (long long)off, SEEK_SET);
-#else
-    return fseeko(f, (off_t)off, SEEK_SET);
-#endif
+    return plat::seek64(f, off);
 }
 inline uint16_t r16(const uint8_t * p) { return (uint16_t)(p[0] | (p[1] << 8)); }
 inline uint32_t r32(const uint8_t * p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
@@ -34,11 +31,7 @@ inline uint64_t r64(const uint8_t * p) { return (uint64_t)r32(p) | ((uint64_t)r3
 inline bool open(const std::string & path, Zip & z, std::string * err = NULL) {
     z = Zip(); z.path = path; FILE * f = fopen(path.c_str(), "rb"); if (!f) { if (err) *err = "열 수 없음"; return false; }
     fseek(f, 0, SEEK_END);
-#if defined(_WIN32)
-    uint64_t fs = (uint64_t)_ftelli64(f);
-#else
-    uint64_t fs = (uint64_t)ftello(f);
-#endif
+    uint64_t fs = plat::tell64(f);
     z.fsize = fs; if (fs < 22) { fclose(f); if (err) *err = "zip 이 아님"; return false; }
     size_t tail = (size_t)(fs < 70000 ? fs : 70000); std::vector<uint8_t> t(tail); seek64(f, fs - tail);
     if (fread(t.data(), 1, tail, f) != tail) { fclose(f); if (err) *err = "읽기 실패"; return false; }

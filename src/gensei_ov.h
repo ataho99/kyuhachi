@@ -9,12 +9,7 @@
 #if !defined(_WIN32)
 #include <iconv.h>
 #endif
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
+#include "platform/plat.h" /* S3: platform layer */
 #include "gensei_phrase.h"   /* t52a (#49): windows.h 와 그 앞의 LEAN_AND_MEAN 정의 뒤에 둔다 */
 
 namespace ov {
@@ -91,8 +86,8 @@ static bool jp_cp_ok(uint32_t cp) {
 static const uint8_t * jp_glyph(uint32_t cp, uint8_t * tmp) {
     if (!g_jp_bmpd && !g_jp_fx.ok) return NULL;
     if (!jp_cp_ok(cp)) return NULL;
-    wchar_t w[2] = { (wchar_t)cp, 0 }; char mb[4] = { 0, 0, 0, 0 }; BOOL used = FALSE;
-    int n = WideCharToMultiByte(932, 0, w, 1, mb, 4, NULL, &used);
+    char mb[4] = { 0, 0, 0, 0 }; bool used = false;
+    int n = plat::wchar_to_cp(932, (wchar_t)cp, mb, 4, &used);
     if (n != 2 || used) return NULL;
     int s1 = (uint8_t)mb[0], s2 = (uint8_t)mb[1];
     if (!((s1 >= 0x81 && s1 <= 0x9F) || (s1 >= 0xE0 && s1 <= 0xEA))) return NULL;
@@ -153,8 +148,8 @@ static unsigned cp2code(uint32_t cp) {
     if (cp >= 0x30A1 && cp <= 0x30F6) { uint32_t ki = cp - 0x30A1; return ki < 63 ? 0x8340u + ki : 0x8380u + (ki - 63); }
 #if defined(_WIN32)
     if (cp < 0x10000) {
-        wchar_t wc = (wchar_t)cp; char mb[4]; BOOL bad = FALSE;
-        int n = WideCharToMultiByte(949, 0, &wc, 1, mb, 4, NULL, &bad);
+        char mb[4]; bool bad = false;
+        int n = plat::wchar_to_cp(949, (wchar_t)cp, mb, 4, &bad);
         if (n == 2 && !bad) { unsigned a = (uint8_t)mb[0], b = (uint8_t)mb[1]; if (a >= 0xB0 && a <= 0xC8 && b >= 0xA1 && b <= 0xFE) return jis2sjis((int)(a - 0xA0) + 0x20, (int)(b - 0xA0) + 0x20); }
     }
 #else

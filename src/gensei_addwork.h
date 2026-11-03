@@ -9,38 +9,13 @@
 #include "gensei_zip.h"
 #include <sys/stat.h>
 #include <set>
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <dirent.h>
-#include <unistd.h>
-#endif
+#include "platform/plat.h" /* S3: platform layer */
 
 namespace aw {
 
-#if defined(_WIN32)
-inline std::string conv(const std::string & s, UINT from, UINT to) {
-    if (s.empty()) return s; int n = MultiByteToWideChar(from, 0, s.c_str(), (int)s.size(), NULL, 0); if (n <= 0) return s;
-    std::wstring w((size_t)n, L'\0'); MultiByteToWideChar(from, 0, s.c_str(), (int)s.size(), &w[0], n);
-    int m = WideCharToMultiByte(to, 0, w.c_str(), n, NULL, 0, NULL, NULL); if (m <= 0) return s;
-    std::string o((size_t)m, '\0'); WideCharToMultiByte(to, 0, w.c_str(), n, &o[0], m, NULL, NULL); return o;
-}
-inline std::string acp_to_u8(const std::string & s) { return conv(s, CP_ACP, CP_UTF8); }
-/* UTF-8 → 시스템(ANSI) 문자열. 현재 코드 페이지에 없는 글자가 있으면(손실) 짧은 이름(8.3, ASCII)으로 바꾼다. */
-inline std::string u8_to_acp(const std::string & s) {
-    if (s.empty()) return s; int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), NULL, 0); if (n <= 0) return s;
-    std::wstring w((size_t)n, L'\0'); MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], n);
-    BOOL lossy = FALSE; int m = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, w.c_str(), n, NULL, 0, NULL, &lossy); if (m <= 0) return s;
-    std::string o((size_t)m, '\0'); lossy = FALSE; WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, w.c_str(), n, &o[0], m, NULL, &lossy);
-    if (!lossy) return o;
-    wchar_t sp[1024]; DWORD k = GetShortPathNameW(w.c_str(), sp, 1024);   /* 있는 경로일 때만 */
-    if (k > 0 && k < 1024) { int q = WideCharToMultiByte(CP_ACP, 0, sp, (int)k, NULL, 0, NULL, NULL); if (q > 0) { std::string r((size_t)q, '\0'); WideCharToMultiByte(CP_ACP, 0, sp, (int)k, &r[0], q, NULL, NULL); return r; } }
-    return o;
-}
-#else
-inline std::string acp_to_u8(const std::string & s) { return s; }
-inline std::string u8_to_acp(const std::string & s) { return s; }
-#endif
+inline std::string acp_to_u8(const std::string & s) { return plat::acp_to_u8(s); }
+/* UTF-8 → 시스템(ANSI) 문자열. 현재 코드 페이지에 없는 글자가 있으면(손실) 짧은 이름(8.3, ASCII)으로 바꾼다. (본문: platform/plat_str.h) */
+inline std::string u8_to_acp(const std::string & s) { return plat::u8_to_acp(s); }
 /* 엄격한 UTF-8 검사 · 높은 바이트 유무 */
 inline bool u8_valid(const std::string & s) {
     size_t i = 0, n = s.size();
@@ -59,33 +34,9 @@ inline bool has_hi(const std::string & s) { for (unsigned char c : s) if (c >= 0
 inline std::string sys_from_ini(const std::string & v) { return (has_hi(v) && u8_valid(v)) ? u8_to_acp(v) : v; }
 
 inline void list_dir(const std::string & dir, std::vector<std::string> & files, std::vector<std::string> * subs) {
-#if defined(_WIN32)
-    /* 와이드(UTF-16) API 로 훑는다. 현재 코드 페이지에 없는 글자가 든 이름은 짧은 이름(8.3)으로 돌려준다 (그대로 열 수 있게). */
-    std::wstring wd; { int n = MultiByteToWideChar(CP_ACP, 0, dir.c_str(), (int)dir.size(), NULL, 0); wd.assign((size_t)(n > 0 ? n : 0), L'\0'); if (n > 0) MultiByteToWideChar(CP_ACP, 0, dir.c_str(), (int)dir.size(), &wd[0], n); }
-    WIN32_FIND_DATAW fd; HANDLE h = FindFirstFileW((wd + L"\\*").c_str(), &fd); if (h == INVALID_HANDLE_VALUE) return;
-    auto toacp = [](const wchar_t * w, bool & lossy) -> std::string {
-        int m = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, w, -1, NULL, 0, NULL, NULL); if (m <= 0) { lossy = true; return std::string(); }
-        std::string o((size_t)m, '\0'); BOOL l = FALSE; WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, w, -1, &o[0], m, NULL, &l); o.resize((size_t)m - 1); lossy = l != FALSE; return o; };
-    do {
-        if (!wcscmp(fd.cFileName, L".") || !wcscmp(fd.cFileName, L"..")) continue;
-        bool lossy = false; std::string n = toacp(fd.cFileName, lossy);
-        if (lossy && fd.cAlternateFileName[0]) { bool l2 = false; std::string a = toacp(fd.cAlternateFileName, l2); if (!a.empty()) n = a; }
-        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { if (subs) subs->push_back(n); } else files.push_back(n);
-    } while (FindNextFileW(h, &fd));
-    FindClose(h);
-#else
-    DIR * d = opendir(dir.c_str()); if (!d) return; struct dirent * e;
-    while ((e = readdir(d))) { std::string n = e->d_name; if (n == "." || n == "..") continue; struct stat st; if (stat((dir + "/" + n).c_str(), &st) != 0) continue; if (S_ISDIR(st.st_mode)) { if (subs) subs->push_back(n); } else files.push_back(n); }
-    closedir(d);
-#endif
+    plat::list_dir_acp(dir, files, subs);
 }
-inline char sep() {
-#if defined(_WIN32)
-    return '\\';
-#else
-    return '/';
-#endif
-}
+inline char sep() { return plat::sep(); }
 inline std::string join(const std::string & a, const std::string & b) { if (a.empty()) return b; char c = a.back(); return (c == '\\' || c == '/') ? a + b : a + sep() + b; }
 inline std::string base_of(const std::string & p) { size_t s = p.find_last_of("\\/"); return s == std::string::npos ? p : p.substr(s + 1); }
 inline std::string dir_of(const std::string & p) { size_t s = p.find_last_of("\\/"); return s == std::string::npos ? std::string(".") : p.substr(0, s); }
@@ -93,13 +44,7 @@ inline bool file_stat(const std::string & p, uint64_t & size, uint64_t & mtime) 
     struct stat st; if (stat(p.c_str(), &st) != 0) return false; size = (uint64_t)st.st_size; mtime = (uint64_t)st.st_mtime; return true;
 }
 inline bool dir_exists(const std::string & p) { struct stat st; return stat(p.c_str(), &st) == 0 && (st.st_mode & S_IFDIR); }
-inline bool make_dir(const std::string & p) {
-#if defined(_WIN32)
-    return CreateDirectoryA(p.c_str(), NULL) || GetLastError() == ERROR_ALREADY_EXISTS;
-#else
-    return mkdir(p.c_str(), 0755) == 0 || dir_exists(p);
-#endif
-}
+inline bool make_dir(const std::string & p) { return plat::make_dir(p); }
 inline std::string lower(std::string s) { for (auto & c : s) c = (char)tolower((unsigned char)c); return s; }
 inline std::string hex64(uint64_t v) { char b[24]; snprintf(b, sizeof b, "%016llx", (unsigned long long)v); return b; }
 inline uint64_t fnv(const std::string & s, uint64_t h = 1469598103934665603ull) { for (unsigned char c : s) { h ^= c; h *= 1099511628211ull; } return h; }

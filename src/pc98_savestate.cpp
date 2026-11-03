@@ -7,6 +7,8 @@
  * 파일 입출력은 FILE fread fwrite. 경로는 호스트가 UTF-8 로 준다.
  * 링크 주의: pic.cpp.E 가 pic.obj 를 대체 링크할 때 g_pic_state_unknown_events 를 정의한다.
  */
+#define PLAT_NARROW /* no windows.h here (clashes with DOSBox headers) */
+#include "platform/plat_fs.h"
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -99,11 +101,8 @@ struct Reader {
     }
 };
 
-/* t53a/F5 도우미. Win32 는 헤더 충돌을 피하려고 직접 선언(kernel32). 좁은 문자열 API 는 fopen 과 같은 규약이라 경로 해석이 일치한다. */
+/* t53a/F5 도우미. kernel32 직접 선언(헤더 충돌 회피)은 S3 에서 platform/plat_fs.h (PLAT_NARROW) 로 옮김. */
 extern "C" {
-__declspec(dllimport) int __stdcall CopyFileA(const char *, const char *, int);
-__declspec(dllimport) int __stdcall MoveFileExA(const char *, const char *, unsigned long);
-__declspec(dllimport) int __stdcall DeleteFileA(const char *);
 int __cdecl _commit(int);
 int __cdecl _fileno(FILE *);
 }
@@ -278,11 +277,11 @@ bool PC98_SaveState_ToFile(const char *path, const std::vector<Pc98StateDisk> &d
     size_t n = fwrite(&img[0], 1, img.size(), f);
     bool flushed = (fflush(f) == 0) && (_commit(_fileno(f)) == 0);
     fclose(f);
-    if (n != img.size() || !flushed) { DeleteFileA(tmp.c_str()); err = "short write (temp file)"; return false; }
+    if (n != img.size() || !flushed) { plat::remove_file(tmp); err = "short write (temp file)"; return false; }
     {   /* 읽어 되짚기: 크기·전체 CRC */
         std::vector<uint8_t> back; std::string e2;
         if (!ReadWhole(tmp.c_str(), back) || back.size() != img.size() || CrcOf(&back[0], back.size() - 4) != CrcOf(&img[0], img.size() - 4)) {
-            DeleteFileA(tmp.c_str()); err = "verify failed (temp file)"; return false;
+            plat::remove_file(tmp); err = "verify failed (temp file)"; return false;
         }
     }
     if (stop && !std::strcmp(stop, "tmp")) { err = "test stop after temp"; return false; }
@@ -294,12 +293,12 @@ bool PC98_SaveState_ToFile(const char *path, const std::vector<Pc98StateDisk> &d
             std::string dest;
             if (readable) dest = spath + ".bak";
             else { dest = spath + ".unreadable"; if (FileExists(dest)) dest = spath + ".unreadable2"; }
-            if (!CopyFileA(spath.c_str(), dest.c_str(), 0)) { DeleteFileA(tmp.c_str()); err = "cannot back up previous file: " + dest; return false; }
+            if (!plat::copy_file(spath, dest, false)) { plat::remove_file(tmp); err = "cannot back up previous file: " + dest; return false; }
             LOG_MSG("PC98_SaveState: previous file kept as %s (%s)", dest.c_str(), readable ? "readable" : e3.c_str());
         }
     }
     if (stop && !std::strcmp(stop, "bak")) { err = "test stop after backup"; return false; }
-    if (!MoveFileExA(tmp.c_str(), spath.c_str(), 1 /*REPLACE_EXISTING*/ | 8 /*WRITE_THROUGH*/)) { DeleteFileA(tmp.c_str()); err = "cannot replace save file"; return false; }
+    if (!plat::replace_file(tmp, spath)) { plat::remove_file(tmp); err = "cannot replace save file"; return false; }
     LOG_MSG("PC98_SaveState: wrote %u bytes to %s", (unsigned)img.size(), path);
     return true;
 }

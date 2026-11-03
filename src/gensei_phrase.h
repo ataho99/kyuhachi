@@ -11,15 +11,14 @@
 #include <stdlib.h>
 #include <string>
 #include <map>
-#include <windows.h>
+#include "platform/plat.h" /* S3: platform layer */
 
 static std::map<std::string, std::string> & phr_tbl() { static std::map<std::string, std::string> m; return m; }   /* 지금 언어의 「원문 → 바꿀문구」 */
 struct PhrSlot { char * buf; size_t cap; };
 static std::map<std::string, PhrSlot> & phr_slots() { static std::map<std::string, PhrSlot> m; return m; }       /* 원문마다 고정 칸 */
 static int phr_loaded_count = 0;   /* 지금 언어에서 읽은 줄 수(로그용) */
 static int phr_lang_cur = 0;       /* 0 한국어 · 1 English · 2 にほんご */
-struct PhrLock { CRITICAL_SECTION cs; PhrLock() { InitializeCriticalSection(&cs); } };
-static PhrLock g_phr_lock_o;   /* 구형 도구 모음에도 있는 CRITICAL_SECTION (SRWLOCK 은 컴파일러가 모름) */   /* 칸 만들기·언어 바꾸기를 서로 막는다(문구를 부르는 쪽이 둘 이상의 스레드일 수 있음) */
+static plat::Lock g_phr_lock_o;   /* 구형 도구 모음에도 있는 CRITICAL_SECTION (SRWLOCK 은 컴파일러가 모름) */   /* 칸 만들기·언어 바꾸기를 서로 막는다(문구를 부르는 쪽이 둘 이상의 스레드일 수 있음) */
 static int phr_width(const std::string & s) {   /* ov::tw 와 같은 규칙: ASCII 8 · 그 밖 16 (UTF-8 글자 수 기준) */
     int w = 0; for (size_t i = 0; i < s.size(); ) { unsigned char c = (unsigned char)s[i]; size_t n = c < 0x80 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4; w += c < 0x80 ? 8 : 16; i += n; } return w; }
 static std::string phr_clip(const std::string & s, int maxw) {   /* 표시 폭이 넘치면 글자 경계에서 잘라낸다 */
@@ -46,9 +45,7 @@ static bool phr_parse_line(std::string ln, std::string & key, std::string & val)
 /* 문구 파일 한 개 읽기(키가 겹치면 나중 파일이 이긴다). 실패해도(없음·잘림·깨짐) 아무 일도 없다. maxw > 0 이면 줄마다 그 폭으로 자른다 */
 static void phr_load(const std::string & utf8path, int maxw = 0) {
     try {
-        int wl = MultiByteToWideChar(CP_UTF8, 0, utf8path.c_str(), -1, NULL, 0); if (wl <= 0) return;
-        std::wstring wp((size_t)wl, L'\0'); MultiByteToWideChar(CP_UTF8, 0, utf8path.c_str(), -1, &wp[0], wl);
-        FILE * f = _wfopen(wp.c_str(), L"rb"); if (!f) return;
+        FILE * f = plat::fopen_u8_rb(utf8path); if (!f) return;
         std::string all; char buf[4096]; size_t n; while ((n = fread(buf, 1, sizeof buf, f)) > 0) { all.append(buf, n); if (all.size() > (4u << 20)) break; }
         fclose(f);
         if (all.size() >= 3 && (unsigned char)all[0] == 0xEF && (unsigned char)all[1] == 0xBB && (unsigned char)all[2] == 0xBF) all.erase(0, 3);   /* BOM 있어도 없어도 */
@@ -62,10 +59,7 @@ static void phr_load(const std::string & utf8path, int maxw = 0) {
 /* exe 와 같은 폴더의 파일을 유니코드 경로로 연다 — 한글·일본어 폴더에 풀어도 읽힌다(ACP 변환을 거치지 않음) */
 static void phr_load_beside_exe(const wchar_t * name, int maxw = 0) {
     try {
-        wchar_t mp[1024]; DWORD n = GetModuleFileNameW(NULL, mp, 1024); if (n == 0 || n >= 1024) return;
-        std::wstring p(mp, n); size_t sl = p.find_last_of(L"\\/"); p = (sl == std::wstring::npos ? std::wstring() : p.substr(0, sl + 1)) + name;
-        int ul = WideCharToMultiByte(CP_UTF8, 0, p.c_str(), -1, NULL, 0, NULL, NULL); if (ul <= 0) return;
-        std::string u((size_t)ul, '\0'); WideCharToMultiByte(CP_UTF8, 0, p.c_str(), -1, &u[0], ul, NULL, NULL); u.resize((size_t)ul - 1);
+        std::string u; if (!plat::beside_exe_u8(name, u)) return;
         phr_load(u, maxw);
     } catch (...) { }
 }
@@ -79,22 +73,22 @@ static void phr_slot_fill(const std::string & key, PhrSlot & s) {
 /* 화면용 문구: 칸의 포인터(프로그램 끝까지 유효). 칸은 처음 부를 때 만들고, 내용은 언어를 바꿀 때 제자리에서 바뀐다 */
 static const char * phr_(const char * def) {
     if (!def) return def;
-    EnterCriticalSection(&g_phr_lock_o.cs); const char * r = def;
+    g_phr_lock_o.lock(); const char * r = def;
     auto & m = phr_slots(); auto it = m.find(def);
     if (it == m.end()) {
-        size_t dl = strlen(def); PhrSlot s; s.cap = dl + 1 + 240; s.buf = (char *)malloc(s.cap); if (!s.buf) { LeaveCriticalSection(&g_phr_lock_o.cs); return def; }   /* 번역이 원문보다 길어도 들어가도록 여유 */
+        size_t dl = strlen(def); PhrSlot s; s.cap = dl + 1 + 240; s.buf = (char *)malloc(s.cap); if (!s.buf) { g_phr_lock_o.unlock(); return def; }   /* 번역이 원문보다 길어도 들어가도록 여유 */
         phr_slot_fill(def, s); it = m.insert(std::make_pair(std::string(def), s)).first;
     }
-    r = it->second.buf; LeaveCriticalSection(&g_phr_lock_o.cs); return r;
+    r = it->second.buf; g_phr_lock_o.unlock(); return r;
 }
 /* UI 언어 지정(0 한국어 · 1 English · 2 にほんご). 문구 파일을 다시 읽고 모든 칸을 새 언어로 바꾼다 — 재시작 불필요 */
 static void phr_set_lang(int lang) {
     if (lang < 0 || lang > 2) lang = 0;
-    EnterCriticalSection(&g_phr_lock_o.cs);
+    g_phr_lock_o.lock();
     phr_lang_cur = lang; phr_tbl().clear(); phr_loaded_count = 0;
     if (lang == 0) { phr_load_beside_exe(L"strings_ko.txt"); phr_load_beside_exe(L"strings.txt", 600); }   /* 한국어: 사용자 덮어쓰기 strings.txt 가 마지막 */
     else if (lang == 1) phr_load_beside_exe(L"strings_en.txt");
     else phr_load_beside_exe(L"strings_ja.txt");
     for (auto & kv : phr_slots()) phr_slot_fill(kv.first, kv.second);
-    LeaveCriticalSection(&g_phr_lock_o.cs);
+    g_phr_lock_o.unlock();
 }

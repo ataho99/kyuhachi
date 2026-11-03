@@ -56,6 +56,7 @@
 #include "gensei_boostaud.h"
 #include "gensei_nkdb.h"
 #include "gensei_addwork.h"
+#include "platform/plat.h" /* S3: platform layer */
 #include "gensei_uilist.h"
 #include "gensei_embed.h"   /* r019: 글꼴·셰이더 내장본 (빌드 스크립트가 생성) */
 
@@ -133,8 +134,7 @@ static std::string gh_mixed_u8(const char * s, int n) {
         if ((c & 0xF0) == 0xE0 && cont(i + 1) && cont(i + 2)) { o.append(s + i, 3); i += 3; continue; }
         if (c == 0xC2 && i + 1 < n && (unsigned char)s[i + 1] == 0xB7 && (i == 0 || s[i - 1] == ' ') && (i + 2 >= n || s[i + 2] == ' ')) { o.append(s + i, 2); i += 2; continue; }
         int j = i; while (j < n && (unsigned char)s[j] >= 0x80) { if ((((unsigned char)s[j]) & 0xF0) == 0xE0 && cont(j + 1) && cont(j + 2) && j > i) break; j++; }
-        int wl = MultiByteToWideChar(CP_ACP, 0, s + i, j - i, NULL, 0);
-        if (wl > 0) { std::wstring w((size_t)wl, L'\0'); MultiByteToWideChar(CP_ACP, 0, s + i, j - i, &w[0], wl); int ul = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), wl, NULL, 0, NULL, NULL); if (ul > 0) { std::string u((size_t)ul, '\0'); WideCharToMultiByte(CP_UTF8, 0, w.c_str(), wl, &u[0], ul, NULL, NULL); o += u; } }
+        { std::string u; if (plat::acp_bytes_to_u8(s + i, j - i, u)) o += u; }
         i = j;
     }
     return o;
@@ -426,17 +426,18 @@ static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bo
 static volatile float g_scanv = 7.0f, g_maskv = 0.15f, g_bleedv = 0.0f, g_glowv = 0.0f, g_nearv = 0.0f;   /* t48c: 빛 번짐 · 밑 그림 nearest(1) */   /* crt 셰이더 uniform(렌더 스레드가 읽음) */
 static std::string g_exedir, g_cfgpath;
 /* ------------------------------------------------------------------ r020 (#247정정·#248): 공용 자원 run\res\fonts · run\res\rhythm */
-static bool gh_exists(const std::string & p) { return GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES; }
+static bool gh_exists(const std::string & p) { return plat::exists(p.c_str()); }
 static std::string gh_res_font_path(const std::string & name) {   /* 글꼴 이름 → 파일 (res\fonts 우선, 옛 exe 옆도 허용). 없으면 res 쪽 경로를 돌려준다 */
     std::string a = g_exedir + "\\res\\fonts\\" + name + ".bmp", b = g_exedir + "\\" + name + ".bmp";
     if (gh_exists(a)) return a; if (gh_exists(b)) return b; return a;
 }
 /* t52b (#127): anex86 형식 글꼴 BMP(524,350 B)가 하나도 없으면 PC-98 글꼴 로딩 뒤 널 읽기(c0000005)로 죽었다.
  * → 작품을 시작하기 전에 막고 안내한다. 일부만 있으면 있는 것으로 대신한다(글자 모양은 달라도 죽지 않음). */
-static bool gh_font_bmp_ok(const std::string & p) { WIN32_FIND_DATAA fd; HANDLE h = FindFirstFileA(p.c_str(), &fd); if (h == INVALID_HANDLE_VALUE) return false; FindClose(h); return !(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && fd.nFileSizeHigh == 0 && fd.nFileSizeLow == 524350u; }
+static bool gh_font_bmp_ok(const std::string & p) { bool ok = false; if (!plat::find_a(p, [&](const plat::DirEnt & e) { ok = !e.is_dir && e.size_hi == 0 && e.size_lo == 524350u; return false; })) return false; return ok; }
 static bool gh_any_font_bmp(std::string * which) {
-    WIN32_FIND_DATAA fd; std::string dir = g_exedir + "\\res\\fonts\\"; HANDLE h = FindFirstFileA((dir + "*.bmp").c_str(), &fd);
-    if (h != INVALID_HANDLE_VALUE) { do { if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && fd.nFileSizeHigh == 0 && fd.nFileSizeLow == 524350u) { if (which) *which = dir + fd.cFileName; FindClose(h); return true; } } while (FindNextFileA(h, &fd)); FindClose(h); }
+    std::string dir = g_exedir + "\\res\\fonts\\"; bool found = false;
+    plat::find_a(dir + "*.bmp", [&](const plat::DirEnt & e) { if (!e.is_dir && e.size_hi == 0 && e.size_lo == 524350u) { if (which) *which = dir + e.name; found = true; return false; } return true; });
+    if (found) return true;
     { static const char * const nm[2] = { "\\kyuhachi_font.bmp", "\\pc98player_font.bmp" };   /* t52g: 새 이름 먼저, 옛 이름도 읽는다 */
       for (int q = 0; q < 2; q++) { std::string b = g_exedir + nm[q]; if (gh_font_bmp_ok(b)) { if (which) *which = b; return true; } } }
     return false;
@@ -533,12 +534,12 @@ static void gh_nk_load_once(void);
 static int gh_scan_hdd(const std::string & root, std::string & run, std::string & dirp) {
     struct F { std::string d, n; uint64_t sz; }; std::vector<F> v;
     std::function<void(const std::string &, const std::string &, int)> rec = [&](const std::string & ph, const std::string & rel, int dep) {
-        WIN32_FIND_DATAA fd; HANDLE h = FindFirstFileA((ph + "\\*").c_str(), &fd); if (h == INVALID_HANDLE_VALUE) return;
-        do { std::string n = fd.cFileName; if (n == "." || n == "..") continue;
-            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { if (dep < 2) rec(ph + "\\" + n, rel.empty() ? n : rel + "\\" + n, dep + 1); continue; }
-            std::string u; for (char c : n) u += (char)toupper((unsigned char)c); size_t d = u.find_last_of('.'); if (d == std::string::npos) continue; std::string x = u.substr(d + 1), st = u.substr(0, d);
-            if (x != "EXE" && x != "COM" && x != "BAT") continue; if (prof::inst_rank(n) || prof::is_tool_stem(st) || st == "COMMAND" || st == "LHA" || st == "LHARC" || st == "UNLHA" || st == "LHX" || st == "DELETE" || st == "UNINST") continue;
-            v.push_back({ rel, u, ((uint64_t)fd.nFileSizeHigh << 32) | fd.nFileSizeLow }); } while (FindNextFileA(h, &fd)); FindClose(h); };
+        plat::find_a(ph + "\\*", [&](const plat::DirEnt & fd) -> bool {
+        std::string n = fd.name; if (n == "." || n == "..") return true;
+            if (fd.is_dir) { if (dep < 2) rec(ph + "\\" + n, rel.empty() ? n : rel + "\\" + n, dep + 1); return true; }
+            std::string u; for (char c : n) u += (char)toupper((unsigned char)c); size_t d = u.find_last_of('.'); if (d == std::string::npos) return true; std::string x = u.substr(d + 1), st = u.substr(0, d);
+            if (x != "EXE" && x != "COM" && x != "BAT") return true; if (prof::inst_rank(n) || prof::is_tool_stem(st) || st == "COMMAND" || st == "LHA" || st == "LHARC" || st == "UNLHA" || st == "LHX" || st == "DELETE" || st == "UNINST") return true;
+            v.push_back({ rel, u, ((uint64_t)fd.size_hi << 32) | fd.size_lo }); return true; }); };
     rec(root, "", 0);
     if (v.size() > 1) { std::vector<F> b; for (auto & f : v) if (f.n.size() > 4 && f.n.substr(f.n.size() - 4) == ".BAT") b.push_back(f); if (b.size() == 1) { run = b[0].n; dirp = b[0].d; return 1; } }
     if (v.size() > 1) { std::vector<prof::RunEnt> ents; for (auto & f : v) if (f.d.empty()) { prof::RunEnt e; e.name = f.n; e.size = (uint32_t)f.sz; ents.push_back(e); }   /* t43r: 풀린(설치된) 폴더 루트에 실행 파일이 여럿이면 선택 규칙(dos_pick)으로 하나 고른다 */
@@ -1036,22 +1037,22 @@ static void gh_ft_sheet(void) {   /* 20 장 컨택트 시트 (5x4, 장당 320x20
 static volatile bool g_scr_req = false; static std::vector<unsigned int> g_scrshots_ms;
 static bool gh_shot_save(void) {
     if (g_fb.empty() || g_fbw <= 0 || g_fbh <= 0) { gh_osd(phr_("스크린샷 저장 실패"), 1500); gh_log("SCREENSHOT: no frame"); return false; }
-    std::string dir = g_exedir + "\\screenshots"; CreateDirectoryA(dir.c_str(), NULL);
-    SYSTEMTIME st; GetLocalTime(&st); char ts[40]; snprintf(ts, sizeof ts, "%04d%02d%02d-%02d%02d%02d", (int)st.wYear, (int)st.wMonth, (int)st.wDay, (int)st.wHour, (int)st.wMinute, (int)st.wSecond);
+    std::string dir = g_exedir + "\\screenshots"; plat::mkdir(dir.c_str());
+    plat::LocalTime st = plat::local_now(); char ts[40]; snprintf(ts, sizeof ts, "%04d%02d%02d-%02d%02d%02d", st.year, st.month, st.day, st.hour, st.minute, st.second);
     std::string base = dir + "\\" + g_prof.id + "_" + ts, path = base + ".png";
-    for (int n = 2; n < 100 && GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES; n++) path = base + "_" + std::to_string(n) + ".png";
+    for (int n = 2; n < 100 && plat::exists(path.c_str()); n++) path = base + "_" + std::to_string(n) + ".png";
     if (!g_headless && g_use_gl && g_fb_mtx && g_win) {   /* t41: 창에 보이는 그대로(셰이더·곡면·비율) 화면 영역만 저장 */
         snprintf(g_shot_path, sizeof g_shot_path, "%s", path.c_str()); g_shot_w = g_shot_h = 0; g_shot_crop = 1; g_shot_req = 1;
         for (int t = 0; t < 600 && g_shot_req; t++) SDL_Delay(5);
         bool done = !g_shot_req; g_shot_crop = 0; g_shot_req = 0;
-        WIN32_FILE_ATTRIBUTE_DATA fg; bool okg = done && GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &fg) && fg.nFileSizeLow > 0;
+        plat::FileInfo fg; bool okg = done && plat::stat_file(path, fg) && fg.size_lo > 0;
         if (okg) { gh_log("SCREENSHOT OK %s (화면 설정 적용 %dx%d, shader=%d fit=%d curve=%.2f)", path.c_str(), g_shot_w, g_shot_h, (int)g_shader, (int)g_fit, (double)g_curve); gh_osd(phr_("스크린샷 저장됨"), 1500); return true; }
         gh_log("SCREENSHOT GL 경로 실패(done=%d) — 원본 프레임으로 대체", (int)done);
     }
     std::vector<uint32_t> out; const uint32_t * src = g_fb.data();
     if (g_fbw != 640 || g_fbh != 400) { out.assign(640 * 400, 0); ov::Canvas sc = { out.data(), 640, 400 }; ov::blit_scaled(sc, g_fb.data(), g_fbw, g_fbh, 0, 0, 640, 400); src = out.data(); }
     gh_png(path.c_str(), src, 640, 400);
-    WIN32_FILE_ATTRIBUTE_DATA fa; bool ok = GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &fa) && (fa.nFileSizeLow > 0);
+    plat::FileInfo fa; bool ok = plat::stat_file(path, fa) && (fa.size_lo > 0);
     gh_log("SCREENSHOT %s %s (src %dx%d -> 640x400)", ok ? "OK" : "FAIL", path.c_str(), g_fbw, g_fbh);
     gh_osd(ok ? phr_("스크린샷 저장됨") : phr_("스크린샷 저장 실패"), 1500); return ok;
 }
@@ -1065,8 +1066,8 @@ static void gh_diag_focus(const char * why) {
 static void gh_diag_enter(int tag) { g_dg_n[tag] = 0; g_dg_m[tag] = 0; gh_log("DIAG enter loop=%s", tag ? "game-menu" : "main-menu"); gh_diag_focus("enter"); }
 static bool gh_winshot(void) {
     if (g_headless || !g_use_gl || !g_win) { gh_log("WINSHOT: no GL window"); return false; }
-    std::string dir = g_exedir + "\\winshots"; CreateDirectoryA(dir.c_str(), NULL);
-    SYSTEMTIME st; GetLocalTime(&st); char ts[64]; snprintf(ts, sizeof ts, "%04d%02d%02d-%02d%02d%02d_%03d", (int)st.wYear, (int)st.wMonth, (int)st.wDay, (int)st.wHour, (int)st.wMinute, (int)st.wSecond, (int)st.wMilliseconds);
+    std::string dir = g_exedir + "\\winshots"; plat::mkdir(dir.c_str());
+    plat::LocalTime st = plat::local_now(); char ts[64]; snprintf(ts, sizeof ts, "%04d%02d%02d-%02d%02d%02d_%03d", st.year, st.month, st.day, st.hour, st.minute, st.second, st.ms);
     std::string path = dir + "\\win_" + ts + ".png";
     snprintf(g_shot_path, sizeof g_shot_path, "%s", path.c_str()); g_shot_w = g_shot_h = 0; g_shot_crop = 0; g_shot_req = 1;
     for (int t = 0; t < 600 && g_shot_req; t++) SDL_Delay(5);
@@ -1201,23 +1202,23 @@ static FILE * gh_open_rw(const std::string & path, uint64_t * size, bool rw = tr
 static bool gh_copy_file(const std::string & from, const std::string & to) {
     FILE * a = fopen(from.c_str(), "rb"); if (!a) return false; FILE * b = fopen((to + ".tmp").c_str(), "wb"); if (!b) { fclose(a); return false; }
     std::vector<char> buf(1 << 20); bool ok = true; for (;;) { size_t n = fread(&buf[0], 1, buf.size(), a); if (!n) break; if (fwrite(&buf[0], 1, n, b) != n) { ok = false; break; } }
-    fclose(a); if (fclose(b) != 0) ok = false; if (!ok) { DeleteFileA((to + ".tmp").c_str()); return false; }
-    DeleteFileA(to.c_str()); return MoveFileA((to + ".tmp").c_str(), to.c_str()) != 0;
+    fclose(a); if (fclose(b) != 0) ok = false; if (!ok) { plat::remove_file((to + ".tmp").c_str()); return false; }
+    plat::remove_file(to.c_str()); return plat::move_file(to + ".tmp", to);
 }
 static std::string gh_disk_dir(void) { return g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x") + "\\disk"; }
 static std::string gh_workpath(const std::string & name) {
     std::string orig = g_imgdir + "\\" + name, dd = gh_disk_dir(); std::string base = name; { size_t p = base.find_last_of("\\/"); if (p != std::string::npos) base = base.substr(p + 1); }
     std::string wp = dd + "\\" + base;
-    WIN32_FILE_ATTRIBUTE_DATA ao, aw; if (!GetFileAttributesExA(orig.c_str(), GetFileExInfoStandard, &ao)) return orig;
-    bool have = GetFileAttributesExA(wp.c_str(), GetFileExInfoStandard, &aw) != 0 && aw.nFileSizeHigh == ao.nFileSizeHigh && aw.nFileSizeLow == ao.nFileSizeLow;
-    if (!have) { CreateDirectoryA(g_savedir.c_str(), NULL); CreateDirectoryA((g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x")).c_str(), NULL); CreateDirectoryA(dd.c_str(), NULL);
+    plat::FileInfo ao, aw; if (!plat::stat_file(orig, ao)) return orig;
+    bool have = plat::stat_file(wp, aw) && aw.size_hi == ao.size_hi && aw.size_lo == ao.size_lo;
+    if (!have) { plat::mkdir(g_savedir.c_str()); plat::mkdir((g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x")).c_str()); plat::mkdir(dd.c_str());
         if (!gh_copy_file(orig, wp)) { gh_log("작업 사본 만들기 실패 -> 원본을 읽기 전용으로 연다: %s", orig.c_str()); return orig; } gh_log("작업 사본 만듦: %s", wp.c_str()); }
     return wp;
 }
 static int gh_reset_disks(const std::string & id) {   /* 「원본 디스크로 초기화」: 작품 저장폴더의 디스크 작업 사본을 지운다(다음 실행 때 원본에서 다시 만든다) */
-    std::string dd = g_savedir + "\\" + id + "\\disk"; int n = 0; WIN32_FIND_DATAA fd; HANDLE h = FindFirstFileA((dd + "\\*").c_str(), &fd);
-    if (h != INVALID_HANDLE_VALUE) { do { if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue; if (DeleteFileA((dd + "\\" + fd.cFileName).c_str())) n++; } while (FindNextFileA(h, &fd)); FindClose(h); }
-    RemoveDirectoryA(dd.c_str()); gh_log("원본 디스크로 초기화: %s 사본 %d개 삭제", id.c_str(), n); return n;
+    std::string dd = g_savedir + "\\" + id + "\\disk"; int n = 0;
+    plat::find_a(dd + "\\*", [&](const plat::DirEnt & fd) { if (fd.is_dir) return true; if (plat::remove_file(dd + "\\" + fd.name)) n++; return true; });
+    plat::remove_dir(dd); gh_log("원본 디스크로 초기화: %s 사본 %d개 삭제", id.c_str(), n); return n;
 }
 static int g_disk_ix[4] = { -1, -1, -1, -1 };   /* 드라이브 -> g_disks 위치 (교체 때 같은 자리를 갱신) */
 static bool gh_attach(int idx, const char * name, bool replace = false) {
@@ -1473,8 +1474,8 @@ static bool gh_do_load(const std::string & path) {
     return ok;
 }
 static std::string gh_slot_path(void) {
-    CreateDirectoryA((g_savedir).c_str(), NULL);
-    std::string d = g_savedir + "\\" + g_prof.id; CreateDirectoryA(d.c_str(), NULL);
+    plat::mkdir((g_savedir).c_str());
+    std::string d = g_savedir + "\\" + g_prof.id; plat::mkdir(d.c_str());
     return d + "\\slot01.g98s";
 }
 /* ===================================================================== r012: 설정 적용·배속·키보드·화면 게시·게임 중 메뉴·부팅 연출 */
@@ -1704,12 +1705,12 @@ static void gh_refresh_game_slots(int gi) {
     ui::UiGame & G = g_ui.games[gi]; G.lastslot = -1; G.thmb.clear(); unsigned long long best = 0;
     for (int i = 0; i < 8; i++) {
         ui::SlotInfo & s = G.slot[i]; s = ui::SlotInfo();
-        std::string p = gh_slot_n(gi, i); WIN32_FILE_ATTRIBUTE_DATA fa;
-        if (!GetFileAttributesExA(p.c_str(), GetFileExInfoStandard, &fa)) continue;
-        s.used = true; s.bytes = (int)fa.nFileSizeLow;
-        FILETIME lft; SYSTEMTIME st; FileTimeToLocalFileTime(&fa.ftLastWriteTime, &lft); FileTimeToSystemTime(&lft, &st);
-        char b[32]; snprintf(b, sizeof b, "%02d-%02d %02d:%02d", (int)st.wMonth, (int)st.wDay, (int)st.wHour, (int)st.wMinute); s.stamp = b;
-        unsigned long long t = ((unsigned long long)fa.ftLastWriteTime.dwHighDateTime << 32) | fa.ftLastWriteTime.dwLowDateTime;
+        std::string p = gh_slot_n(gi, i); plat::FileInfo fa;
+        if (!plat::stat_file(p, fa)) continue;
+        s.used = true; s.bytes = (int)fa.size_lo;
+        plat::LocalTime st = plat::local_from_filetime(fa.mtime_ft);
+        char b[32]; snprintf(b, sizeof b, "%02d-%02d %02d:%02d", st.month, st.day, st.hour, st.minute); s.stamp = b;
+        unsigned long long t = fa.mtime_ft;
         if (t >= best) { best = t; G.lastslot = i; }
         std::vector<uint8_t> png; std::string err;
         if (PC98_SaveState_ReadThumb(p.c_str(), png, err) && !png.empty()) gh_png_decode(png, s.th, s.tw_, s.th_);
@@ -1789,7 +1790,7 @@ static bool gh_make_blank_hdi(const std::string & path, int mb) {
     uint32_t h[8] = { 0, 0, 0x1000, sz, ss, sec, sur, (uint32_t)cyl }; fwrite(h, 1, sizeof h, f);
     static unsigned char z[65536]; size_t pad = 0x1000 - sizeof h; bool ok = fwrite(z, 1, pad, f) == pad;
     for (uint32_t left = sz; ok && left;) { size_t k = left > sizeof z ? sizeof z : left; ok = fwrite(z, 1, k, f) == k; left -= (uint32_t)k; }
-    fclose(f); if (!ok) DeleteFileA(path.c_str()); return ok;
+    fclose(f); if (!ok) plat::remove_file(path.c_str()); return ok;
 }
 static void gh_ui_env_setup(void) {
     ui::Env & E = g_ui.env; E.sep = '\\';
@@ -1817,8 +1818,8 @@ static void gh_ui_env_setup(void) {
             if (!gh_make_blank_hdi(aw::join(dir, nm), mb)) return false; out = nm; gh_log("hdd_make: %s %dMB", nm.c_str(), mb); return true; }
         return false; };
     E.save_test = [](int g, const std::string & name, const ent::Kv & kv) {
-        (void)g; std::string td = g_exedir + "\\logs\\_test"; CreateDirectoryA((g_exedir + "\\logs").c_str(), NULL); CreateDirectoryA(td.c_str(), NULL);
-        DeleteFileA((td + "\\user.ini").c_str()); return prof::save_entry(td, name, kv, name); };
+        (void)g; std::string td = g_exedir + "\\logs\\_test"; plat::mkdir((g_exedir + "\\logs").c_str()); plat::mkdir(td.c_str());
+        plat::remove_file((td + "\\user.ini").c_str()); return prof::save_entry(td, name, kv, name); };
     E.resolved = [](int g, ent::Kv & out) {
         out.clear(); if (g < 0 || g >= (int)g_ui.games.size()) return false;
         std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(g_ui.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
@@ -1841,11 +1842,11 @@ static void gh_ui_env_setup(void) {
     E.font_group = [](const std::string & nm) { for (auto & f : g_ui.fonts) if (f.name == nm) return f.group; return std::string(); };
 }
 static void gh_spawn_test(const std::string & id, const std::string & entry, int secs) {
-    char mp[MAX_PATH]; DWORD n = GetModuleFileNameA(NULL, mp, MAX_PATH); std::string exe(mp, n); std::string td = g_exedir + "\\logs\\_test";
+    std::string exe = plat::exe_path(); std::string td = g_exedir + "\\logs\\_test";
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --entry \"" + aw::u8_to_acp(entry) + "\" --userini \"" + td + "\\user.ini\" --sec " + std::to_string(secs > 0 ? secs : 20) + " --bkosd 1 --savedir \"" + td + "\\saves\" --windowed --noboot --out \"" + td + "\"";
-    STARTUPINFOA si; memset(&si, 0, sizeof si); si.cb = sizeof si; PROCESS_INFORMATION pi; memset(&pi, 0, sizeof pi); std::vector<char> cb(cmd.begin(), cmd.end()); cb.push_back(0);
-    if (CreateProcessA(exe.c_str(), cb.data(), NULL, NULL, FALSE, 0, NULL, g_exedir.c_str(), &si, &pi)) { CloseHandle(pi.hProcess); CloseHandle(pi.hThread); gh_log("test run: %s", cmd.c_str()); }
-    else gh_log("test run FAIL err=%lu", (unsigned long)GetLastError());
+    unsigned long perr = 0;
+    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("test run: %s", cmd.c_str()); }
+    else gh_log("test run FAIL err=%lu", (unsigned long)perr);
 }
 static void gh_launch_note(ui::Ui & U, const ui::Act & a) {   /* 실행 요청의 항목 이름을 프로필 결정에 넘기고 최근 실행 시각을 적는다 */
     prof::g_entry_req = (a.t == ui::A_START) ? a.entry : (a.entry.empty() ? U.sel_entry : a.entry);
@@ -1972,12 +1973,7 @@ static HWND gh_hwnd(void) { SDL_SysWMinfo wi; SDL_VERSION(&wi.version); if (g_wi
 static int g_tb_last = -1;          /* -1 아직 안 함 · 0 밝게 · 1 어둡게 · -3 이 윈도우에서는 지원 안 됨 */
 static unsigned g_tb_tick = 0;
 static bool gh_apps_light(void) {
-    HKEY k; DWORD v = 0, sz = sizeof v, ty = 0; bool light = false;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &k) == ERROR_SUCCESS) {
-        if (RegQueryValueExW(k, L"AppsUseLightTheme", NULL, &ty, (LPBYTE)&v, &sz) == ERROR_SUCCESS && ty == REG_DWORD && v == 1) light = true;
-        RegCloseKey(k);
-    }
-    return light;
+    return plat::apps_use_light_theme();
 }
 static void gh_titlebar_apply(const char * why, bool force) {
     try {
@@ -1985,17 +1981,13 @@ static void gh_titlebar_apply(const char * why, bool force) {
         if (g_tb_last == -3 && !force) return;
         int want = gh_apps_light() ? 0 : 1;
         if (!force && want == g_tb_last) return;
-        HMODULE m = LoadLibraryW(L"dwmapi.dll");
-        typedef HRESULT (WINAPI * PF)(HWND, DWORD, LPCVOID, DWORD);
-        PF f = m ? (PF)GetProcAddress(m, "DwmSetWindowAttribute") : NULL;
-        if (!f) { if (g_tb_last != -3) gh_log("TITLEBAR %s: DwmSetWindowAttribute 없음 -> 기본 제목표시줄 유지", why); g_tb_last = -3; return; }
-        BOOL b = want ? TRUE : FALSE; DWORD at = 20; HRESULT r = f(hw, 20, &b, sizeof b);
-        if (FAILED(r)) { at = 19; r = f(hw, 19, &b, sizeof b); }
-        if (FAILED(r)) { if (g_tb_last != -3) gh_log("TITLEBAR %s: 실패 hr=0x%08lX -> 기본 제목표시줄 유지 (apps_light=%d)", why, (unsigned long)r, 1 - want); g_tb_last = -3; return; }
+        unsigned at = 0; long r = 0; int dr = plat::dwm_dark_titlebar(hw, want != 0, &at, &r);
+        if (dr == 1) { if (g_tb_last != -3) gh_log("TITLEBAR %s: DwmSetWindowAttribute 없음 -> 기본 제목표시줄 유지", why); g_tb_last = -3; return; }
+        if (dr == 2) { if (g_tb_last != -3) gh_log("TITLEBAR %s: 실패 hr=0x%08lX -> 기본 제목표시줄 유지 (apps_light=%d)", why, (unsigned long)r, 1 - want); g_tb_last = -3; return; }
         bool changed = (want != g_tb_last); g_tb_last = want;
         if (changed) {
             gh_log("TITLEBAR %s: apps_light=%d -> %s 제목표시줄 (attr=%u)", why, 1 - want, want ? "어두운" : "밝은", (unsigned)at);
-            if (g_win && !(SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN_DESKTOP)) SetWindowPos(hw, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);   /* 바로 다시 그리게 */
+            if (g_win && !(SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN_DESKTOP)) plat::redraw_frame(hw);   /* 바로 다시 그리게 */
         }
     } catch (...) { }
 }
@@ -2103,7 +2095,7 @@ static void gh_cli_addwork(void) {
         gh_log("ADDWORK%s %s | %s | %s | %s", g_aw_dry ? "(dry)" : "", aw::pretty(w.name).c_str(), r.grade.c_str(), r.judge.c_str(), r.note.c_str());
     }
     gh_log("ADDWORK summary: works=%d added=%d exists=%d skipped=%d blocked=%d dry=%d", (int)ws.size(), S.added, S.exists, S.skipped, S.blocked, (int)g_aw_dry);
-    if (!g_report_dir.empty()) { CreateDirectoryA(g_report_dir.c_str(), NULL); FILE * f = fopen((g_report_dir + "\\match_table.tsv").c_str(), "wb"); if (f) { fwrite(tsv.data(), 1, tsv.size(), f); fclose(f); } }
+    if (!g_report_dir.empty()) { plat::mkdir(g_report_dir.c_str()); FILE * f = fopen((g_report_dir + "\\match_table.tsv").c_str(), "wb"); if (f) { fwrite(tsv.data(), 1, tsv.size(), f); fclose(f); } }
     g_shacache.save(); if (!g_aw_dry && S.added) gh_reload_games();
 }
 /* --batest : 「배속 중 소리」 DSP 단독 시험(소리 장치 없음). 440 Hz 사인을 x 배 속도로 먹이고 출력의 음높이·크기·끊김을 잰다.
@@ -2260,11 +2252,10 @@ static bool gh_boot_seq(bool full) {
     return skipped;
 }
 static void gh_spawn_menu(void) {
-    char mp[MAX_PATH]; DWORD n = GetModuleFileNameA(NULL, mp, MAX_PATH); std::string exe(mp, n);
-    std::string cmd = "\"" + exe + "\" --noboot"; STARTUPINFOA si; memset(&si, 0, sizeof si); si.cb = sizeof si; PROCESS_INFORMATION pi; memset(&pi, 0, sizeof pi);
-    std::vector<char> cb(cmd.begin(), cmd.end()); cb.push_back(0);
-    if (CreateProcessA(exe.c_str(), cb.data(), NULL, NULL, FALSE, 0, NULL, g_exedir.c_str(), &si, &pi)) { CloseHandle(pi.hProcess); CloseHandle(pi.hThread); gh_log("spawn menu OK"); }
-    else gh_log("spawn menu FAIL err=%lu", (unsigned long)GetLastError());
+    std::string exe = plat::exe_path();
+    std::string cmd = "\"" + exe + "\" --noboot"; unsigned long perr = 0;
+    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("spawn menu OK"); }
+    else gh_log("spawn menu FAIL err=%lu", (unsigned long)perr);
 }
 /* ---- t49a (#845): 실행 순서(단계) — 항목의 next= 사슬. 「처음부터」 는 사슬의 첫 단계부터, 「이어하기」 는 지금 고른(마지막) 단계로.
    다음 단계로는 아무 입력(키·클릭·패드) 또는 일시정지 메뉴 「다음 단계」 — 프로세스를 새로 띄워(--entry <다음>) 디스크 구성을 바꾼다. 게임 안 화면 감지·자동 전환 없음 */
@@ -2294,13 +2285,13 @@ static void gh_stage_init(void) {   /* 게임 시작 때: 지금 단계의 다�
     g_stage_next = nx; const ui::UiEnt * ce = gh_find_ent(g_cur_game, nm); std::string nl = phr_("다음 단계로 넘어가기"); if (ce) { auto li = ce->kv.find("next_label"); if (li != ce->kv.end() && !li->second.empty()) nl = li->second; } /* 속성 「다음 단계로」: 메뉴 이름 = next_label (확장 자리: 속성 종류를 더하려면 여기에 항목을 추가) */
     g_ui.stage_next_label = nl; gh_log("STAGE entry='%s' next='%s' (%s)", nm.c_str(), nx.c_str(), nl.c_str()); }
 static void gh_spawn_stage(const std::string & entry) {   /* 같은 실행 인자에서 --demo/--entry 를 빼고 --entry <다음> 을 붙여 새 프로세스로 */
-    char mp[MAX_PATH]; DWORD n = GetModuleFileNameA(NULL, mp, MAX_PATH); std::string exe(mp, n); std::string cmd = "\"" + exe + "\"";
+    std::string exe = plat::exe_path(); std::string cmd = "\"" + exe + "\"";
     for (size_t i = 1; i < g_argv_saved.size(); i++) { const std::string & a = g_argv_saved[i]; if (a == "--demo") continue; if (a == "--entry") { i++; continue; } cmd += " \"" + a + "\""; }
     if (!g_id_given) { cmd += " \""; cmd += (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) ? g_ui.games[g_cur_game].id : std::string(g_prof.id ? g_prof.id : ""); cmd += "\" --noboot"; }
     cmd += " --entry \"" + aw::u8_to_acp(entry) + "\"";
-    STARTUPINFOA si; memset(&si, 0, sizeof si); si.cb = sizeof si; PROCESS_INFORMATION pi; memset(&pi, 0, sizeof pi); std::vector<char> cb(cmd.begin(), cmd.end()); cb.push_back(0);
-    if (CreateProcessA(exe.c_str(), cb.data(), NULL, NULL, FALSE, 0, NULL, g_exedir.c_str(), &si, &pi)) { CloseHandle(pi.hProcess); CloseHandle(pi.hThread); gh_log("STAGE 다음 단계 실행: %s", cmd.c_str()); }
-    else gh_log("STAGE spawn FAIL err=%lu", (unsigned long)GetLastError());
+    unsigned long perr = 0;
+    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("STAGE 다음 단계 실행: %s", cmd.c_str()); }
+    else gh_log("STAGE spawn FAIL err=%lu", (unsigned long)perr);
 }
 static void gh_sendkey(int arg) {
     static const KBD_KEYS K9[9] = { KBD_f10, KBD_1, KBD_2, KBD_3, KBD_4, KBD_5, KBD_6, KBD_7, KBD_kana };
@@ -2339,11 +2330,11 @@ static void gh_menu_run(void) {
             switch (a.t) {
             case ui::A_RESUME: done = true; break;
             case ui::A_NEXTSTAGE: if (!g_stage_next.empty()) { gh_log("STAGE F12 메뉴 「%s」 -> %s", U.stage_next_label.c_str(), g_stage_next.c_str()); if (g_inwin_enabled && !g_headless && g_use_gl) { g_inwin_req = 1; g_inwin_target = g_stage_next; } else g_stage_go = true; g_quit = true; done = true; } break;   /* t49a (#847) · t51a: 창 안 전환 먼저, 안 되면 gh_inwin_cycle 이 g_stage_go 로 폴백 */
-            case ui::A_SAVE: { std::string d = g_savedir + "\\" + g_prof.id; CreateDirectoryA(g_savedir.c_str(), NULL); CreateDirectoryA(d.c_str(), NULL);
+            case ui::A_SAVE: { std::string d = g_savedir + "\\" + g_prof.id; plat::mkdir(g_savedir.c_str()); plat::mkdir(d.c_str());
                 bool ok = gh_do_save(gh_slot_n(g_cur_game, a.slot), false); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 에 저장했습니다") : std::string(phr_("저장에 실패했습니다")), 2000); done = true; break; }
             case ui::A_LOAD: { if (!U.games[g_cur_game].slot[a.slot].used) { gh_osd(phr_("비어 있는 슬롯입니다"), 1500); break; }
                 bool ok = gh_do_load(gh_slot_n(g_cur_game, a.slot)); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 을 불러왔습니다") : std::string(phr_("불러오기에 실패했습니다")), 2000); done = true; break; }
-            case ui::A_DELSLOT: DeleteFileA(gh_slot_n(g_cur_game, a.slot).c_str()); gh_refresh_game_slots(g_cur_game); break;
+            case ui::A_DELSLOT: plat::remove_file(gh_slot_n(g_cur_game, a.slot).c_str()); gh_refresh_game_slots(g_cur_game); break;
             case ui::A_APPLY: gh_apply_settings(U.eff(), true); gensei_western = U.eff().pad == 1; gh_apply_profile_input(g_prof, true); break;   /* t48e (#646): 조작 설정 변경을 바로 입력 층에 */
             case ui::A_SHOT: g_scr_req = true; break;   /* t41: 메뉴가 닫힌 뒤 다음 프레임에서 찍는다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
@@ -2398,7 +2389,7 @@ static bool gh_ui_main_(std::string & out_id) {
     U.in_game = false; U.scr = ui::S_MAIN; SDL_StartTextInput(); U.now_s = (long long)time(NULL);
     {   /* t39: 설치 실행 뒤 처음 열린 목록에서 「설치를 마쳤습니까?」 */
         std::string pf = g_exedir + "\\install_pending.tsv"; FILE * f = fopen(pf.c_str(), "rb");
-        if (f) { char ln[512]; std::string line; if (fgets(ln, sizeof ln, f)) line = ln; fclose(f); DeleteFileA(pf.c_str());
+        if (f) { char ln[512]; std::string line; if (fgets(ln, sizeof ln, f)) line = ln; fclose(f); plat::remove_file(pf.c_str());
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back(); size_t tb = line.find('\t');
             if (tb != std::string::npos) { std::string gid = line.substr(0, tb), en = line.substr(tb + 1); for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { U.ask_install_done((int)i, en); break; } } }
     }
@@ -2428,7 +2419,7 @@ static bool gh_ui_main_(std::string & out_id) {
             switch (a.t) {
             case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; g_cur_game = a.game; g_resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
             case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = g_cur_game = a.game; g_resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
-            case ui::A_DELSLOT: DeleteFileA(gh_slot_n(a.game, a.slot).c_str()); gh_refresh_game_slots(a.game); break;
+            case ui::A_DELSLOT: plat::remove_file(gh_slot_n(a.game, a.slot).c_str()); gh_refresh_game_slots(a.game); break;
             case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); gensei_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
             case ui::A_FULLSCR: gh_fs_toggle(); break;
@@ -2470,7 +2461,7 @@ static bool gh_ui_main(std::string & out_id) {
 /* ---- r012: 창 없이 UI 를 호스트 코드 그대로 그려 PNG 로 (--uitest 폴더). 화면별 캡처 + 부팅 장면 + 설정 저장/읽기 왕복 */
 static void gh_uitest(void) {
     ui::Ui & U = g_ui; static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; int n = 0;
-    CreateDirectoryA(g_uitest_dir.c_str(), NULL);
+    plat::mkdir(g_uitest_dir.c_str());
     for (size_t i = 0; i < U.games.size(); i++) gh_refresh_game_slots((int)i);
     U.cur = U.pick = 2; g_cur_game = 2;
     auto shot = [&](const char * nm) { U.draw(c); { std::string bw = gh_builtin_warn(); if (!bw.empty()) ov::osd_draw(c, bw, false, 336); } char p[700]; if (!g_uikeys_file.empty()) snprintf(p, sizeof p, "%s\\ui_%02d_%s_s%02dt%dc%d.png", g_uitest_dir.c_str(), ++n, nm, (int)U.scr, (int)U.tab, U.sel); else snprintf(p, sizeof p, "%s\\ui_%02d_%s.png", g_uitest_dir.c_str(), ++n, nm);   /* t39ui4: 스크립트 캡처 이름에 화면 번호·탭·선택 줄을 붙인다 */ gh_png(p, buf, 640, 400); };
@@ -2788,7 +2779,7 @@ void GFX_Events(void) {
             static unsigned int next_shot = 0;
             if (next_shot < g_shots_ms.size() && since >= g_shots_ms[next_shot]) { gh_dump_shot(g_shots_ms[next_shot]); next_shot++; }
             { static bool n88 = false; if (!n88 && (unsigned)SegValue(cs) == 0xE800u && (reg_eip & 0xffffu) < 0x10u) { n88 = true;   /* t43k (#334 A2): N88-BASIC ROM 진입 = PC 판 미지원 — 안내 후 정상 종료 */
-                gh_log("N88: E800:%04x 도달 (t=%u) — 이 작품은 N88-BASIC 필요: PC 판 미지원(노바 np2kai 경로 예정)", (unsigned)(reg_eip & 0xffffu), since); if (!g_headless) { wchar_t w[256]; if (MultiByteToWideChar(CP_UTF8, 0, phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), -1, w, 256) > 0) MessageBoxW(NULL, w, L"Kyuhachi - PC-98 BOOTLOADER", MB_OK | MB_ICONINFORMATION | MB_TOPMOST | MB_SETFOREGROUND); } g_quit = true; } }
+                gh_log("N88: E800:%04x 도달 (t=%u) — 이 작품은 N88-BASIC 필요: PC 판 미지원(노바 np2kai 경로 예정)", (unsigned)(reg_eip & 0xffffu), since); if (!g_headless) { plat::msgbox_utf8(phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), 0, 256); } g_quit = true; } }
             static unsigned int last_stat = 0;
             if (g_dumpcode && since / 2000 != last_stat && since > 12000) {
                 PhysPt base = SegPhys(cs) + (reg_eip & (cpu.code.big ? 0xffffffffu : 0xffffu)); char hx[256]; int n = 0;
@@ -2855,8 +2846,7 @@ static void gh_dump_stubs(void);
 static volatile bool g_eexit_seen = false;
 static void gh_msgbox(const char * utf8text) {
     if (g_headless) return;
-    wchar_t w[1024]; int n = MultiByteToWideChar(CP_UTF8, 0, utf8text, -1, w, 1024); if (n <= 0) return;
-    MessageBoxW(NULL, w, L"Kyuhachi - PC-98 BOOTLOADER", MB_OK | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND);
+    plat::msgbox_utf8(utf8text, 1, 1024);
 }
 static LONG WINAPI gh_seh(EXCEPTION_POINTERS * ep) {
     static volatile LONG busy = 0;
@@ -2911,9 +2901,8 @@ static LONG CALLBACK gh_veh(EXCEPTION_POINTERS * ep) {
 }
 static DWORD WINAPI gh_boxkiller(LPVOID) {
     for (;;) {
-        Sleep(200);
-        HWND h = FindWindowA(NULL, "E_Exit");
-        if (h) { g_eexit_seen = true; if (g_log) { fprintf(g_log, "HOST E_Exit message box closed by watchdog\n"); fflush(g_log); } PostMessage(h, WM_CLOSE, 0, 0); PostMessage(h, WM_COMMAND, IDOK, 0); }
+        plat::sleep_ms(200);
+        if (plat::close_window_titled("E_Exit")) { g_eexit_seen = true; if (g_log) { fprintf(g_log, "HOST E_Exit message box closed by watchdog\n"); fflush(g_log); } }
     }
     return 0;
 }
@@ -2955,11 +2944,11 @@ static void gh_finish(int rc) {
    원본 reboot 순서(CPU_Snap_Back_To_Real_Mode · CPU_Snap_Back_Forget · VM_EVENT_RESET · MAPPER_ReleaseAllKeys/LosingFocus · VM_EVENT_RESET_END) → main 이 RunMachine 을 다시 부른다.
    실패(디스크 연결 · 프로필 · 범위 밖 · 예외 · 8초 부팅 신호 없음)는 현행 재실행 경로(gh_spawn_stage / gh_spawn_menu / gh_spawn_game + gh_finish 의 _exit)로 폴백 — 새 창을 만들기 전에 이 프로세스가 끝나므로 창은 늘 하나. */
 static void gh_spawn_game(const std::string & id, const std::string & entry, int resume) {   /* 메뉴에서 고른 작품을 새 프로세스로(폴백 전용) */
-    char mp[MAX_PATH]; DWORD n = GetModuleFileNameA(NULL, mp, MAX_PATH); std::string exe(mp, n);
+    std::string exe = plat::exe_path();
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --noboot"; if (!entry.empty()) cmd += " --entry \"" + aw::u8_to_acp(entry) + "\""; if (resume > 0) cmd += " --resume " + std::to_string(resume);
-    STARTUPINFOA si; memset(&si, 0, sizeof si); si.cb = sizeof si; PROCESS_INFORMATION pi; memset(&pi, 0, sizeof pi); std::vector<char> cb(cmd.begin(), cmd.end()); cb.push_back(0);
-    if (CreateProcessA(exe.c_str(), cb.data(), NULL, NULL, FALSE, 0, NULL, g_exedir.c_str(), &si, &pi)) { CloseHandle(pi.hProcess); CloseHandle(pi.hThread); gh_log("spawn game OK: %s", cmd.c_str()); }
-    else gh_log("spawn game FAIL err=%lu", (unsigned long)GetLastError());
+    unsigned long perr = 0;
+    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("spawn game OK: %s", cmd.c_str()); }
+    else gh_log("spawn game FAIL err=%lu", (unsigned long)perr);
 }
 static std::string gh_conf_sig(const GProfile & p) {   /* 시작 때 한 번만 코어 설정에 들어가는 프로필 값(cycles · 글꼴 · extra · sound). 다르면 같은 창 재부팅으로 못 바꾸므로 폴백 */
     auto kv = [&](const char * k) { auto it = p.kv.find(k); return it == p.kv.end() ? std::string() : it->second; };
@@ -3161,19 +3150,19 @@ int main(int argc, char * argv[]) {
         else if (a[0] != '-') { id = a; g_id_given = true; }
     }
     /* r011b/r012: exe 위치 기준 기본값(인자 없이 더블클릭해도 돌도록) */
-    { char mp[MAX_PATH]; DWORD n = GetModuleFileNameA(NULL, mp, MAX_PATH); std::string s(mp, n); size_t sl = s.find_last_of("\\/"); g_exedir = (sl == std::string::npos) ? std::string(".") : s.substr(0, sl); }
+    { std::string s = plat::exe_path(); size_t sl = s.find_last_of("\\/"); g_exedir = (sl == std::string::npos) ? std::string(".") : s.substr(0, sl); }
     /* t52g (#133): 화면 문구 파일은 설정(언어)을 읽은 뒤 phr_set_lang() 이 읽는다 (strings_ko/en/ja.txt · 한국어는 strings.txt 가 덮어씀) */
     const std::string & exedir = g_exedir;
-    if (GetFileAttributesA("res\\fonts\\kyuhachi_font.bmp") == INVALID_FILE_ATTRIBUTES && GetFileAttributesA("kyuhachi_font.bmp") == INVALID_FILE_ATTRIBUTES && GetFileAttributesA("res\\fonts\\pc98player_font.bmp") == INVALID_FILE_ATTRIBUTES && GetFileAttributesA("pc98player_font.bmp") == INVALID_FILE_ATTRIBUTES) SetCurrentDirectoryA(exedir.c_str());   /* t52g: 새·옛 이름 모두 */
+    if (!plat::exists("res\\fonts\\kyuhachi_font.bmp") && !plat::exists("kyuhachi_font.bmp") && !plat::exists("res\\fonts\\pc98player_font.bmp") && !plat::exists("pc98player_font.bmp")) plat::set_cwd(exedir);   /* t52g: 새·옛 이름 모두 */
     const bool ui_mode = id.empty() && !g_headless;   /* r012: 인자 없음 = 이 실행기의 UI 로 시작 */
-    if (g_imgdir == "." && GetFileAttributesA((exedir + "\\img").c_str()) != INVALID_FILE_ATTRIBUTES) g_imgdir = exedir + "\\img";
+    if (g_imgdir == "." && plat::exists((exedir + "\\img").c_str())) g_imgdir = exedir + "\\img";
     if (g_savedir == "saves") g_savedir = exedir + "\\saves";
     g_cfgpath = exedir + "\\settings.ini";
     { prof::Ini fi; if (prof::ini_load(exedir + "\\res\\flags.ini", fi) && fi.count("flags")) { auto it = fi["flags"].find("mouse_support"); if (it != fi["flags"].end() && it->second == "1") aw::mouse_ok() = true; auto mg = fi["flags"].find("mouse_support_games"); if (mg != fi["flags"].end()) { for (auto & s : prof::split_list(mg->second)) { std::string v = s; for (auto & c : v) c = (char)tolower((unsigned char)c); while (!v.empty() && v.back() == ' ') v.pop_back(); size_t b = v.find_first_not_of(' '); if (b != std::string::npos && b) v = v.substr(b); if (!v.empty()) aw::mouse_games().insert(v); } } } if (g_mouseok_cli) aw::mouse_ok() = true;
       { prof::Profile q; q.disk.assign(4, std::string()); q.disk[0] = "a.fdi"; std::string r3[3]; const char * ids[3] = { "nadia", "ultra", "dotb" }; for (int i = 0; i < 3; i++) { std::map<std::string, std::string> kv; kv["mouse"] = "required"; kv["curated"] = "1"; kv["__id"] = ids[i]; r3[i] = aw::block_reason(q, kv); }
         { char fb[400]; snprintf(fb, sizeof fb, "flags: mouse_support=%d mouse_support_games=%d개 | 마우스 필수 판정(nadia/ultra/dotb) = [%s] / [%s] / [%s]  (빈칸 = 풀림)", (int)aw::mouse_ok(), (int)aw::mouse_games().size(), r3[0].c_str(), r3[1].c_str(), r3[2].c_str()); g_flaglog = fb; } } }
     const bool outdir_auto = (g_outdir == ".");
-    if (outdir_auto) { std::string d = exedir + "\\logs"; CreateDirectoryA(d.c_str(), NULL); d += "\\" + (ui_mode ? std::string("menu") : (id.empty() ? std::string("unknown") : id)); CreateDirectoryA(d.c_str(), NULL); g_outdir = d; }
+    if (outdir_auto) { std::string d = exedir + "\\logs"; plat::mkdir(d.c_str()); d += "\\" + (ui_mode ? std::string("menu") : (id.empty() ? std::string("unknown") : id)); plat::mkdir(d.c_str()); g_outdir = d; }
     {
         std::string lp = g_outdir + "\\kyuhachi_log.txt";
         g_log = fopen(lp.c_str(), "w");
@@ -3279,7 +3268,7 @@ int main(int argc, char * argv[]) {
         { auto in = g_prof.kv.find("install"); auto en = g_prof.kv.find("entry_name"); if (in != g_prof.kv.end() && !in->second.empty() && en != g_prof.kv.end()) { FILE * pf = fopen((exedir + "\\install_pending.tsv").c_str(), "wb"); if (pf) { fprintf(pf, "%s\t%s\n", id.c_str(), en->second.c_str()); fclose(pf); } } }
         if (outdir_auto) {   /* UI 단계 로그는 logs\menu, 게임 로그는 logs\<작품> */
             if (g_log) { fflush(g_log); fclose(g_log); }
-            std::string d = exedir + "\\logs\\" + id; CreateDirectoryA(d.c_str(), NULL); g_outdir = d; g_log = fopen((d + "\\kyuhachi_log.txt").c_str(), "w"); g_log_t0 = SDL_GetTicks();
+            std::string d = exedir + "\\logs\\" + id; plat::mkdir(d.c_str()); g_outdir = d; g_log = fopen((d + "\\kyuhachi_log.txt").c_str(), "w"); g_log_t0 = SDL_GetTicks();
             gh_log("gensei_host " GENSEI_BUILD_ID " game start from UI: '%s' resume_slot=%d noB=%d", id.c_str(), g_resume_slot, (int)g_noB);
         }
     } else {
@@ -3328,7 +3317,7 @@ int main(int argc, char * argv[]) {
             std::string c;
             if (!g_prof.cycles.empty()) { bool num = true; for (char ch : g_prof.cycles) if (ch < '0' || ch > '9') num = false; c += std::string("[cpu]\ncycles=") + (num ? "fixed " : "") + g_prof.cycles + "\n"; }
             {   /* r020 (#247정정): 글꼴은 이름(kr_shinsun · kr_gulim · kr_dotum · jp_default → res\fonts\<이름>.bmp)으로 지정한다. 옛 파일 경로 지정도 읽는다. 보조 zip 은 더 뒤지지 않는다 */
-                auto ex = [](const std::string & p) { return GetFileAttributesA(p.c_str()) != INVALID_FILE_ATTRIBUTES; };
+                auto ex = [](const std::string & p) { return plat::exists(p.c_str()); };
                 std::string f0 = g_prof.font; bool soft = false;
                 { auto fk = g_prof.kv.find("font_kind");   /* t39 (#290/#291): 항목의 font= > 목록 기본 — 원판(jp)은 jp 글꼴, 한글판은 번들 한글(또는 설정에서 고른 같은 묶음 글꼴) */
                   if (f0.empty() && fk != g_prof.kv.end() && fk->second == "jp") { f0 = g_ui.font_jp.empty() ? std::string("jp_default") : g_ui.font_jp; soft = true; }
@@ -3362,7 +3351,7 @@ int main(int argc, char * argv[]) {
             std::string snd = g_prof.kv.count("sound") ? g_prof.kv["sound"] : std::string();
             if (snd.find("rhythm") != std::string::npos || snd.find("2608") != std::string::npos || snd.find("86") != std::string::npos) {
                 std::string rd = g_exedir + "\\res\\rhythm"; int n = 0; static const char * const rn[6] = { "bd", "sd", "top", "hh", "tom", "rim" };
-                for (int i = 0; i < 6; i++) if (GetFileAttributesA((rd + "\\2608_" + rn[i] + ".wav").c_str()) != INVALID_FILE_ATTRIBUTES) n++;
+                for (int i = 0; i < 6; i++) if (plat::exists((rd + "\\2608_" + rn[i] + ".wav").c_str())) n++;
                 if (n > 0) { SetCurrentDirectoryA(rd.c_str()); gh_log("리듬 WAV %d/6 개: %s (현재 폴더로 지정)%s", n, rd.c_str(), n < 6 ? " — 일부 없음" : ""); }
                 else { gh_log("리듬음 파일 없음 — 넣는 곳: %s (sound=%s)", rd.c_str(), snd.c_str()); if (g_osd.empty()) { g_osd = phr_("리듬음 파일 없음 — 넣는 곳: run\\res\\rhythm\\"); g_osd_until = SDL_GetTicks() + 10000; } }
             }
@@ -3460,7 +3449,7 @@ int main(int argc, char * argv[]) {
                 std::string dv = g_prof.kv.count("dosdrv") ? g_prof.kv["dosdrv"] : std::string("a"); if (dv != "a" && dv != "b") dv = "a";
                 if (hddf) {   /* t43c: C: = 작품별 호스트 폴더 (savedir\<id>\hdd). 비어 있으면 설치기 실행, 채워졌으면 실행 파일 탐지 */
                     std::string sd1 = g_savedir, sd2 = g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x"), hd = sd2 + "\\hdd";
-                    CreateDirectoryA(sd1.c_str(), NULL); CreateDirectoryA(sd2.c_str(), NULL); CreateDirectoryA(hd.c_str(), NULL);
+                    plat::mkdir(sd1.c_str()); plat::mkdir(sd2.c_str()); plat::mkdir(hd.c_str());
                     ae += "mount a \"" + hd + "\"\n";
                     std::string run, dirp; int nrun = gh_scan_hdd(hd, run, dirp);
                     std::string idv = g_prof.kv.count("dosinstdrv") ? g_prof.kv["dosinstdrv"] : dv, inst = g_prof.kv.count("dosinst") ? g_prof.kv["dosinst"] : std::string(); if (!inst.empty() && g_prof.kv.count("dosinstargs") && !g_prof.kv["dosinstargs"].empty()) inst += " " + g_prof.kv["dosinstargs"];

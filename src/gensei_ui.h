@@ -16,7 +16,7 @@
 #include <functional>
 #include "gensei_ent.h"
 #include "gensei_fontreg.h"
-#include "gensei_hangul_t48.h"   /* t48b: 한글 조합기 */
+#include "text/gensei_hangul_t48.h"   /* t48b: 한글 조합기 */
 
 namespace ui {
 using namespace ov;

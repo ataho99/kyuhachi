@@ -10,7 +10,7 @@
 #include <iconv.h>
 #endif
 #include "platform/plat.h" /* S3: platform layer */
-#include "gensei_phrase.h"   /* t52a (#49): windows.h 와 그 앞의 LEAN_AND_MEAN 정의 뒤에 둔다 */
+#include "text/gensei_phrase.h"   /* t52a (#49): windows.h 와 그 앞의 LEAN_AND_MEAN 정의 뒤에 둔다 */
 
 namespace ov {
 

@@ -45,8 +45,9 @@
 #if defined(WIN32)
 # include <windows.h>
 #endif
-#include "gensei_input12.h"
-#include "gensei_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
+#include "input/gensei_input12.h"
+#include "input/gensei_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
+#include "input/gensei_inputtypes.h"   /* S6 */
 #include "gensei_ui.h"
 #include "settings/gensei_prof.h"
 #include "pc98_savestate.h"
@@ -164,7 +165,6 @@ void LOG::operator() (char const * format, ...) {
 }
 
 /* ------------------------------------------------------------------ profile */
-struct GKey { unsigned int at_ms; KBD_KEYS key; int step = 0; std::string lab; };   /* t47a: step = 편집 화면 단계 번호(1 부터), lab = OSD 에 보일 이름 */
 struct GProfile {
     const char * id = "";
     const char * disk[4] = { NULL, NULL, NULL, NULL };   /* index 0=A 1=B 2=C 3=D (bios_disk index) */
@@ -297,7 +297,6 @@ static bool gh_parse_amouse(const std::string & s) {   /* "ms:dx,dy,act;..." act
  *   mm <dx> <dy> · mb <l|r> <0|1>  SDL_MOUSEMOTION(xrel,yrel) / 버튼 이벤트
  *   key <SDL키이름> <0|1>          SDL_KEYDOWN/UP (창 포커스 없이)
  *   log <글>                       로그에 한 줄 */
-struct GInj { unsigned at; std::vector<std::string> a; };
 static std::vector<GInj> g_inj; static size_t g_next_inj = 0; static std::string g_inject_file;
 static SDL_Joystick * g_vj = NULL; static int g_vj_idx = -1; static std::string g_vj_map;
 static bool gh_parse_inject(const std::string & path) {
@@ -421,8 +420,9 @@ static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bo
     if (other_on) { ov::osd_draw(oc, other_osd, true, y); y += 30; } if (!g_bk_osd.empty()) ov::osd_draw(oc, g_bk_osd, true, y);   /* t47a: 자동 입력 단계 줄 */
 }
 /* ---- t46x: 화면 키보드 오버레이 (경로 B) — 키 표(플랫폼 무관) + 상태·그리기. SDL 입력층은 gh_kbd_event 한 함수(아래 글루). */
-#include "gensei_kbtable.h"
-#include "gensei_kbov.h"
+#include "input/gensei_kbtable.h"
+#include "input/gensei_kbov.h"
+#include "gensei_kbov_draw.h"   /* S6: kbov drawing half */
 static volatile float g_scanv = 7.0f, g_maskv = 0.15f, g_bleedv = 0.0f, g_glowv = 0.0f, g_nearv = 0.0f;   /* t48c: 빛 번짐 · 밑 그림 nearest(1) */   /* crt 셰이더 uniform(렌더 스레드가 읽음) */
 static std::string g_exedir, g_cfgpath;
 /* ------------------------------------------------------------------ r020 (#247정정·#248): 공용 자원 run\res\fonts · run\res\rhythm */

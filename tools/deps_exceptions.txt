@@ -1,0 +1,2 @@
+# dependency exceptions (checked by hand; check_deps.sh only sees module folders)
+E1 input->core keyboard.h, mouse.h, reason: passes input to the core, ruling #203. Other modules depending on core remain violations.

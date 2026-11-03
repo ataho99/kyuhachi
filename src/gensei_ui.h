@@ -16,13 +16,13 @@
 #include <functional>
 #include "settings/gensei_ent.h"
 #include "settings/gensei_settings.h"   /* S5: Settings struct moved out */
+#include "input/gensei_ukey.h"   /* S6 */
 #include "gensei_fontreg.h"
 #include "text/gensei_hangul_t48.h"   /* t48b: 한글 조합기 */
 
 namespace ui {
 using namespace ov;
 
-enum UKey { UK_NONE, UK_UP, UK_DOWN, UK_LEFT, UK_RIGHT, UK_OK, UK_CANCEL, UK_TRI, UK_SQ, UK_SELECT, UK_L, UK_R, UK_ANY };
 enum ActT { A_NONE, A_START, A_LOAD, A_SAVE, A_RESUME, A_MAINMENU, A_QUIT, A_SENDKEY, A_DISKSWAP, A_APPLY, A_DELSLOT, A_EXTRA, A_ADD, A_WINMULT, A_FULLSCR, A_SHOT, A_TEST, A_SETLANG, A_KBD, A_KBBTN, A_KBSH, A_SETTITLE, A_NEXTSTAGE };   /* t44a (#494): A_SETLANG(game=작품 index, arg 0 자동 1 한글판 2 원판 일본어) */   /* r017: A_ADD(arg 0 파일 1 폴더 2 게임폴더 지정 3 다시 검색 4 해제) · A_WINMULT(arg=배율, 0=사용자 지정) */
 struct Act { ActT t = A_NONE; int game = -1, slot = 0, arg = 0; bool resume = false; std::string entry; };   /* t39: entry = 실행할 항목 이름(빈칸 = 폴더 기본, 「-」 = 항목 없이) */
 

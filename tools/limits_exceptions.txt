@@ -27,3 +27,4 @@ plat_sync.h — 길이/줄수 예외: S3 에서 옛 호출부 본문을 그대�
 plat_time.h — 길이/줄수 예외: S3 에서 옛 호출부 본문을 그대로 옮김(줄 모양 보존)
 plat_window.h — 길이/줄수 예외: S3 에서 옛 호출부 본문을 그대로 옮김(줄 모양 보존)
 gensei_settings.h lines=61 bytes=6181 long=10 — 줄 모양 보존: gensei_ui.h 에서 코드 그대로 옮김(S5)
+gensei_kbov_draw.h lines=80 bytes=5881 long=9 — moved/split unchanged lines (S6)

@@ -20,3 +20,29 @@ tests/golden/saves/*
 !tests/golden/saves/t52i_A_s1.g98s
 .git_failed_*/
 third_party/dosbox-x/
+
+# --- remote main (merged) ---
+# build output
+*.ilk
+!tools/*.exe
+
+# user-supplied files — never commit
+/games/*
+!/games/README.txt
+/fonts/ja/*
+!/fonts/ja/README.txt
+*.rom
+*.ROM
+*.d88
+*.D88
+*.hdi
+*.HDI
+*.fdi
+*.FDI
+*.nfd
+*.hdm
+FREECG98.*
+font.bmp
+
+# user data
+/save/

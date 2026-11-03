@@ -9,7 +9,7 @@ my($k,$ek)=rd($fk); my($e,$ee)=rd($fe); my($j,$ej)=rd($fj);
 my $me=grep{!exists $e->{$_}}keys %$k; my $mj=grep{!exists $j->{$_}}keys %$k;
 my $xe=grep{!exists $k->{$_}}keys %$e; my $xj=grep{!exists $k->{$_}}keys %$j;
 my $unk=0; my %seen;
-for my $d (@src){ for my $f (glob("$d/*.h $d/*.cpp $d/*/*.h $d/*/*.cpp")){ next if $f=~/embed/; open(my $h,'<:encoding(UTF-8)',$f) or next; local $/; my $t=<$h>;
+for my $d (@src){ for my $f (glob("$d/*.h $d/*.cpp $d/*/*.h $d/*/*.cpp $d/*/*/*.h $d/*/*/*.cpp")){ next if $f=~/embed/; open(my $h,'<:encoding(UTF-8)',$f) or next; local $/; my $t=<$h>;
   while($t=~/\bT\(\s*"((?:[^"\\]|\\.)*)"/g){ my $s=$1; $s=~s/\\n/\n/g; $s=~s/\\"/"/g; $s=~s/\\\\/\\/g; next if $seen{$s}++; $unk++ unless exists $k->{$s}; } } }
 printf "keys ko=%d en=%d ja=%d missing_en=%d missing_ja=%d extra_en=%d extra_ja=%d empty=%d src_unknown=%d\n",scalar(keys %$k),scalar(keys %$e),scalar(keys %$j),$me,$mj,$xe,$xj,$ek+$ee+$ej,$unk;
 exit(($me||$mj||$xe||$xj||scalar(keys %$k)!=scalar(keys %$e)||scalar(keys %$k)!=scalar(keys %$j))?1:0);

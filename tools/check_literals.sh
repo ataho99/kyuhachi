@@ -7,4 +7,4 @@ perl -CSD -e '
   while(<$h>){ my $l=$_; $l=~s/\r?\n$//; next unless $l=~/[\x{AC00}-\x{D7A3}]/; next if $l=~m{^\s*(//|\*|/\*)};
    $l=~s{//.*$}{}; $l=~s/\bT\(\s*"(?:[^"\\]|\\.)*"\s*\)//g; next unless $l=~/[\x{AC00}-\x{D7A3}]/;
    $tot++; $log++ if $l=~/\b(gh_log|GH_LOG|LOG|log_|fprintf|printf|puts)\b/; } }
- print "literals outside_T=$tot log_calls=$log\n";' $(ls $D/*.h $D/*.cpp $D/*/*.h $D/*/*.cpp 2>/dev/null)
+ print "literals outside_T=$tot log_calls=$log\n";' $(ls $D/*.h $D/*.cpp $D/*/*.h $D/*/*.cpp $D/*/*/*.h $D/*/*/*.cpp 2>/dev/null)

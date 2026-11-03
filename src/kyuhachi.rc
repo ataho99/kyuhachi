@@ -1,0 +1,29 @@
+#include <winver.h>
+#include "kh_version.h"
+1 ICON "kyuhachi.ico"
+#define KH_STR2(x) #x
+#define KH_STR(x) KH_STR2(x)
+1 VERSIONINFO
+ FILEVERSION KH_VER_MAJOR,KH_VER_MINOR,KH_VER_PATCH,KH_VER_BUILD
+ PRODUCTVERSION KH_VER_MAJOR,KH_VER_MINOR,KH_VER_PATCH,KH_VER_BUILD
+ FILEOS 0x00040004L
+ FILETYPE 0x00000001L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "ProductName", "Kyuhachi"
+      VALUE "FileDescription", "Kyuhachi - PC-98 BOOTLOADER"
+      VALUE "ProductVersion", KH_VERSION ""
+      VALUE "FileVersion", KH_VERSION ""
+      VALUE "OriginalFilename", "Kyuhachi.exe"
+      VALUE "InternalName", "Kyuhachi"
+      VALUE "LegalCopyright", "GNU GPL v2 or later (includes DOSBox-X components)"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END

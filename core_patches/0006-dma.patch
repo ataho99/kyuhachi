@@ -1,0 +1,21 @@
+--- a/hardware/dma.cpp	2026-11-03 10:47:48.752348700 +0900
++++ b/hardware/dma.cpp	2026-11-03 10:47:48.765013500 +0900
+@@ -976,3 +976,18 @@
+ 		}
+ 	} dummy;
+ }
++
++// ---- B run (pc98_sys save-state support, draft, eye-checked, not compiled) ----
++// pc98_port_29h is static (dma.cpp:170), so access goes through here.
++// The setter also restores the derived channel wraparound, mirroring
++// DMA_Write_Port's 0x29 branch (same expression, no existing logic touched).
++uint8_t PC98_GetPort29h(void) {
++    return pc98_port_29h;
++}
++
++void PC98_SetPort29h(uint8_t v) {
++    pc98_port_29h = v;
++    if (DmaControllers[0] != NULL && DmaControllers[0]->GetChannel(v & 3U) != NULL)
++        DmaControllers[0]->GetChannel(v & 3U)->page_bank_increment_wraparound =
++            (uint8_t)(((v & 0x08U) ? 0xF0U : 0x00U) + ((v & 0x04U) ? 0x0FU : 0x00U));
++}

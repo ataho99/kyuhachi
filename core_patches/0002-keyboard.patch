@@ -1,0 +1,141 @@
+--- a/hardware/keyboard.cpp	2026-11-03 10:47:47.814802600 +0900
++++ b/hardware/keyboard.cpp	2026-11-03 10:47:47.829644000 +0900
+@@ -3043,3 +3043,138 @@
+     }
+ } dummy;
+ }
++
++// ---- B run (pc98_sys save-state support, draft, eye-checked, not compiled) ----
++// Only additions: static removal-free accessors + PC98_Sys_RearmEvents.
++// No existing logic touched. Types used below are file-local, so the
++// pc98_sys component calls these helpers instead of extern-ing statics.
++// 8251 UART state (keyboard.cpp:2190-2385, static anonymous struct).
++void PC98_8251_SaveState(std::ostream& stream) {
++    WRITE_POD(&pc98_8251_keyboard_uart_state.data, pc98_8251_keyboard_uart_state.data);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.txdata, pc98_8251_keyboard_uart_state.txdata);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.state, pc98_8251_keyboard_uart_state.state);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.mode_byte, pc98_8251_keyboard_uart_state.mode_byte);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.keyboard_reset, pc98_8251_keyboard_uart_state.keyboard_reset);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.rx_enable, pc98_8251_keyboard_uart_state.rx_enable);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.tx_enable, pc98_8251_keyboard_uart_state.tx_enable);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.valid_state, pc98_8251_keyboard_uart_state.valid_state);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.rx_busy, pc98_8251_keyboard_uart_state.rx_busy);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.rx_ready, pc98_8251_keyboard_uart_state.rx_ready);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.tx_busy, pc98_8251_keyboard_uart_state.tx_busy);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.tx_empty, pc98_8251_keyboard_uart_state.tx_empty);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.io_delay_ms, pc98_8251_keyboard_uart_state.io_delay_ms);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.tx_load_ms, pc98_8251_keyboard_uart_state.tx_load_ms);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.recv_buffer, pc98_8251_keyboard_uart_state.recv_buffer);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.recv_in, pc98_8251_keyboard_uart_state.recv_in);
++    WRITE_POD(&pc98_8251_keyboard_uart_state.recv_out, pc98_8251_keyboard_uart_state.recv_out);
++}
++
++void PC98_8251_LoadState(std::istream& stream) {
++    READ_POD(&pc98_8251_keyboard_uart_state.data, pc98_8251_keyboard_uart_state.data);
++    READ_POD(&pc98_8251_keyboard_uart_state.txdata, pc98_8251_keyboard_uart_state.txdata);
++    READ_POD(&pc98_8251_keyboard_uart_state.state, pc98_8251_keyboard_uart_state.state);
++    READ_POD(&pc98_8251_keyboard_uart_state.mode_byte, pc98_8251_keyboard_uart_state.mode_byte);
++    READ_POD(&pc98_8251_keyboard_uart_state.keyboard_reset, pc98_8251_keyboard_uart_state.keyboard_reset);
++    READ_POD(&pc98_8251_keyboard_uart_state.rx_enable, pc98_8251_keyboard_uart_state.rx_enable);
++    READ_POD(&pc98_8251_keyboard_uart_state.tx_enable, pc98_8251_keyboard_uart_state.tx_enable);
++    READ_POD(&pc98_8251_keyboard_uart_state.valid_state, pc98_8251_keyboard_uart_state.valid_state);
++    READ_POD(&pc98_8251_keyboard_uart_state.rx_busy, pc98_8251_keyboard_uart_state.rx_busy);
++    READ_POD(&pc98_8251_keyboard_uart_state.rx_ready, pc98_8251_keyboard_uart_state.rx_ready);
++    READ_POD(&pc98_8251_keyboard_uart_state.tx_busy, pc98_8251_keyboard_uart_state.tx_busy);
++    READ_POD(&pc98_8251_keyboard_uart_state.tx_empty, pc98_8251_keyboard_uart_state.tx_empty);
++    READ_POD(&pc98_8251_keyboard_uart_state.io_delay_ms, pc98_8251_keyboard_uart_state.io_delay_ms);
++    READ_POD(&pc98_8251_keyboard_uart_state.tx_load_ms, pc98_8251_keyboard_uart_state.tx_load_ms);
++    READ_POD(&pc98_8251_keyboard_uart_state.recv_buffer, pc98_8251_keyboard_uart_state.recv_buffer);
++    READ_POD(&pc98_8251_keyboard_uart_state.recv_in, pc98_8251_keyboard_uart_state.recv_in);
++    READ_POD(&pc98_8251_keyboard_uart_state.recv_out, pc98_8251_keyboard_uart_state.recv_out);
++}
++
++// caps/kana/num (keyboard.cpp:2160-2164, static anonymous struct).
++void PC98_Keyboard_State_SaveState(std::ostream& stream) {
++    WRITE_POD(&pc98_keyboard_state.caps, pc98_keyboard_state.caps);
++    WRITE_POD(&pc98_keyboard_state.kana, pc98_keyboard_state.kana);
++    WRITE_POD(&pc98_keyboard_state.num, pc98_keyboard_state.num);
++}
++
++void PC98_Keyboard_State_LoadState(std::istream& stream) {
++    READ_POD(&pc98_keyboard_state.caps, pc98_keyboard_state.caps);
++    READ_POD(&pc98_keyboard_state.kana, pc98_keyboard_state.kana);
++    READ_POD(&pc98_keyboard_state.num, pc98_keyboard_state.num);
++}
++
++// 8255 value members only (const char* names excluded). Both 8255s are
++// static class instances (keyboard.cpp:2023,2132), so save goes through here.
++static void PC98_8255_SaveBody(const Intel8255& c, std::ostream& stream) {
++    WRITE_POD(&c.latchOutPortA, c.latchOutPortA);
++    WRITE_POD(&c.latchOutPortB, c.latchOutPortB);
++    WRITE_POD(&c.latchOutPortC, c.latchOutPortC);
++    WRITE_POD(&c.mode, c.mode);
++    WRITE_POD(&c.portAWriteMask, c.portAWriteMask);
++    WRITE_POD(&c.portBWriteMask, c.portBWriteMask);
++    WRITE_POD(&c.portCWriteMask, c.portCWriteMask);
++    WRITE_POD(&c.IBF_A, c.IBF_A);
++    WRITE_POD(&c.IBF_B, c.IBF_B);
++    WRITE_POD(&c.OBF_A, c.OBF_A);
++    WRITE_POD(&c.OBF_B, c.OBF_B);
++    WRITE_POD(&c.INTR_A, c.INTR_A);
++    WRITE_POD(&c.INTR_B, c.INTR_B);
++    WRITE_POD(&c.pINTR_A, c.pINTR_A);
++    WRITE_POD(&c.pINTR_B, c.pINTR_B);
++    WRITE_POD(&c.INTE_1, c.INTE_1);
++    WRITE_POD(&c.INTE_2, c.INTE_2);
++    WRITE_POD(&c.INTE_A, c.INTE_A);
++    WRITE_POD(&c.INTE_B, c.INTE_B);
++}
++
++static void PC98_8255_LoadBody(Intel8255& c, std::istream& stream) {
++    // Direct member restore (no outPortC call): SHUT0/1 side effects are
++    // saved separately, speaker inhibit stays with the Keyboard component.
++    READ_POD(&c.latchOutPortA, c.latchOutPortA);
++    READ_POD(&c.latchOutPortB, c.latchOutPortB);
++    READ_POD(&c.latchOutPortC, c.latchOutPortC);
++    READ_POD(&c.mode, c.mode);
++    READ_POD(&c.portAWriteMask, c.portAWriteMask);
++    READ_POD(&c.portBWriteMask, c.portBWriteMask);
++    READ_POD(&c.portCWriteMask, c.portCWriteMask);
++    READ_POD(&c.IBF_A, c.IBF_A);
++    READ_POD(&c.IBF_B, c.IBF_B);
++    READ_POD(&c.OBF_A, c.OBF_A);
++    READ_POD(&c.OBF_B, c.OBF_B);
++    READ_POD(&c.INTR_A, c.INTR_A);
++    READ_POD(&c.INTR_B, c.INTR_B);
++    READ_POD(&c.pINTR_A, c.pINTR_A);
++    READ_POD(&c.pINTR_B, c.pINTR_B);
++    READ_POD(&c.INTE_1, c.INTE_1);
++    READ_POD(&c.INTE_2, c.INTE_2);
++    READ_POD(&c.INTE_A, c.INTE_A);
++    READ_POD(&c.INTE_B, c.INTE_B);
++}
++
++void PC98_Sys8255_SaveState(std::ostream& stream) { PC98_8255_SaveBody(pc98_sys_8255, stream); }
++void PC98_Sys8255_LoadState(std::istream& stream) { PC98_8255_LoadBody(pc98_sys_8255, stream); }
++void PC98_Prn8255_SaveState(std::ostream& stream) { PC98_8255_SaveBody(pc98_prn_8255, stream); }
++void PC98_Prn8255_LoadState(std::istream& stream) { PC98_8255_LoadBody(pc98_prn_8255, stream); }
++
++// Post-load re-arm (B run). uart_rx_load/tx_load/pc98_keyboard_recv_byte are
++// NOT in the old PIC table (keyboard.cpp:2249-2289), so a restored rx_busy
++// would stick forever without this. Called at the end of pc98_sys setBytes.
++void PC98_Sys_RearmEvents(void) {
++    PIC_RemoveEvents(uart_rx_load);
++    PIC_RemoveEvents(uart_tx_load);
++    PIC_RemoveEvents(pc98_keyboard_recv_byte);
++    // §4.2-12: type-ahead beyond the in-flight byte is dropped (host key
++    // state is outside save scope). recv_out still points at the in-flight
++    // slot, so a re-armed delivery below reads the right byte.
++    pc98_8251_keyboard_uart_state.recv_in = pc98_8251_keyboard_uart_state.recv_out;
++    if (pc98_8251_keyboard_uart_state.rx_busy && !pc98_8251_keyboard_uart_state.rx_ready) {
++        PIC_AddEvent(uart_rx_load, pc98_8251_keyboard_uart_state.io_delay_ms, 0);
++    } else {
++        // Nothing in flight (or byte already in `data`): clear stuck flag.
++        pc98_8251_keyboard_uart_state.rx_busy = false;
++    }
++    if (pc98_8251_keyboard_uart_state.tx_busy) {
++        PIC_AddEvent(uart_tx_load, pc98_8251_keyboard_uart_state.tx_load_ms, 0);
++        PIC_AddEvent(pc98_keyboard_recv_byte, pc98_8251_keyboard_uart_state.io_delay_ms,
++            pc98_8251_keyboard_uart_state.txdata);
++    }
++}

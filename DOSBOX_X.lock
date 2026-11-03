@@ -1,0 +1,12 @@
+# DOSBox-X 원본(Y:\dbx_ws\ana\src\src) 파일 sha256 — core_patches 의 기준. 형식: <sha256> <상대경로>
+# U1: DOSBox-X 2026.10.01 (configure.ac AC_INIT, CHANGELOG 첫 항목). git 정보 없음 — 커밋 불명
+# U1 단서: AC_INIT(dosbox-x,2026.10.01,[https://github.com/joncampbell123/dosbox-x/issues],[],[https://dosbox-x.com])
+# U1 단서: CHANGELOG 첫 줄 = 2026.10.01:  / .git 없음(커밋 불명)
+bd8f618ce165240f0f5a79b212f83b8bc50ef2d880cd0cefae95715561a12f6e ints/bios.cpp
+49e783269441a5a9df84b127a16408b7e0c8e79eaf32d0f84608747a991cd6cb hardware/keyboard.cpp
+7543a9bcecdb25afa41100e31f35cdacfc6fee90b70703450d6e448e8d6f4c6f hardware/floppy.cpp
+32c2a86fc9b36a8517c54bb6d1558b7f928e24cccc6998c4f88a8af0e511f977 hardware/pic.cpp
+1379e3fb5f927120f0feee59f65e7803e1e0bebe5dd74f238b1368d0c6680d4b ints/pc98_lio.cpp
+594e53de1ed67d894815727ca95334553d85c5ef06454156013a64e267bbd5e3 hardware/dma.cpp
+6e215ee7eb78d1f0ebeef10b456cc69a5b53d1d85532cae9faeede98ce8f7114 hardware/mixer.cpp
+88f23873970a632400696684fbf39c4deec2383172fcee5600b380e1c9a9d6f3 cpu/paging.cpp

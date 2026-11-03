@@ -1,0 +1,22 @@
+--- a/cpu/paging.cpp	2026-11-03 10:50:31.709674324 +0900
++++ b/cpu/paging.cpp	2026-11-03 10:50:31.716874324 +0900
+@@ -1462,9 +1462,6 @@
+ //	WRITE_POD( &paging.wp, paging.wp );
+ 	WRITE_POD( &paging.base, paging.base );
+ 
+-	WRITE_POD( &paging.tlb.read, paging.tlb.read );
+-	WRITE_POD( &paging.tlb.write, paging.tlb.write );
+-	WRITE_POD( &paging.tlb.phys_page, paging.tlb.phys_page );
+ 
+ 	WRITE_POD( &paging.links, paging.links );
+ //	WRITE_POD( &paging.ur_links, paging.ur_links );
+@@ -1484,9 +1481,6 @@
+ //	READ_POD( &paging.wp, paging.wp );
+ 	READ_POD( &paging.base, paging.base );
+ 
+-	READ_POD( &paging.tlb.read, paging.tlb.read );
+-	READ_POD( &paging.tlb.write, paging.tlb.write );
+-	READ_POD( &paging.tlb.phys_page, paging.tlb.phys_page );
+ 
+ 	READ_POD( &paging.links, paging.links );
+ //	READ_POD( &paging.ur_links, paging.ur_links );

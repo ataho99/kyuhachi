@@ -1,0 +1,110 @@
+--- a/hardware/floppy.cpp	2026-11-03 10:47:48.058369900 +0900
++++ b/hardware/floppy.cpp	2026-11-03 10:47:48.071686900 +0900
+@@ -1629,3 +1629,107 @@
+     }
+ }
+ 
++/* ---- GENSEI SAVE D1 (appended, eye-checked draft, not compiled) ----
++ * FDC save-state accessors. Same TU as floppycontroller[], so no friend
++ * line is needed (all touched members are public; the array is file-static
++ * and visible here). Existing logic above is untouched.
++ * Blob layout (see W/save_src/D1/pc98_fdc_state.cpp, D1_inventory.txt):
++ *   u8 ctl_present (floppycontroller[0] != NULL)
++ *   if present: DOR, status bits, irq_pending, ST[4], current_cylinder[4],
++ *     in_cmd[16]+len+pos, out_res[16]+len+pos, motor_steps, motor_dir,
++ *     fdc_motor_step_delay, in_cmd_state, out_res_state,
++ *     then per drive i=0..3: u8 dev_present (+ if present:
++ *       current_track, select, motor, track0, int13_disk).
++ * Excluded (pointers/config, host re-attaches at boot): ReadHandler[8],
++ * WriteHandler[8], dma*, controller back-pointer, imageDisk*,
++ * IRQ/DMA/base_io/interface_index/int13fakev86io/instant_mode/register_pnp
++ * (FDC_Init re-applies them from config).
++ * WRITE_POD/READ_POD (dosbox.h) hardcode the name `stream`, so the
++ * parameter is named `stream` on purpose.
++ */
++void FDC_SaveState_Write(std::ostream& stream) {
++	unsigned char ctl_present = (floppycontroller[0] != NULL) ? 1 : 0;
++	WRITE_POD(&ctl_present, ctl_present);
++	if (!ctl_present) return;
++	FloppyController* fdc = floppycontroller[0];
++	WRITE_POD(&fdc->digital_output_register, fdc->digital_output_register);
++	WRITE_POD(&fdc->data_register_ready, fdc->data_register_ready);
++	WRITE_POD(&fdc->data_read_expected, fdc->data_read_expected);
++	WRITE_POD(&fdc->non_dma_mode, fdc->non_dma_mode);
++	WRITE_POD(&fdc->busy_status, fdc->busy_status);
++	WRITE_POD(&fdc->positioning, fdc->positioning);
++	WRITE_POD(&fdc->irq_pending, fdc->irq_pending);
++	WRITE_POD(&fdc->ST, fdc->ST);
++	WRITE_POD(&fdc->current_cylinder, fdc->current_cylinder);
++	WRITE_POD(&fdc->in_cmd, fdc->in_cmd);
++	WRITE_POD(&fdc->in_cmd_len, fdc->in_cmd_len);
++	WRITE_POD(&fdc->in_cmd_pos, fdc->in_cmd_pos);
++	WRITE_POD(&fdc->out_res, fdc->out_res);
++	WRITE_POD(&fdc->out_res_len, fdc->out_res_len);
++	WRITE_POD(&fdc->out_res_pos, fdc->out_res_pos);
++	WRITE_POD(&fdc->motor_steps, fdc->motor_steps);
++	WRITE_POD(&fdc->motor_dir, fdc->motor_dir);
++	WRITE_POD(&fdc->fdc_motor_step_delay, fdc->fdc_motor_step_delay);
++	WRITE_POD(&fdc->in_cmd_state, fdc->in_cmd_state);
++	WRITE_POD(&fdc->out_res_state, fdc->out_res_state);
++	for (int i = 0; i < 4; i++) {
++		unsigned char dev_present = (fdc->device[i] != NULL) ? 1 : 0;
++		WRITE_POD(&dev_present, dev_present);
++		if (!dev_present) continue;
++		FloppyDevice* dev = fdc->device[i];
++		WRITE_POD(&dev->current_track, dev->current_track);
++		WRITE_POD(&dev->select, dev->select);
++		WRITE_POD(&dev->motor, dev->motor);
++		WRITE_POD(&dev->track0, dev->track0);
++		WRITE_POD(&dev->int13_disk, dev->int13_disk);
++	}
++}
++
++void FDC_SaveState_Read(std::istream& stream) {
++	unsigned char ctl_present = 0;
++	READ_POD(&ctl_present, ctl_present);
++	/* Same-config cold load is assumed (FDC enabled at boot, object
++	 * exists). If the blob has no controller, or no live object exists
++	 * (cannot construct FloppyController without Section* config),
++	 * keep the live object as-is. */
++	if (!ctl_present) return;
++	if (floppycontroller[0] == NULL) return;
++	FloppyController* fdc = floppycontroller[0];
++	READ_POD(&fdc->digital_output_register, fdc->digital_output_register);
++	READ_POD(&fdc->data_register_ready, fdc->data_register_ready);
++	READ_POD(&fdc->data_read_expected, fdc->data_read_expected);
++	READ_POD(&fdc->non_dma_mode, fdc->non_dma_mode);
++	READ_POD(&fdc->busy_status, fdc->busy_status);
++	READ_POD(&fdc->positioning, fdc->positioning);
++	READ_POD(&fdc->irq_pending, fdc->irq_pending);
++	READ_POD(&fdc->ST, fdc->ST);
++	READ_POD(&fdc->current_cylinder, fdc->current_cylinder);
++	READ_POD(&fdc->in_cmd, fdc->in_cmd);
++	READ_POD(&fdc->in_cmd_len, fdc->in_cmd_len);
++	READ_POD(&fdc->in_cmd_pos, fdc->in_cmd_pos);
++	READ_POD(&fdc->out_res, fdc->out_res);
++	READ_POD(&fdc->out_res_len, fdc->out_res_len);
++	READ_POD(&fdc->out_res_pos, fdc->out_res_pos);
++	READ_POD(&fdc->motor_steps, fdc->motor_steps);
++	READ_POD(&fdc->motor_dir, fdc->motor_dir);
++	READ_POD(&fdc->fdc_motor_step_delay, fdc->fdc_motor_step_delay);
++	READ_POD(&fdc->in_cmd_state, fdc->in_cmd_state);
++	READ_POD(&fdc->out_res_state, fdc->out_res_state);
++	for (int i = 0; i < 4; i++) {
++		unsigned char dev_present = 0;
++		READ_POD(&dev_present, dev_present);
++		if (dev_present) {
++			if (fdc->device[i] == NULL) fdc->device[i] = new FloppyDevice(fdc);
++			FloppyDevice* dev = fdc->device[i];
++			READ_POD(&dev->current_track, dev->current_track);
++			READ_POD(&dev->select, dev->select);
++			READ_POD(&dev->motor, dev->motor);
++			READ_POD(&dev->track0, dev->track0);
++			READ_POD(&dev->int13_disk, dev->int13_disk);
++		}
++		else {
++			if (fdc->device[i] != NULL) { delete fdc->device[i]; fdc->device[i] = NULL; }
++		}
++	}
++}
++

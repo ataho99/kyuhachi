@@ -1,0 +1,64 @@
+--- a/ints/bios.cpp	2026-11-03 10:47:47.493309600 +0900
++++ b/ints/bios.cpp	2026-11-03 10:47:47.516058100 +0900
+@@ -19,6 +19,7 @@
+ #include <assert.h>
+ #include "control.h"
+ #include "dosbox.h"
++int gensei_nosplash = 1;   // r017: 1 = BIOS 스플래시 생략 (호스트 --splash 가 0 으로)
+ #include "mem.h"
+ #include "cpu.h"
+ #include "bios.h"
+@@ -5087,8 +5088,29 @@
+     } while (v >= 0x60);
+ }
+ 
++// ---- B run (pc98_sys save-state support, draft, eye-checked, not compiled) ----
++// INT 1Bh multi-sector progress lived in function-local statics (see below).
++// Storage moved to file scope so save/load helpers can reach it; every use
++// line inside PC98_BIOS_FDC_CALL is unchanged (pointer aliases index the same).
++unsigned int pc98_bios_fdc_cyl[2] = {0,0}, pc98_bios_fdc_head[2] = {0,0}, pc98_bios_fdc_sect[2] = {0,0}, pc98_bios_fdc_sz[2] = {0,0};
++
++void PC98_BIOS_FDC_SaveProgress(std::ostream& stream) {
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_cyl), sizeof(pc98_bios_fdc_cyl));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_head), sizeof(pc98_bios_fdc_head));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_sect), sizeof(pc98_bios_fdc_sect));
++    stream.write(reinterpret_cast<const char*>(pc98_bios_fdc_sz), sizeof(pc98_bios_fdc_sz));
++}
++
++void PC98_BIOS_FDC_LoadProgress(std::istream& stream) {
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_cyl), sizeof(pc98_bios_fdc_cyl));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_head), sizeof(pc98_bios_fdc_head));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_sect), sizeof(pc98_bios_fdc_sect));
++    stream.read(reinterpret_cast<char*>(pc98_bios_fdc_sz), sizeof(pc98_bios_fdc_sz));
++}
++
+ void PC98_BIOS_FDC_CALL(unsigned int flags) {
+-    static unsigned int fdc_cyl[2]={0,0},fdc_head[2]={0,0},fdc_sect[2]={0,0},fdc_sz[2]={0,0}; // FIXME: Rename and move out. Making "static" is a hack here.
++    static unsigned int *fdc_cyl = pc98_bios_fdc_cyl, *fdc_head = pc98_bios_fdc_head, *fdc_sect = pc98_bios_fdc_sect, *fdc_sz = pc98_bios_fdc_sz; // B run: was function-local static arrays (FIXME line kept as comment below)
++    // static unsigned int fdc_cyl[2]={0,0},fdc_head[2]={0,0},fdc_sect[2]={0,0},fdc_sz[2]={0,0}; // FIXME: Rename and move out. Making "static" is a hack here.
+     uint32_t img_heads=0,img_cyl=0,img_sect=0,img_ssz=0;
+     unsigned int drive;
+     unsigned int status;
+@@ -11308,6 +11330,22 @@
+ #endif
+ 
+ 	textsplash = true;
++
++        if (gensei_nosplash && machine == MCH_PC98) {   // r017: 스플래시 없이 끝 장면의 상태(텍스트 지움·그래픽 숨김)만 만든다
++            reg_eax = 0x0C00; CALLBACK_RunRealInt(0x18);    // 텍스트 층 켜기
++            reg_eax = 0x1100; CALLBACK_RunRealInt(0x18);    // 커서 표시
++            reg_eax = 0x1300; reg_edx = 0x0000; CALLBACK_RunRealInt(0x18);
++            reg_eax = 0x4100; CALLBACK_RunRealInt(0x18);    // 그래픽 층 숨김
++            for (unsigned int i=0;i < (80*400);i++) {
++                mem_writeb(0xA8000+i,0); mem_writeb(0xB0000+i,0); mem_writeb(0xB8000+i,0); mem_writeb(0xE0000+i,0);
++            }
++            IO_Write(0x6A,0x00);                            // 8색 모드
++            reg_eax = 0x4200; reg_ecx = 0x8000; CALLBACK_RunRealInt(0x18);
++            reg_eax = 0x1600; reg_edx = 0xE100; CALLBACK_RunRealInt(0x18);   // 텍스트 VRAM 지움
++            setupStopClock = setupStopClock_PC98; setupGetDateTime = setupGetDateTime_PC98;
++            setupSetDateTime = setupSetDateTime_PC98; setupPollClockUpdated = setupPollClockUpdated_PC98;
++            return CBRET_NONE;
++        }
+ 
+         char logostr[8][34];
+         strcpy(logostr[0], "+---------------------+");

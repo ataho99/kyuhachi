@@ -1,0 +1,37 @@
+--- a/ints/pc98_lio.cpp	2026-11-03 10:47:48.507199400 +0900
++++ b/ints/pc98_lio.cpp	2026-11-03 10:47:48.518899500 +0900
+@@ -1687,3 +1687,34 @@
+     reg_al = ret;
+     return LIO_SUCCESS;
+ }
++
++// ---- B run (pc98_sys save-state support, draft, eye-checked, not compiled) ----
++// lio_work/lio_draw/lio_palette_mode are static (pc98_lio.cpp:101-103) with
++// file-local struct types, so save goes through here. paint_work (640x400
++// malloc buffer) is NOT saved: use sites allocate on NULL (lines ~878/~996)
++// and every LIO entry refreshes via lio_updatedraw(). paint_point/paint_line/
++// paint_tile are transient in-call containers (design §2.14), not saved.
++void PC98_LIO_SaveState(std::ostream& stream) {
++    stream.write(reinterpret_cast<const char*>(&lio_work), sizeof(lio_work));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.x1), sizeof(lio_draw.x1));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.y1), sizeof(lio_draw.y1));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.x2), sizeof(lio_draw.x2));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.y2), sizeof(lio_draw.y2));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.flag), sizeof(lio_draw.flag));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.palette_max), sizeof(lio_draw.palette_max));
++    stream.write(reinterpret_cast<const char*>(&lio_draw.planes), sizeof(lio_draw.planes));
++    stream.write(reinterpret_cast<const char*>(&lio_palette_mode), sizeof(lio_palette_mode));
++}
++
++void PC98_LIO_LoadState(std::istream& stream) {
++    stream.read(reinterpret_cast<char*>(&lio_work), sizeof(lio_work));
++    stream.read(reinterpret_cast<char*>(&lio_draw.x1), sizeof(lio_draw.x1));
++    stream.read(reinterpret_cast<char*>(&lio_draw.y1), sizeof(lio_draw.y1));
++    stream.read(reinterpret_cast<char*>(&lio_draw.x2), sizeof(lio_draw.x2));
++    stream.read(reinterpret_cast<char*>(&lio_draw.y2), sizeof(lio_draw.y2));
++    stream.read(reinterpret_cast<char*>(&lio_draw.flag), sizeof(lio_draw.flag));
++    stream.read(reinterpret_cast<char*>(&lio_draw.palette_max), sizeof(lio_draw.palette_max));
++    stream.read(reinterpret_cast<char*>(&lio_draw.planes), sizeof(lio_draw.planes));
++    stream.read(reinterpret_cast<char*>(&lio_palette_mode), sizeof(lio_palette_mode));
++    // paint_work pointer untouched (re-derived on next LIO call).
++}

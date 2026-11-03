@@ -7,3 +7,6 @@ legacy/** -text
 *.ico binary
 *.g98s binary
 *.obj binary
+core_patches/** -text
+core_added/** -text
+DOSBOX_X.lock text eol=lf

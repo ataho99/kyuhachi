@@ -1,10 +1,6 @@
 /* app/main_setup.h -- S9c: main() steps E-I: hooks+input, tests, window, game select, game prep. Bodies moved unchanged from gensei_host.cpp main (as of t54u). Included in place before main; single translation unit. */
 static void gh_main_input_init(std::string & id) {
-#if defined(WIN32)
-    SetUnhandledExceptionFilter(gh_seh); AddVectoredExceptionHandler(1, gh_veh);
-    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
-    CreateThread(NULL, 0, gh_boxkiller, NULL, 0, NULL);
-#endif
+    gh_crash_install();
     kh_db_dir = gApp.exedir;   /* t48e (#651 2): <exe>\res\gamecontrollerdb.txt */
     kh_input_init();
     kh_hotplug_hook = gh_hotplug_hook;

@@ -65,6 +65,14 @@ static DWORD WINAPI gh_boxkiller(LPVOID) {
     }
     return 0;
 }
+/* S9e-N 2: install crash handlers and watchdog in one function; callers carry no OS names */
+static void gh_crash_install(void) {
+    SetUnhandledExceptionFilter(gh_seh); AddVectoredExceptionHandler(1, gh_veh);
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+    CreateThread(NULL, 0, gh_boxkiller, NULL, 0, NULL);
+}
+#else
+static void gh_crash_install(void) {}   /* non-Windows: nothing to install */
 #endif
 
 static void gh_dump_stubs(void) {

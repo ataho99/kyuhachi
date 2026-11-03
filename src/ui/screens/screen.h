@@ -1,0 +1,69 @@
+#pragma once
+/* screens/screen.h -- S8b: S_SCREEN screen. Code moved unchanged from kh_ui.h / screen_table.h (members of struct Ui, defined out of line). */
+inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효과 4줄(끔~100% 10단계, 좌우 키로 조절) + 곡면. 줄 간격 20 으로 9줄이 같은 상자에 들어간다 */
+    titlebar(c, phr_("화면 설정"));
+    Settings & s = eff();
+    rbox(c, 16, 24, 288, 212, WH, phr_("화면 설정"));
+    std::vector<std::string> n = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면") };
+    items(c, 40, 44, 256, n, sel, 18);
+    rbox(c, 320, 24, 304, 212, WH, phr_("선택지"));
+    auto row = [&](int i) { return sel == i; };
+    const int PY = 18;
+    const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, 44, sc, 2, scope, WH, row(0));
+    const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, 44 + PY, rt, 3, s.ratio, WH, row(1));
+    const char * sh[] = { "sharp", "nearest" }; choices(c, 344, 44 + 2 * PY, sh, 2, s.shader == 2 ? 1 : 0, WH, row(2));
+    char b[16]; const int fxv[4] = { s.scan, s.mask, s.bleed, s.glow };
+    for (int i = 0; i < 4; i++) { int y = 44 + (3 + i) * PY; if (fxv[i] <= 0) snprintf(b, sizeof b, "끔"); else snprintf(b, sizeof b, "%d%%", fxv[i] * 10); barv(c, 340, y, 232, fxv[i] / 10.0, phr_("끔"), phr_("최대"), WH, row(3 + i)); text(c, 578, y, b, WH, K); }
+    snprintf(b, sizeof b, "%.2f", s.curve_f()); barv(c, 340, 44 + 7 * PY, 232, s.curve / 10.0, phr_("평면"), phr_("최대"), WH, row(7)); text(c, 578, 44 + 7 * PY, b, WH, K);
+    { const char * wm[] = { "x1", "x2", "x3", "x4", "x5", phr_("사용자 지정") }; unsigned dmk = 0; for (int i = 0; i < WMN; i++) if (i + 1 > wmax) dmk |= 1u << i;
+      choicesd(c, 344, 44 + 8 * PY, wm, 6, wmult ? wmult - 1 : 5, WH, dmk); }
+    { const char * fsc[] = { phr_("창 모드"), phr_("전체화면") }; choices(c, 344, 44 + 9 * PY, fsc, 2, fs_now ? 1 : 0, WH, row(9)); }   /* t52i (B3) */
+    rbox(c, 16, 240, 608, 82, WH, phr_("미리보기"));
+    thumb(c, game(), 40, 258, 96, 60);
+    const UiGame * gm = game();
+    { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 258, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
+    text(c, 156, 278, phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."), WH, K);
+    text(c, 156, 298, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
+    char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
+    static std::string wd; wd = wb;
+    static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("화면 비율: 4:3 은 원래 비율, 정수배는 또렷한 배율."), phr_("필터: sharp 는 또렷하게, nearest 는 원본 그대로. 효과는 어느 필터에나 얹습니다."), phr_("주사선: 가로줄 무늬의 진하기 (끔 ~ 100%)."), phr_("마스크: 화소 배열 무늬의 진하기 (끔 ~ 100%)."), phr_("RGB 번짐: 색 어긋남과 가로 번짐 (가장자리일수록 큼, 끔 ~ 100%)."), phr_("빛 번짐: 밝은 곳 주변으로 빛이 퍼짐 (끔 ~ 100%)."), phr_("곡면: 화면 가장자리를 둥글게 보이게 합니다.") };
+    desc(c, 324, 44, { fit(sel < 8 ? std::string(dd[sel]) : sel == 9 ? std::string(phr_("전체화면: 창과 전체화면을 오갑니다. Alt+Enter 로도 됩니다.")) : wd, 560) });
+    helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
+}
+inline Act Ui::k_screen_conf(UKey k, Act & a) {
+    do { {
+        if (scr == S_CONF && sel == 13 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT)) { int dl = (k == UK_LEFT) ? -1 : 1; lang = (lang + dl + 3) % 3; phr_set_lang(lang); lang_chg = true; dirty = true; break; }   /* t52g (#133): 언어 — 문구 칸이 제자리에서 바뀌어 바로 보인다 */
+        if (scr == S_CONF && sel >= 11 && sel <= 12 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT || k == UK_TRI)) { if (k == UK_OK) open_font(sel - 11, S_CONF); break; }   /* t52f: 글꼴 행이 11·12 로 한 칸씩 내려감 */
+        if (scr == S_CONF && sel == 4 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT)) { if (k == UK_OK) go(S_PAD, 0); break; }   /* t48e (#646) */
+        bool scr_s = scr == S_SCREEN; int nrow = scr_s ? 10 : 14;
+        if (scr_s && sel == 9 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { a.t = A_FULLSCR; return a; }   /* t52i (B3): 전체화면 줄 — 좌우·○ 로 바로 오간다 */
+        Settings & s = (sel == 0) ? eff() : edit();
+        if (k == UK_LEFT || k == UK_RIGHT) {
+            int d = (k == UK_RIGHT) ? 1 : -1;
+            if (scr_s && sel == 8) {   /* 창 배율(전역): 모니터에 들어가는 다음/이전 배율 */
+                int m = wm_next(d); if (m > 0) { wmult = m; a.t = A_WINMULT; a.arg = m; dirty = true; }
+                return a;
+            }
+            if (sel == 0) { scope = clampi(scope + d, 0, 1); if (scope == 1 && !has_t[cur]) { t[cur] = effective(cur); has_t[cur] = true; } }
+            else if (scr_s) {
+                if (sel == 1) s.ratio = clampi(s.ratio + d, 0, 2);
+                if (sel == 2) s.shader = d > 0 ? 2 : 0;   /* t48c: 필터 = sharp / nearest */
+                { if (sel == 3) s.scan = clampi(s.scan + d, 0, 10); if (sel == 4) s.mask = clampi(s.mask + d, 0, 10); if (sel == 5) s.bleed = clampi(s.bleed + d, 0, 10); if (sel == 6) s.glow = clampi(s.glow + d, 0, 10); if (sel == 7) s.curve = clampi(s.curve + d, 0, 10); }   /* t48c: 필터와 상관없이 효과를 켠다. 바꾸면 A_APPLY 로 곧바로 화면에 반영 */
+                a.t = A_APPLY;
+            } else {
+                if (sel == 1) s.bgm = clampi(s.bgm + d, 0, 8);
+                if (sel == 2) s.se = clampi(s.se + d, 0, 8);
+                if (sel == 5) s.bmult = clampi(s.bmult + d, 0, 4);
+                if (sel == 6) s.bmode = clampi(s.bmode + d, 0, 2);
+                if (sel == 7) s.bsound = clampi(s.bsound + d, 0, 2);
+                if (sel == 8) s.boot = clampi(s.boot + d, 0, 1); if (sel == 9) s.bosd = clampi(s.bosd + d, 0, 1); if (sel == 10) s.ovbtn = clampi(s.ovbtn + d, 0, 1);
+                a.t = A_APPLY;
+            }
+            dirty = true; (void)nrow;
+        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; e.ovbtn = def.ovbtn; } dirty = true; a.t = A_APPLY; }
+        else if (k == UK_CANCEL) { if (!scr_s) { cb_has = false; a.t = A_APPLY; dirty = true; }   /* t52i: × = 뒤로. 값은 바뀐 순간부터 저장 대상 */ if (scr_s && backup_has) { eff() = backup; backup_has = false; a.t = A_APPLY; if (wmult != bk_wmult || winw != bk_winw || winh != bk_winh) { wmult = bk_wmult; winw = bk_winw; winh = bk_winh; a.t = A_WINMULT; a.arg = wmult; } } go(in_game ? S_GAME : S_MAIN, in_game ? (scr == S_SCREEN ? 4 : 5) : 0); if (!in_game) sel = 0; }
+        else if (k == UK_OK) { backup_has = false; cb_has = false; dirty = true; a.t = A_APPLY; go(in_game ? S_GAME : S_MAIN, in_game ? (scr == S_SCREEN ? 4 : 5) : 0); }
+        break; }
+    } while (0);
+    return a;
+}

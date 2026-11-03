@@ -198,42 +198,8 @@ struct Ui {
         std::string cv; { std::string k = pad_key(row); if (scope == 1 && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end()) cv = it->second; } else if (scope == 0) { auto it = gpad.find(k); if (it != gpad.end()) cv = it->second; } }
         sel = 0; for (size_t i = 0; i < pk_opts.size(); i++) if (pk_opts[i] == cv) sel = (int)i; scr = S_PADKEY;
     }
-    void d_pad(Canvas & c) {
-        titlebar(c, phr_("조작 설정"));
-        Settings & s = eff();
-        rbox(c, 16, 24, 288, 296, WH, phr_("패드 버튼"));
-        std::vector<std::string> n = { phr_("적용 범위"), phr_("결정 방식") }; for (int i = 0; i < 7; i++) n.push_back(pad_row_name(i));
-        items(c, 40, 44, 256, n, sel, 24);
-        rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
-        auto row = [&](int i) { return sel == i; };
-        auto ry = [](int i) { return 44 + 24 * i; };
-        const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, ry(0), sc, 2, scope, WH, row(0));
-        const char * ly[] = { phr_("일본식(동쪽)"), phr_("서양식(남쪽)") }; choices(c, 344, ry(1), ly, 2, s.pad == 1 ? 1 : 0, WH, row(1));
-        for (int i = 0; i < 7; i++) {
-            bool fw = false, df = false; std::string v = pad_val(i, &fw, &df); std::string t = pad_show(v);
-            if (scope == 1 && !fw) t += df ? phr_(" (기본)") : phr_(" (전역)"); else if (scope == 0 && df) t += phr_(" (기본)");
-            text(c, 344, ry(2 + i), fit(t, 250), row(2 + i) ? K : WH, row(2 + i) ? WH : K);
-        }
-        text(c, 344, ry(9) + 4, dkey(phr_("{△} = 메뉴 열기 (고정)")), CY, K);
-        static const char * const dd[] = { phr_("전역=모든 작품, 이 작품=이 작품만. 작품 값이 우선."), phr_("결정 방식: 일본식=동쪽 버튼, 서양식=남쪽 버튼이 결정."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기."), phr_("버튼 한 줄입니다. {○}:키 고르기.") };
-        desc(c, 324, 44, { fit(dkey(dd[sel < 9 ? sel : 8]), 560) });
-        helpline(c, phr_("↑↓:선택, ←→:값, ○:키 고르기, ×:뒤로, △:출하 시 설정"));
-    }
-    void d_padkey(Canvas & c) {
-        titlebar(c, "");
-        rbox(c, 16, 24, 288, 296, WH, (phr_("키 고르기: ") + pad_row_name(pk_row)).c_str());
-        std::vector<std::string> r; std::vector<uint32_t> col; std::string curv = pad_val(pk_row);
-        for (auto & o : pk_opts) { std::string lab = o.empty() ? std::string(scope == 1 ? phr_("전역 따름 (작품 값 지움)") : phr_("기본값")) : pad_show(o); r.push_back(std::string(o == curv && !o.empty() ? "● " : "  ") + fit(lab, 220)); col.push_back(0); }
-        rowlist(c, 40, 48, 256, 9, r, sel, 24, &col);
-        rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
-        text(c, 340, 44, fit(pad_row_name(pk_row) + " → " + (sel < (int)pk_opts.size() ? (pk_opts[sel].empty() ? std::string(phr_("기본")) : pad_show(pk_opts[sel])) : std::string("-")), 270), YL, K);
-        text(c, 340, 74, fit(scope == 1 ? phr_("저장: 이 작품 (user.ini [pad])") : phr_("저장: 전역 (settings.ini)"), 270), CY, K);
-        text(c, 340, 104, phr_("배정 없음 = 이 버튼은"), WH, K);
-        text(c, 340, 124, phr_("아무 것도 보내지 않음"), WH, K);
-        text(c, 340, 154, phr_("마우스 왼/오른 = 게임 마우스 버튼"), WH, K);
-        desc(c, 324, 44, { phr_("STOP COPY GRPH XFER NFER HELP 등 PC-98 키를 고를 수 있습니다.") });
-        helpline(c, phr_("↑↓:선택, ○:정함, ×:취소"));
-    }
+    void d_pad(Canvas & c);
+    void d_padkey(Canvas & c);
     int fnt_mode = 0;            /* 0 전역 한글 · 1 전역 일본어 · 2 항목 */
     std::vector<std::string> fnt_opts; std::string fnt_need; Scr fnt_ret = S_CONF; std::map<std::string, ov::BmpFont> fnt_cache;
     /* 화면 키보드 */
@@ -541,25 +507,7 @@ struct Ui {
         rowlist(c, 40, 48, 560, 9, r, sel, 24);
         { const char * H = phr_("↑↓:선택, ○:바꾸기, □:삭제, △:위로, SEL:아래로, ×:완료"); desc(c, 324, 58, { phr_("게임 중 메뉴의 「디스크 교체」에 나오는 디스크와 순서입니다."), phr_("시작부터 교체가 필요한 작품은 처음 3초에 안내가 뜹니다.") }, -1, H); helpline(c, H); }
     }
-    void d_font(Canvas & c) {
-        titlebar(c, ""); std::string ttl = fnt_mode == 0 ? phr_("한글 글꼴") : fnt_mode == 1 ? phr_("일본어 글꼴") : phr_("실행 방법 글꼴");
-        rbox(c, 16, 24, 288, 296, WH, ttl.c_str());
-        std::vector<std::string> r; std::vector<uint32_t> col; std::string curv = fnt_cur();
-        for (auto & o : fnt_opts) { r.push_back(std::string(o == curv ? "● " : "  ") + fit(o.empty() ? std::string(fnt_mode == 2 ? phr_("자동 (목록 기본)") : phr_("기본")) : o, 220)); col.push_back(0); }
-        if (fnt_opts.empty()) { r.push_back(phr_("(고를 수 있는 글꼴 없음)")); col.push_back(GY); }
-        rowlist(c, 40, 48, 256, 9, r, sel, 24, &col);
-        rbox(c, 320, 24, 304, 296, WH, phr_("미리보기"));
-        std::string pv = sel < (int)fnt_opts.size() ? fnt_opts[sel] : std::string(); if (pv.empty()) pv = fnt_default_name();
-        const ov::BmpFont * bf = fnt_font(pv);
-        text(c, 340, 44, fit(pv.empty() ? std::string("-") : pv, 270), YL, K);
-        { std::string grp; for (auto & f : fonts) if (f.name == pv) grp = f.group; text(c, 340, 64, fit(grp.empty() ? std::string(phr_("묶음 -")) : std::string(fontreg::group_label(grp)), 270), CY, K); }
-        if (bf) { text_bmp(c, *bf, 340, 100, phr_("한글 가나다라마바사"), WH, K); text_bmp(c, *bf, 340, 124, phr_("열락의 학원 신비한 바다"), WH, K); text_bmp(c, *bf, 340, 148, "あいうえお アイウエオ", WH, K); } else text(c, 340, 100, phr_("미리볼 수 없는 글꼴입니다."), GY, K);
-        { int rej = 0; for (auto & f : fonts) if (!f.ok) rej++; if (rej) text(c, 340, 280, fit(phr_("거른 파일 ") + std::to_string(rej) + phr_("개 (형식·크기 불일치)"), 270), OR, K); }
-        text(c, 340, 196, fit(phr_("같은 묶음의 글꼴만 바꿀 수 있습니다."), 270), WH, K); text(c, 340, 216, fit(phr_("다른 묶음은 한글이 깨져 막아 둡니다."), 270), WH, K);
-        if (!fnt_need.empty()) text(c, 340, 240, fit(phr_("이 작품의 묶음: ") + std::string(fontreg::group_label(fnt_need)), 270), CY, K);
-        desc(c, 324, 58, { fnt_mode == 2 ? phr_("이 실행 방법의 글꼴입니다. 자동 = 목록 기본(한글판=한글, 원판=일본어).") : phr_("전역 기본 글꼴입니다. 실행 방법이 글꼴을 따로 정하면 그것이 우선입니다."), phr_("글꼴 폴더에 bmp 를 넣으면 자동으로 목록에 나옵니다.") }, -1, phr_("↑↓:선택, ○:정함, ×:취소"));
-        helpline(c, phr_("↑↓:선택, ○:정함, ×:취소"));
-    }
+    void d_font(Canvas & c);
     std::string fnt_default_name() const { if (fnt_mode == 1) return font_jp.empty() ? "jp_default" : font_jp; return font_kr.empty() ? "kyuhachi_font" : font_kr; }   /* t52g: 임시 이름 pc98player_font → kyuhachi_font */
     void jp_refresh() { const ov::BmpFont * bf = fnt_font(font_jp.empty() ? std::string("jp_default") : font_jp); ov::jp_set(lang == 2, bf); }   /* t52h (#134): 일본어 글꼴 BMP · 언어를 글자 그리기에 알림 */
     std::string fnt_cur() const { if (fnt_mode == 0) return font_kr; if (fnt_mode == 1) return font_jp; return kv_get("font"); }
@@ -627,35 +575,8 @@ struct Ui {
             for (int r = 0; r < 4 && !found; r++) for (int q = 0; q < 10; q++) if (hk_row(r)[q] == lc) { if (ch >= 'A' && ch <= 'Z') hk_press(4, 1); hk_press(r, q); found = true; break; }
         }
     }
-    void d_hosk(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 608, 236, WH, osk_target == 2 ? phr_("표시 제목 입력 (한글 키보드)") : osk_target == 3 ? phr_("메뉴 이름 입력 (한글 키보드)") : phr_("이름 입력 (한글 키보드)"));
-        { std::string sb = fit(osk_buf, 430); int cx = 40 + tw(sb); text(c, 40, 48, sb, YL, K);
-          std::string cu = hg::cur_text(hc.cur); if (!cu.empty()) { text(c, cx, 48, cu, CY, K); int cw = tw(cu); c.rect(cx, 66, cw, 2, CY); cx += cw; }
-          if (!ime_comp.empty()) { text(c, cx, 48, ime_comp, CY, K); int cw = tw(ime_comp); c.rect(cx, 66, cw, 2, CY); cx += cw; }
-          text(c, cx, 48, "_", YL, K); }
-        text(c, 480, 48, hc.han ? phr_("[한]") : phr_("[영]"), CY, K); if (osk_shift) text(c, 540, 48, "SHIFT", OR, K);
-        for (int r = 0; r < 5; r++) for (int q = 0; q < hk_len(r); q++) {
-            int x, y, w, h; hk_rect(r, q, x, y, w, h); bool sl = r == osk_r && q == osk_c; std::string lb = hk_label(r, q);
-            c.rect(x, y, w, h, sl ? WH : GY); c.rect(x + 1, y + 1, w - 2, h - 2, sl ? WH : K);
-            uint32_t fg = (r == 4 && q == 1 && osk_shift) ? OR : ((r == 4 && q == 0) ? CY : WH);
-            text(c, x + (w - tw(lb)) / 2, y + 4, lb, sl ? K : fg, sl ? WH : K);
-        }
-        desc(c, 270, 58, { phr_("SHIFT: 다음 한 자모만 쌍자음·ㅒㅖ"), phr_("패드: L=SHIFT △=한/영 □=지움 R=띄우기") });
-        g_help_osk = true; helpline(c, phr_("↑↓←→:이동, ○:입력, SEL:완료, ×:취소"));
-    }
-    void d_osk(Canvas & c) {
-        if (osk_hg) { d_hosk(c); return; }   /* t48b */
-        titlebar(c, ""); rbox(c, 16, 24, 608, 296, WH, osk_target == 0 ? phr_("이름 입력") : phr_("글자 입력"));
-        { std::string sb = fit(osk_buf, 500); int cx = 40 + tw(sb); text(c, 40, 48, sb, YL, K); if (!ime_comp.empty()) { text(c, cx, 48, ime_comp, CY, K); int cw = tw(ime_comp); c.rect(cx, 66, cw, 2, CY); cx += cw; } text(c, cx, 48, "_", YL, K); }   /* t48a: 조합 중 글자는 밑줄 */
-        static const char * rowsl[5] = { "abcdefghij", "klmnopqrst", "uvwxyz0123", "456789.-/\\", ":|~_'() " };
-        for (int r = 0; r < 5; r++) for (int q = 0; q < 10 && q < (int)strlen(rowsl[r]); q++) {
-            char ch = rowsl[r][q]; if (!ch) continue; if (osk_upper && ch >= 'a' && ch <= 'z') ch = (char)(ch - 32); int x = 120 + q * 40, y = 92 + r * 36; bool sl = r == osk_r && q == osk_c;
-            c.rect(x - 4, y - 4, 32, 28, sl ? WH : GY); c.rect(x - 3, y - 3, 30, 26, sl ? WH : K);
-            char s[4] = { ch == ' ' ? '_' : ch, 0, 0, 0 }; text(c, x + 4, y, s, sl ? K : WH, sl ? WH : K);
-        }
-        desc(c, 324, 58, { osk_target == 0 ? phr_("키보드가 있으면 한/영 키로 한글도 그대로 칠 수 있습니다.") : phr_("DOS 명령용입니다. 대문자는 소문자로 저장되고 ~ 는 Enter 입니다."), phr_("키보드가 있으면 그대로 쳐도 됩니다.") }, -1, phr_("↑↓←→:이동, ○:입력, □:지움, △:대소문자, SEL:완료, ×:취소"));
-        helpline(c, phr_("↑↓←→:이동, ○:입력, □:지움, △:대소문자, SEL:완료, ×:취소"));
-    }
+    void d_hosk(Canvas & c);
+    void d_osk(Canvas & c);
     void d_name(Canvas & c) {
         titlebar(c, ""); rbox(c, 16, 24, 288, 296, WH, phr_("이름 고르기"));
         std::vector<std::string> r = name_presets(); r.push_back(phr_("직접 입력 (한글 키보드)")); r.push_back(phr_("직접 입력 (영문 글자표)")); items(c, 40, 44, 256, r, sel, 24);   /* t48b: 11줄이라 간격 24 */
@@ -677,36 +598,7 @@ struct Ui {
         helpline(c, phr_("↑↓:선택, ○:결정, ×:취소"));
     }
     void d_add(Canvas & c);
-    void d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효과 4줄(끔~100% 10단계, 좌우 키로 조절) + 곡면. 줄 간격 20 으로 9줄이 같은 상자에 들어간다 */
-        titlebar(c, phr_("화면 설정"));
-        Settings & s = eff();
-        rbox(c, 16, 24, 288, 212, WH, phr_("화면 설정"));
-        std::vector<std::string> n = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면") };
-        items(c, 40, 44, 256, n, sel, 18);
-        rbox(c, 320, 24, 304, 212, WH, phr_("선택지"));
-        auto row = [&](int i) { return sel == i; };
-        const int PY = 18;
-        const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, 44, sc, 2, scope, WH, row(0));
-        const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, 44 + PY, rt, 3, s.ratio, WH, row(1));
-        const char * sh[] = { "sharp", "nearest" }; choices(c, 344, 44 + 2 * PY, sh, 2, s.shader == 2 ? 1 : 0, WH, row(2));
-        char b[16]; const int fxv[4] = { s.scan, s.mask, s.bleed, s.glow };
-        for (int i = 0; i < 4; i++) { int y = 44 + (3 + i) * PY; if (fxv[i] <= 0) snprintf(b, sizeof b, "끔"); else snprintf(b, sizeof b, "%d%%", fxv[i] * 10); barv(c, 340, y, 232, fxv[i] / 10.0, phr_("끔"), phr_("최대"), WH, row(3 + i)); text(c, 578, y, b, WH, K); }
-        snprintf(b, sizeof b, "%.2f", s.curve_f()); barv(c, 340, 44 + 7 * PY, 232, s.curve / 10.0, phr_("평면"), phr_("최대"), WH, row(7)); text(c, 578, 44 + 7 * PY, b, WH, K);
-        { const char * wm[] = { "x1", "x2", "x3", "x4", "x5", phr_("사용자 지정") }; unsigned dmk = 0; for (int i = 0; i < WMN; i++) if (i + 1 > wmax) dmk |= 1u << i;
-          choicesd(c, 344, 44 + 8 * PY, wm, 6, wmult ? wmult - 1 : 5, WH, dmk); }
-        { const char * fsc[] = { phr_("창 모드"), phr_("전체화면") }; choices(c, 344, 44 + 9 * PY, fsc, 2, fs_now ? 1 : 0, WH, row(9)); }   /* t52i (B3) */
-        rbox(c, 16, 240, 608, 82, WH, phr_("미리보기"));
-        thumb(c, game(), 40, 258, 96, 60);
-        const UiGame * gm = game();
-        { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 258, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
-        text(c, 156, 278, phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."), WH, K);
-        text(c, 156, 298, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
-        char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
-        static std::string wd; wd = wb;
-        static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("화면 비율: 4:3 은 원래 비율, 정수배는 또렷한 배율."), phr_("필터: sharp 는 또렷하게, nearest 는 원본 그대로. 효과는 어느 필터에나 얹습니다."), phr_("주사선: 가로줄 무늬의 진하기 (끔 ~ 100%)."), phr_("마스크: 화소 배열 무늬의 진하기 (끔 ~ 100%)."), phr_("RGB 번짐: 색 어긋남과 가로 번짐 (가장자리일수록 큼, 끔 ~ 100%)."), phr_("빛 번짐: 밝은 곳 주변으로 빛이 퍼짐 (끔 ~ 100%)."), phr_("곡면: 화면 가장자리를 둥글게 보이게 합니다.") };
-        desc(c, 324, 44, { fit(sel < 8 ? std::string(dd[sel]) : sel == 9 ? std::string(phr_("전체화면: 창과 전체화면을 오갑니다. Alt+Enter 로도 됩니다.")) : wd, 560) });
-        helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
-    }
+    void d_screen(Canvas & c);
     void d_screen_t48b2_old(Canvas & c) {
         titlebar(c, phr_("화면 설정"));
         Settings & s = eff(); bool crt = s.shader == 1;
@@ -739,63 +631,10 @@ struct Ui {
         desc(c, 324, 44, { fit(sel < 7 ? std::string(dd[sel]) : wd, 560) });
         helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
     }
-    void d_conf(Canvas & c) {
-        titlebar(c, phr_("소리/패드/배속 설정"));
-        Settings & s = eff();
-        rbox(c, 16, 24, 288, 296, WH, phr_("동작 환경 설정"));
-        std::vector<std::string> n = { phr_("적용 범위"), phr_("BGM 음량"), phr_("효과음 음량"), phr_("소리 출력 장치"), phr_("조작 설정"), phr_("배속 배율"), phr_("배속 방식"), phr_("배속 중 소리"), phr_("부팅 시퀀스"), phr_("배속 표시"), phr_("오버레이 버튼 표시"), phr_("한글 글꼴"), phr_("일본어 글꼴"), phr_("언어 / Language / 言語") };
-        items(c, 40, 44, 256, n, sel, 19);
-        rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
-        auto row = [&](int i) { return sel == i; };
-        auto ry = [](int i) { return 44 + 19 * i; };
-        const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, ry(0), sc, 2, scope, WH, row(0));
-        char b[8];
-        snprintf(b, sizeof b, "%d", s.bgm); barv(c, 340, ry(1), 232, s.bgm / 8.0, "OFF", phr_("최대"), WH, row(1)); text(c, 590, ry(1), b, WH, K);
-        snprintf(b, sizeof b, "%d", s.se); barv(c, 340, ry(2), 232, s.se / 8.0, "OFF", phr_("최대"), WH, row(2)); text(c, 590, ry(2), b, WH, K);
-        text(c, 344, ry(3), phr_("기본 장치"), row(3) ? K : WH, row(3) ? WH : K);
-        text(c, 344, ry(4), s.pad == 1 ? phr_("조작 설정 (서양식)") : phr_("조작 설정 (일본식)"), row(4) ? K : WH, row(4) ? WH : K);   /* t48e (#646): 고정 글자 → 조작 설정 화면 입구 */
-        const char * bm[] = { "x2", "x3", "x4", "x6", "x8" }; choices(c, 344, ry(5), bm, 5, s.bmult, WH, row(5));
-        const char * bk[] = { phr_("홀드"), phr_("토글"), phr_("둘 다") }; choices(c, 344, ry(6), bk, 3, s.bmode, WH, row(6));
-        const char * bs[] = { phr_("끔"), phr_("빠르게"), phr_("음높이 유지") }; choices(c, 344, ry(7), bs, 3, s.bsound, WH, row(7));
-        const char * bt[] = { phr_("켬"), phr_("끔") }; choices(c, 344, ry(8), bt, 2, s.boot, WH, row(8));
-        { const char * bo[] = { phr_("끔"), phr_("켬") }; choices(c, 344, ry(9), bo, 2, s.bosd, WH, row(9)); }
-        { const char * ob[] = { phr_("끔"), phr_("켬") }; choices(c, 344, ry(10), ob, 2, s.ovbtn, WH, row(10)); }   /* t52f (#132) */
-        text(c, 344, ry(11), fit(font_kr.empty() ? std::string(phr_("기본 (kyuhachi_font)")) : font_kr, 250), row(11) ? K : WH, row(11) ? WH : K);
-        text(c, 344, ry(12), fit(font_jp.empty() ? std::string(phr_("기본 (jp_default)")) : font_jp, 250), row(12) ? K : WH, row(12) ? WH : K);
-        { const char * lg[] = { "한국어", "English", "にほんご" }; choices(c, 344, ry(13), lg, 3, lang, WH, row(13)); }   /* t52g (#133): 언어 */
-        static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("BGM 음량입니다. 효과음과 따로 조절합니다."), phr_("효과음 음량입니다. 시작 소리도 이 값을 따릅니다."), phr_("소리가 나오는 장치입니다. 지금은 기본 장치만 씁니다."), phr_("패드 배치입니다. ○가 결정, ×가 취소입니다."), phr_("배속 배율입니다."), phr_("홀드는 누르는 동안, 토글은 눌러 켜고 끄기, 둘 다는 둘 다."), phr_("끔=무음 · 빠르게=음높이 상승 · 음높이 유지=높이 그대로"), phr_("시작할 때 나오는 부팅 화면을 켜고 끕니다."), phr_("배속 중에 오른쪽 위에 ▶▶ 배율을 계속 표시합니다. 캡처에는 찍히지 않습니다."), phr_("게임 중 화면 아래의 오버레이 버튼(메뉴·저장·불러오기·배속·키보드)을 보입니다. 끄면 전부 숨깁니다."), phr_("한글판 기본 글꼴입니다. {○} 로 고릅니다. 같은 배치의 글꼴만 나옵니다."), phr_("원판(일본어) 기본 글꼴입니다. {○} 로 고릅니다."), phr_("화면 문구 언어입니다. 바꾸면 바로 적용되고 저장됩니다.") };
-        desc(c, 328, 44, { fit(dkey(dd[sel]), 560) }, -1, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
-        helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
-    }
-    void d_save(Canvas & c) {
-        titlebar(c, phr_("세이브 관리"));
-        const UiGame * gm = game();
-        rbox(c, 16, 24, 288, 296, WH, gm ? ttl_suf(*gm, phr_("슬롯"), 256).c_str() : phr_("슬롯"));
-        for (int i = 0; i < 8; i++) {
-            int yy = 44 + i * 30; const SlotInfo * si = gm ? &gm->slot[i] : NULL; bool u = si && si->used;
-            std::string s = phr_("슬롯 ") + std::to_string(i + 1) + "   " + (u ? si->stamp : phr_("(비어 있음)"));
-            if (i == slotsel) { c.rect(34, yy - 3, 256, 22, WH); text(c, 40, yy, s, K, WH); } else text(c, 40, yy, s, u ? CY : GY, K);
-        }
-        rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
-        const SlotInfo * si = gm ? &gm->slot[slotsel] : NULL;
-        if (si && si->used) {
-            c.rect(343, 43, 258, 162, GY); c.rect(344, 44, 256, 160, K); if (!si->th.empty()) blit_scaled(c, si->th.data(), si->tw_, si->th_, 344, 44, 256, 160); else sample_picture(c, 344, 44, 256, 160);
-            std::string l[4] = { phr_("저장 시각  ") + si->stamp, phr_("상태 파일  ") + std::to_string(si->bytes / 1048576) + "." + std::to_string((si->bytes / 104858) % 10) + "MB", gm->disk[0], gm->disk[1] };
-            for (int i = 0; i < 4; i++) if (!l[i].empty()) text(c, 344, 214 + i * 20, l[i], WH, K);
-        } else text(c, 344, 120, phr_("비어 있는 슬롯입니다."), GY, K);
-        desc(c, 328, 44, { in_game ? phr_("고른 슬롯에 저장하거나 불러옵니다.") : phr_("선택한 슬롯에서 이어서 시작합니다.") }, -1, in_game ? phr_("↑↓:선택, ○:불러오기, □:이 슬롯에 저장, △:삭제, ×:취소") : phr_("↑↓:선택, ○:불러오기, △:삭제, ×:취소"));
-        helpline(c, in_game ? phr_("↑↓:선택, ○:불러오기, □:이 슬롯에 저장, △:삭제, ×:취소") : phr_("↑↓:선택, ○:불러오기, △:삭제, ×:취소"));
-    }
+    void d_conf(Canvas & c);
+    void d_save(Canvas & c);
     void d_extra(Canvas & c);
-    void d_game(Canvas & c) {
-        /* 배경은 호스트가 게임 화면을 깔아 둔다(draw 가 지우지 않도록 호스트가 호출 순서 관리) */
-        int exr = stage_next_label.empty() ? 0 : 22; c.rect(120, 16, 400, 336 + exr, K); rbox(c, 128, 24, 384, 320 + exr, WH, phr_("일시정지"));
-        std::vector<std::string> a = { phr_("이어하기"), phr_("저장  슬롯 ") + std::to_string(slotsel + 1), phr_("불러오기"), phr_("디스크 교체"), phr_("화면 설정"), phr_("소리/패드/배속 설정"), phr_("PC-98 키 보내기"), std::string(phr_("화면 키보드  ")) + (kb_vis ? phr_("켜짐") : phr_("꺼짐")), std::string(phr_("키보드 버튼  ")) + (kb_btn ? phr_("표시") : phr_("숨김")), std::string(phr_("키보드·배속 셰이더  ")) + (kb_sh ? phr_("적용") : phr_("안 함")), phr_("스크린샷"), phr_("메인 메뉴로"), phr_("끝내기") }; if (!stage_next_label.empty()) a.push_back(fit(stage_next_label, 280));
-        items(c, 160, 44, 330, a, sel, 22);
-
-        c.rect(0, 376, 640, 24, K);
-        helpline(c, phr_("↑↓:선택, ○:결정, ×:닫기(이어하기)"));
-    }
+    void d_game(Canvas & c);
     void start_ok(Act & a) {   /* t52i (B1): 0 이어하기 · 1 처음부터 · 2 시스템 디스크만 부팅(= 부가 메뉴의 같은 항목, 호스트 A_EXTRA arg 1) */
         if (startsel == 0 && !has_save(game())) return;
         if (game() && (game()->id.empty() || !blk_cur().empty())) return;
@@ -814,46 +653,9 @@ struct Ui {
         }
         sel = 0; scr = S_VALS;
     }
-    void d_vals(Canvas & c) {   /* t48a (#614 ③): 키·최종값·출처·덮인 값 */
-        titlebar(c, ""); const UiGame * gm = game();
-        rbox(c, 8, 20, 624, 356, WH, gm ? ttl_suf(*gm, phr_("적용값"), 560).c_str() : phr_("적용값"));
-        text(c, 20, 40, phr_("키"), CY, K); text(c, 150, 40, phr_("최종값"), CY, K); text(c, 350, 40, phr_("출처"), CY, K); text(c, 470, 40, phr_("덮인 값"), CY, K);
-        int n = (int)vals.size(); const int VN = 13;
-        if (sel >= n) sel = n > 0 ? n - 1 : 0; if (sel < 0) sel = 0;
-        if (sel < vals_top) vals_top = sel; if (sel >= vals_top + VN) vals_top = sel - VN + 1;
-        for (int i = 0; i < VN && vals_top + i < n; i++) {
-            const ValRow & r = vals[vals_top + i]; int y = 60 + i * 21; bool s = vals_top + i == sel;
-            if (s) c.rect(14, y - 2, 612, 21, WH);
-            text(c, 20, y, fit(r.key, 126), s ? K : CY, s ? WH : K); text(c, 150, y, fit(r.val, 194), s ? K : WH, s ? WH : K);
-            text(c, 350, y, fit(r.src, 114), s ? K : YL, s ? WH : K); text(c, 470, y, fit(r.cov, 150), s ? K : GY, s ? WH : K);
-        }
-        if (n == 0) text(c, 20, 60, phr_("표시할 값이 없습니다."), GY, K);
-        else { const ValRow & r = vals[sel]; text(c, 20, 340, fit(phr_("전체: ") + r.val, 596), YL, K); if (!r.cov.empty()) text(c, 20, 357, fit(phr_("덮인 값: ") + r.cov, 596), GY, K); }
-        helpline(c, phr_("↑↓:이동, L/R:한 쪽, ○ 또는 ×:돌아가기"));
-    }
-    void d_help(Canvas & c) {   /* t52i (B2·B3): 조작 안내 = 한 장 표. 배속은 「입력 → 동작」 표 */
-        titlebar(c, phr_("조작 안내"));
-        rbox(c, 16, 24, 608, 344, WH, phr_("조작 안내"));
-        static const char * L[] = {
-            phr_("패드    ○:결정(스페이스)  ×:취소(Esc)  □:빨리 넘김(CAPS)"),
-            phr_("        △:메뉴(F12)  START:Enter  십자키/왼스틱:방향키"),
-            phr_("배속    입력 → 동작"),
-            phr_("        누르는 동안   R2 / F11"),
-            phr_("        켜고 끄기     L3 / ScrollLock / Alt+F11"),
-            phr_("        빨리 넘김     □ / CAPS  (글 넘기기)"),
-            phr_("화면    Alt+Enter:전체화면  Alt+1/2/3:비율  Alt+S:셰이더"),
-            phr_("        Alt+위/아래:곡면 세기  Alt+[ ]:창 배율"),
-            phr_("저장    메뉴의 저장/불러오기, Alt+F5 / Alt+F9 는 슬롯 1"),
-            phr_("키보드  그 밖의 키는 PC-98 키로 그대로 전달"),
-            phr_("        F10 / 숫자 1-7 / KANA 는 메뉴의 「PC-98 키 보내기」로만 보냄") };
-        for (int i = 0; i < 11; i++) text(c, 40, 46 + i * 28, L[i], L[i][0] != ' ' ? CY : WH, K);
-        helpline(c, phr_("○ 또는 ×:돌아가기"));
-    }
-    void d_keys(Canvas & c) {
-        c.rect(120, 16, 400, 336, K); rbox(c, 128, 24, 384, 320, WH, phr_("PC-98 키 보내기"));
-        std::vector<std::string> a = { "F10", "1", "2", "3", "4", "5", "6", "7", "KANA" }; items(c, 160, 48, 330, a, sel, 28);
-        c.rect(0, 376, 640, 24, K); helpline(c, phr_("↑↓:선택, ○:보내기, ×:닫기"));
-    }
+    void d_vals(Canvas & c);
+    void d_help(Canvas & c);
+    void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
     bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: return true; default: return false; } }
@@ -1083,54 +885,11 @@ struct Ui {
             else if (k == UK_SELECT && sel + 1 < (int)sw.size()) { std::swap(sw[sel], sw[sel + 1]); sel++; }
             else if (k == UK_CANCEL) { kv_set("swap", join_commas(sw)); sel = 8; scr = S_EDIT; }
             break; }
-        case S_VALS: {   /* t48a (#614 ③) */
-            int n = (int)vals.size();
-            if (k == UK_UP && sel > 0) sel--; else if (k == UK_DOWN && sel + 1 < n) sel++;
-            else if (k == UK_L) sel = sel > 13 ? sel - 13 : 0; else if (k == UK_R) sel = sel + 13 < n ? sel + 13 : (n > 0 ? n - 1 : 0);
-            else if (k == UK_OK || k == UK_CANCEL) go(S_EXTRA, 7);
-            break; }
-        case S_FONT:
-            mv(sel, (int)fnt_opts.size());
-            if (k == UK_OK && sel < (int)fnt_opts.size()) {
-                const std::string o = fnt_opts[sel];
-                if (fnt_mode == 0) font_kr = (o == "kyuhachi_font" || o == "pc98player_font") ? std::string() : o; else if (fnt_mode == 1) font_jp = (o == "jp_default") ? std::string() : o;
-                else { if (o.empty()) { ed.erase("font"); ed.erase("font_kind"); } else { ed["font"] = o; std::string g; for (auto & f : fonts) if (f.name == o) g = f.group; if (g == fnt_need) ed["font_kind"] = g == "jis" ? "jp" : "kr"; /* t52c: 다른 묶음 글꼴을 고르면 작품 종류(font_kind)는 그대로 둔다 */ } }
-                dirty = true; scr = fnt_ret; sel = fnt_prev_sel; a.t = A_APPLY;
-            } else if (k == UK_CANCEL) { scr = fnt_ret; sel = fnt_prev_sel; }
-            break;
-        case S_PAD: {   /* t48e (#646): 조작 설정 */
-            mv(sel, 9);
-            if (k == UK_LEFT || k == UK_RIGHT) {
-                int d = (k == UK_RIGHT) ? 1 : -1;
-                if (sel == 0) { scope = clampi(scope + d, 0, 1); if (scope == 1 && !has_t[cur]) { t[cur] = effective(cur); has_t[cur] = true; } }
-                else if (sel == 1) { Settings & s = edit(); int nv = clampi(s.pad + d, 0, 1); if (nv != s.pad) { s.pad = nv; dirty = true; a.t = A_APPLY; } }
-            } else if (k == UK_OK) {
-                if (sel >= 2) open_padkey(sel - 2);
-                else if (sel == 1) { Settings & s = edit(); s.pad = s.pad == 1 ? 0 : 1; dirty = true; a.t = A_APPLY; }
-            } else if (k == UK_TRI) {   /* 출하 시 설정: 이 범위의 버튼 줄을 모두 지움, 결정 방식은 일본식 */
-                if (scope == 0) { gpad.clear(); eff().pad = 0; }
-                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } edit().pad = g.pad; }
-                dirty = true; a.t = A_APPLY;
-            } else if (k == UK_CANCEL) { go(S_CONF, 4); }
-            break; }
-        case S_PADKEY:
-            mv(sel, (int)pk_opts.size());
-            if (k == UK_OK && sel < (int)pk_opts.size()) {
-                const std::string o = pk_opts[sel]; std::string key = pad_key(pk_row);
-                if (scope == 1) { if (env.pad_set && cur >= 0 && cur < (int)games.size()) env.pad_set(cur, key, o); }
-                else { if (o.empty()) gpad.erase(key); else gpad[key] = o; }
-                dirty = true; scr = S_PAD; sel = pad_sel_keep; a.t = A_APPLY;
-            } else if (k == UK_CANCEL) { scr = S_PAD; sel = pad_sel_keep; }
-            break;
-        case S_OSK: {
-            if (osk_hg) { hk_key(k); break; }   /* t48b */
-            static const char * rowsl[5] = { "abcdefghij", "klmnopqrst", "uvwxyz0123", "456789.-/\\", ":|~_'() " };
-            auto cellok = [&](int r, int q) { return q < (int)strlen(rowsl[r]); };
-            if (k == UK_UP) osk_r = (osk_r + 4) % 5; else if (k == UK_DOWN) osk_r = (osk_r + 1) % 5; else if (k == UK_LEFT) osk_c = (osk_c + 9) % 10; else if (k == UK_RIGHT) osk_c = (osk_c + 1) % 10;
-            else if (k == UK_OK && cellok(osk_r, osk_c)) { char ch = rowsl[osk_r][osk_c]; if (osk_target == 1 || !osk_upper) { if (ch >= 'A' && ch <= 'Z') ch = (char)(ch + 32); } else if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 32); if (osk_buf.size() < 48) osk_buf += ch; }
-            else if (k == UK_SQ) osk_back(); else if (k == UK_TRI && osk_target == 0) osk_upper = !osk_upper;
-            else if (k == UK_SELECT) osk_done(); else if (k == UK_CANCEL) { scr = osk_ret; if (osk_ret == S_EDIT) sel = 0; }
-            break; }
+        case S_VALS: k_vals(k, a); break;   /* t48a (#614 ③) */
+        case S_FONT: k_font(k, a); break;
+        case S_PAD: k_pad(k, a); break;   /* t48e (#646): 조작 설정 */
+        case S_PADKEY: k_padkey(k, a); break;
+        case S_OSK: k_osk(k, a); break;
         case S_NAME: {
             int cnt = (int)name_presets().size() + 2; mv(sel, cnt);   /* t48b: 끝에 「한글 키보드」 「영문 글자표」 두 줄 */
             if (k == UK_OK) { if (sel < cnt - 2) { ed_name = ent::unique_name(name_presets()[sel], ents_used(eg, en_orig)); sel = 0; scr = S_EDIT; } else osk_open(0, ed_name, S_EDIT, sel == cnt - 2); }
@@ -1180,6 +939,16 @@ struct Ui {
     void k_swap(UKey k, Act & a);
     void k_swapi(UKey k, Act & a);
     void k_add(UKey k, Act & a);
+    void k_vals(UKey k, Act & a);
+    void k_pad(UKey k, Act & a);
+    void k_padkey(UKey k, Act & a);
+    void k_font(UKey k, Act & a);
+    void k_osk(UKey k, Act & a);
+    Act k_screen_conf(UKey k, Act & a);
+    void k_save(UKey k, Act & a);
+    void k_game(UKey k, Act & a);
+    void k_keys(UKey k, Act & a);
+    void k_help(UKey k, Act & a);
     Act key(UKey k);
 };
 #include "ui/screen_table.h"   /* S8a: draw/key dispatch and the home-flow screens */

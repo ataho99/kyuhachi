@@ -42,9 +42,7 @@
 #include <typeinfo>
 #include <vector>
 #include <deque>
-#if defined(WIN32)
-# include <windows.h>
-#endif
+#include "platform/plat_os.h"   /* S9e-ㄴ: windows.h 는 platform 층에서 포함 */
 #include "input/kh_input12.h"
 #include "input/kh_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
 #include "input/kh_inputtypes.h"   /* S6 */

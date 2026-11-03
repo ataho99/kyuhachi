@@ -1,0 +1,81 @@
+== 시작 2026-11-03T08:59:40+09:00 | 대상 zip sha dcfe9012a3341ca8 | 백업 사본 = /mnt/h/RETRO_SET/PC98_PLAYER/백업_saves_20261103-081759
+exe sha: N=dd0465d0f7a135a5 I(t52i)=0492561362375ec5 F(옛)=a8b8fdde8687bbb5
+== S1 같은 부팅 저장→불러오기
+kitan: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\N\Kyuhachi\s1a.g98s -> OK  (THMB 3206 bytes)|LOAD 시험_t53a_state_085940\N\Kyuhachi\s1a.g98s <- OK | png=3206,3206,3206,3206,3206,3206,
+doukyuusei2: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\N\Kyuhachi\s1b.g98s -> OK  (THMB 7244 bytes)|LOAD 시험_t53a_state_085940\N\Kyuhachi\s1b.g98s <- OK | png=7244,7282,7282,7244,7244,
+== S2 저장(프로세스 1) → 다른 프로세스에서 불러오기 14회
+저장: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\N\Kyuhachi\s2.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,
+s2 크기 19014863
+load@2.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@2.2: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=2715,3206,3206,3206,
+load@2.4: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@2.6: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@2.8: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=2760,3206,3206,3206,
+load@3.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@3.2: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@3.4: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@3.6: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=2563,3206,3206,3206,
+load@3.8: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@4.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@4.5: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+load@5.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3134,3206,3206,3206,
+load@6.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s2.g98s <- OK | png=3206,3206,3206,3206,
+== S3 라이브 세이브 사본(백업_saves) → t53a 로 불러오기 (대조: t52i 로 같은 사본)
+사본 daimadou95 sha16 40315c8afcccaf85 크기 19033677
+사본 doukyuusei2 sha16 f0fc2aa01e94238a 크기 19065341
+사본 kitan sha16 d0f64468444ba02d 크기 19014982
+t53a daimadou95@3.0: rc=0 gensei_host r024t53a start, profile='daimadou95' headless=0 ui=0 stubs=326 autokeys=0|   4049 MSG  PC98_SaveState: loading state saved by build 'r023t39ui4' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_daimadou95.g98s <- OK | png=2730,22755,22772,1300,22772,
+t53a daimadou95@6.0: rc=0 gensei_host r024t53a start, profile='daimadou95' headless=0 ui=0 stubs=326 autokeys=0|   7075 MSG  PC98_SaveState: loading state saved by build 'r023t39ui4' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_daimadou95.g98s <- OK | png=2759,22755,22807,1329,22807,
+t52i daimadou95@3.0 (대조): rc=0 gensei_host r024t52i start, profile='daimadou95' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\I\Kyuhachi\L_daimadou95.g98s <- FAIL build ID mismatch: saved='r023t39ui4' current='r024t52i'| png=1300,1329,1256,1300,
+t53a doukyuusei2@3.0: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   4225 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=11598,53984,53984,7282,53984,
+t53a doukyuusei2@6.0: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   7172 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=11803,53984,53984,7244,53984,
+t52i doukyuusei2@3.0 (대조): rc=0 gensei_host r024t52i start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\I\Kyuhachi\L_doukyuusei2.g98s <- FAIL build ID mismatch: saved='r024t52d' current='r024t52i'| png=7282,7244,7244,7282,
+t53a kitan@3.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   4028 MSG  PC98_SaveState: loading state saved by build 'r024t52f' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_kitan.g98s <- OK | png=3206,3329,3329,3206,3329,
+t53a kitan@6.0: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7149 MSG  PC98_SaveState: loading state saved by build 'r024t52f' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_kitan.g98s <- OK | png=3206,3329,3329,3206,3329,
+t52i kitan@3.0 (대조): rc=0 gensei_host r024t52i start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\I\Kyuhachi\L_kitan.g98s <- FAIL build ID mismatch: saved='r024t52f' current='r024t52i'| png=3206,3206,3206,3206,
+t53a doukyuusei2 반복@2.0: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   3259 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=6820,53984,53984,3146,
+t53a doukyuusei2 반복@2.4: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   3568 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=11802,53984,53984,7244,
+t53a doukyuusei2 반복@4.0: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   5135 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=7282,53984,53984,7282,
+t53a doukyuusei2 반복@5.0: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   6148 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\L_doukyuusei2.g98s <- OK | png=10683,53984,53984,7244,
+== S4 이어하기 경로(saves\<작품>\slot01.g98s, UI 이어하기와 같은 코드) — 사본으로
+resume doukyuusei2: rc=0 gensei_host r024t53a start, profile='doukyuusei2' headless=0 ui=0 stubs=326 autokeys=0|   3321 MSG  PC98_SaveState: loading state saved by build 'r024t52d' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\saves_resume\doukyuusei2\slot01.g98s <- OK | png=
+resume kitan: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   3056 MSG  PC98_SaveState: loading state saved by build 'r024t52f' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\saves_resume\kitan\slot01.g98s <- OK | png=
+resume daimadou95: rc=0 gensei_host r024t53a start, profile='daimadou95' headless=0 ui=0 stubs=326 autokeys=0|   3051 MSG  PC98_SaveState: loading state saved by build 'r023t39ui4' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\saves_resume\daimadou95\slot01.g98s <- OK | png=
+== S5 다른 빌드가 저장한 상태 → t53a 로 불러오기
+t52i 저장: rc=0 gensei_host r024t52i start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\I\Kyuhachi\s5i.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+t53a 로 불러오기(t52i 저장분): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   3987 MSG  PC98_SaveState: loading state saved by build 'r024t52i' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\s5i.g98s <- OK | png=3206,3206,3206,3206,
+옛 exe 저장: rc=0  png=3206,3206,3206,3206,
+t53a 로 불러오기(옛 exe 저장분): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   4089 MSG  PC98_SaveState: loading state saved by build 'r024t52f' into 'r024t53a' (format v2, same component table)|LOAD 시험_t53a_state_085940\N\Kyuhachi\s5f.g98s <- OK | png=3206,3206,3206,3206,
+== S6 잘린 파일 · 한 바이트 깨짐 · 없는 파일 (t53a 로 만든 s2)
+6a(9507431B): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s6a.g98s <- FAIL CRC32 mismatch (corrupt image)| png=3206,3206,3206,3206,
+6b(19014862B): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s6b.g98s <- FAIL CRC32 mismatch (corrupt image)| png=3206,3206,3206,3206,
+6c(100B): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s6c.g98s <- FAIL CRC32 mismatch (corrupt image)| png=3206,3206,3206,3206,
+6d(0B): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s6d.g98s <- FAIL empty image| png=3206,3206,3206,3206,
+6e(한 바이트): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s6e.g98s <- FAIL CRC32 mismatch (corrupt image)| png=3206,3206,3206,3206,
+6f(없는 파일): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\없음.g98s <- FAIL cannot open for read: H:\RETRO_SET\PC98_PLAYER\시험_t53a_state_085940\N\Kyuhachi\없음.g98s| png=3206,3206,3206,
+== S7 형식이 정말 다른 파일(헤더·길이표를 고치고 CRC 다시 계산) — 거부돼야 하고 크래시는 없어야 함
+7a: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s7a.g98s <- FAIL state ABI mismatch: saved=99 current=1 (saved by build 'r024t53a')| png=3206,3206,3206,
+7b: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s7b.g98s <- FAIL format version mismatch| png=3206,3206,3206,
+7c: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s7c.g98s <- FAIL component length mismatch: 'CMOS' saved=81 current=80 (saved by build 'r024t53a')| png=3206,3206,3206,3206,
+== S8 F5 덮어쓰기 · 백업 · 저장 도중 정지 흉내
+8a 첫 저장: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+  파일: s8.g98s 
+8b 덮어쓰기(읽을 수 있던 파일→.bak): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7332 MSG  PC98_SaveState: previous file kept as 시험_t53a_state_085940\N\Kyuhachi\s8.g98s.bak (readable)|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+  파일: s8.g98s s8.g98s.bak  | .bak==첫 저장: 예 | 새 저장 CRC 유효: 
+8c 못 읽는 파일 덮어쓰기(→.unreadable): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7205 MSG  PC98_SaveState: previous file kept as 시험_t53a_state_085940\N\Kyuhachi\s8c.g98s.unreadable (CRC32 mismatch (corrupt image))|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8c.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+  파일: s8c.g98s s8c.g98s.unreadable  | .unreadable==원래 조각: 예
+8d 또 못 읽는 파일(→.unreadable2, .bak 안 건드림): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7149 MSG  PC98_SaveState: previous file kept as 시험_t53a_state_085940\N\Kyuhachi\s8c.g98s.unreadable2 (CRC32 mismatch (corrupt image))|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8c.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+  파일: s8c.g98s s8c.g98s.unreadable s8c.g98s.unreadable2 
+8e 임시 파일만 쓰고 정지(원본 s8e 유지?): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s -> FAIL test stop after temp (THMB 3206 bytes)| png=3206,3206,3206,3206,
+  파일: s8e.g98s s8e.g98s.tmp  | 원본 불변: 예
+8f 백업까지 하고 정지(원본 s8e 유지?): rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7276 MSG  PC98_SaveState: previous file kept as 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s.bak (readable)|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s -> FAIL test stop after backup (THMB 3206 bytes)| png=3206,3206,3206,
+  파일: s8e.g98s s8e.g98s.bak s8e.g98s.tmp  | 원본 불변: 예
+8g 남은 .tmp 가 있어도 정상 저장: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|   7311 MSG  PC98_SaveState: previous file kept as 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s.bak (readable)|SAVE 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s -> OK  (THMB 3206 bytes)| png=3206,3206,3206,3206,3206,
+  파일: s8e.g98s s8e.g98s.bak  | 새 파일 != 옛 파일: 예
+8h 저장한 파일을 다시 불러오기: rc=0 gensei_host r024t53a start, profile='kitan' headless=0 ui=0 stubs=326 autokeys=0|LOAD 시험_t53a_state_085940\N\Kyuhachi\s8e.g98s <- OK | png=3206,3206,3206,3206,
+== S9 라이브 saves 불변 확인
+live daimadou95: 40315c8afcccaf85 (백업 40315c8afcccaf85)
+live doukyuusei2: f0fc2aa01e94238a (백업 f0fc2aa01e94238a)
+live kitan: d0f64468444ba02d (백업 d0f64468444ba02d)
+T=/mnt/h/RETRO_SET/PC98_PLAYER/시험_t53a_state_085940
+== 끝 2026-11-03T09:09:14+09:00

@@ -1,0 +1,25 @@
+== v0.5.0-t53a ==
+zip  /mnt/h/RETRO_SET/PC98_PLAYER/release/Kyuhachi-v0.5.0-t53a.zip (8045131 B)
+sha  72307e2987d5cc08c5b66485f94a530fb018a97feae70076cddb07ab403959ad
+-- notes (/mnt/h/RETRO_SET/PC98_PLAYER/release/notes_t53a_final.md) --
+**What's new (since t52i2)**
+- Saved states made by earlier builds now load in newer builds when the saved-state format is the same (the strict build-name check is gone). A state that really is incompatible is refused with a message, never a crash.
+- Fixed a crash that could happen while restoring FM sound state on load.
+- Saving is safer: the new state is written to a temporary file and checked before it replaces the old one. The previous save is kept next to it as `slotNN.g98s.bak` (or `.unreadable` if it could not be read), so an interrupted save never costs you your last good one.
+
+PC-98, one click away. Unzip and run Kyuhachi.exe — no installer.
+
+**Before you start**
+- Put an anex86-format font BMP (524,350 B) in `res/fonts/`. TTF/OTF are not supported.
+- Korean releases / Korean patches need the matching Korean font BMP.
+- Drums: put the six YM2608 rhythm samples (`2608_*.wav`) in `res/rhythm/` (not bundled).
+- Game images, NEC BIOS, font ROMs and rhythm samples are NOT included. Use your own copies.
+- If your antivirus (e.g. Avast CyberCapture) blocks it, add the folder as an exception.
+
+**Languages:** 한국어 · English · 日本語 (Settings → Language)
+
+GPL: complete corresponding source available on request (see README.txt).
+sha256 (zip): `72307e2987d5cc08c5b66485f94a530fb018a97feae70076cddb07ab403959ad`
+-----------------
+검사 합격
+DRY RUN — 올리려면: release.sh t53a --publish

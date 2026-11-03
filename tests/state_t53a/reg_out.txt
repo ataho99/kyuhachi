@@ -1,0 +1,92 @@
+== reg start 2026-11-03T08:56:59+09:00
+대상 = t53a zip sha256 dcfe9012a3341ca8 size 8044196
+2:# 지시 #136 2항 시험: 새로 푼 폴더(시험_t53a_<시각>). live 폴더 안에서는 부팅하지 않는다(읽기 복사만).
+3:P=/mnt/h/RETRO_SET/PC98_PLAYER; ZB=/mnt/h/RETRO_SET/PC98_PLAYER/build/r020/out_t53a/Kyuhachi-v0.5.0-t53a.zip; ZH=$P/release/Kyuhachi-v0.5.0-t52h.zip; T=$P/시
+4:FD=$P/live_v050/Kyuhachi/res/fonts; PS=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe; KS=/mnt/h/RETRO_SET/PC98_PLAYER/build/r020/work/t52i/uik
+시험 폴더: /mnt/h/RETRO_SET/PC98_PLAYER/시험_t53a_085659
+-- raw 끝부분
+shinonome16_jp.fnt zip 안 sha256: d556df1c5ba54d0d3a4dcbc4b0c99dca43ec16c64593e10d368fe95972c6e0f7 | work 쪽: d556df1c5ba54d0d3a4dcbc4b0c99dca43ec16c64593e10d368fe95972c6e0f7
+zip: 8044196 sha256 dcfe9012a3341ca8e32b3127d58dfda911a13676fe6952e187bed0ada6c974a3
+T=/mnt/h/RETRO_SET/PC98_PLAYER/시험_t53a_085659
+DONE
+== T2 (글꼴 0개): 로그 줄 vs golden
+T2 DIFF
+1,3c1,3
+< HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\zero\Kyuhachi\shaders\pc98_sharp.glsl -> 내장 셰이더 사용
+< HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\zero\Kyuhachi\shaders\pc98_crt.glsl -> 내장 셰이더 사용
+< HOST ERROR: 글꼴 BMP(anex86 형식 524,350 B) 없음: H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\zero\Kyuhachi\res\fonts -> 작품을 시작하지 않음
+---
+> HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\zero\Kyuhachi\shaders\pc98_sharp.glsl -> 내장 셰이더 사용
+> HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\zero\Kyuhachi\shaders\pc98_crt.glsl -> 내장 셰이더 사용
+> HOST ERROR: 글꼴 BMP(anex86 형식 524,350 B) 없음: H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\zero\Kyuhachi\res\fonts -> 작품을 시작하지 않음
+== T3 (부팅): 로그 줄 vs golden + 캡처
+T3 log DIFF
+1,3c1,3
+< HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\Kyuhachi\shaders\pc98_sharp.glsl -> 내장 셰이더 사용
+< HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\Kyuhachi\shaders\pc98_crt.glsl -> 내장 셰이더 사용
+< HOST 글꼴 = 기본 (번들 한글 패치 글꼴 H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\Kyuhachi\res\fonts\kyuhachi_font.bmp)
+---
+> HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\Kyuhachi\shaders\pc98_sharp.glsl -> 내장 셰이더 사용
+> HOST WARN: GL: shader file not found: H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\Kyuhachi\shaders\pc98_crt.glsl -> 내장 셰이더 사용
+> HOST 글꼴 = 기본 (번들 한글 패치 글꼴 H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\Kyuhachi\res\fonts\kyuhachi_font.bmp)
+캡처 장수/크기 새: 3206  | golden: 3206 
+== T1/T7 uikeys lang0
+compared=11 bad=0
+T7 DIFF lang0
+log key lines DIFF
+7c7
+< HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\out_keys0\settings_uikeys.ini (bleed=0)
+---
+> HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\out_keys0\settings_uikeys.ini (bleed=0)
+== T1/T7 uikeys lang1
+compared=11 bad=0
+T7 DIFF lang1
+log key lines DIFF
+7c7
+< HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\out_keys1\settings_uikeys.ini (bleed=0)
+---
+> HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\out_keys1\settings_uikeys.ini (bleed=0)
+== T1/T7 uikeys lang2
+compared=11 bad=0
+T7 DIFF lang2
+log key lines DIFF
+7c7
+< HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t52i_082441\f1\out_keys2\settings_uikeys.ini (bleed=0)
+---
+> HOST uikeys: 설정 저장 H:\RETRO_SET\PC98_PLAYER\시험_t53a_085659\f1\out_keys2\settings_uikeys.ini (bleed=0)
+== T1 전체 57장 × 3 언어
+full0 png=57
+DIFF ui_01_boot1.png rows=9
+DIFF ui_02_boot3.png rows=9
+DIFF ui_03_boot5.png rows=9
+compared=57 bad=1
+      1 HOST T52E conf_restore before=8 changed=7 after=7 act=9 -> FAIL
+      1 HOST T52G lang 2 게임 시작='ゲームスタート' want='ゲーム スタート' FAIL
+      1 HOST T52G lang cycle bad=1 flag=1 roundtrip=1 (phrases ko=665) -> FAIL
+      1 HOST UITEST block_reason: mouse-required=[] normal=[] install-only=[설치 전용 작품 (
+      1 HOST UITEST settings roundtrip FAIL (effective(2).se=8 effective(0).se=8)
+      1 HOST UITEST wm_next: x3->right FAIL, x3->right-again(no x4: grey) FAIL, custom1000x700 -> 
+full1 png=57
+DIFF ui_01_boot1.png rows=9
+DIFF ui_02_boot3.png rows=9
+DIFF ui_03_boot5.png rows=9
+compared=57 bad=1
+      1 HOST T52E conf_restore before=8 changed=7 after=7 act=9 -> FAIL
+      1 HOST T52G lang 2 게임 시작='ゲームスタート' want='ゲーム スタート' FAIL
+      1 HOST T52G lang cycle bad=1 flag=1 roundtrip=1 (phrases ko=665) -> FAIL
+      1 HOST UITEST block_reason: mouse-required=[] normal=[] install-only=[설치 전용 작품 (
+      1 HOST UITEST settings roundtrip FAIL (effective(2).se=8 effective(0).se=8)
+      1 HOST UITEST wm_next: x3->right FAIL, x3->right-again(no x4: grey) FAIL, custom1000x700 -> 
+full2 png=57
+DIFF ui_01_boot1.png rows=9
+DIFF ui_02_boot3.png rows=9
+DIFF ui_03_boot5.png rows=9
+compared=57 bad=1
+      1 HOST T52E conf_restore before=8 changed=7 after=7 act=9 -> FAIL
+      1 HOST T52G lang 2 게임 시작='ゲームスタート' want='ゲーム スタート' FAIL
+      1 HOST T52G lang cycle bad=1 flag=1 roundtrip=1 (phrases ko=665) -> FAIL
+      1 HOST UITEST block_reason: mouse-required=[] normal=[] install-only=[설치 전용 작품 (
+      1 HOST UITEST settings roundtrip FAIL (effective(2).se=8 effective(0).se=8)
+      1 HOST UITEST wm_next: x3->right FAIL, x3->right-again(no x4: grey) FAIL, custom1000x700 -> 
+T=/mnt/h/RETRO_SET/PC98_PLAYER/시험_t53a_085659
+== reg done 2026-11-03T08:59:40+09:00

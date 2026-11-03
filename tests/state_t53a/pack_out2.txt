@@ -1,0 +1,108 @@
+== pack start 2026-11-03T09:17:04+09:00
+chmod (directory attributes) error: Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/Kyuhachi.exe
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/LICENSE.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/README.txt
+          Operation not permitted
+chmod (directory attributes) error: Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/games/PUT_GAMES_HERE.txt
+          Operation not permitted
+chmod (directory attributes) error: Operation not permitted
+chmod (directory attributes) error: Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/res/fonts/PUT_FONTS_HERE.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/res/fonts/shinonome16_LICENSE.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/res/fonts/shinonome16_jp.fnt
+          Operation not permitted
+chmod (directory attributes) error: Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/saves/SAVES_ARE_CREATED_HERE.txt
+          Operation not permitted
+chmod (directory attributes) error: Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/src/SOURCE_README.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/strings_en.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/strings_ja.txt
+          Operation not permitted
+fchmod (file attributes) error: Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/strings_ko.txt
+          Operation not permitted
+warning:  cannot set modif./access times for Kyuhachi/src/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/src/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/src/
+warning:  cannot set modif./access times for Kyuhachi/saves/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/saves/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/saves/
+warning:  cannot set modif./access times for Kyuhachi/res/fonts/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/res/fonts/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/res/fonts/
+warning:  cannot set modif./access times for Kyuhachi/res/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/res/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/res/
+warning:  cannot set modif./access times for Kyuhachi/games/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/games/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/games/
+warning:  cannot set modif./access times for Kyuhachi/
+          Operation not permitted
+warning:  cannot set permissions for Kyuhachi/
+          Operation not permitted
+warning:  set times/attribs failed for Kyuhachi/
+README 줄 삽입: layout 1줄 + 섹션 5줄
+-- 새 README vs t52i2 README 차이(빌드 줄·버전만 나와야 함)
+1c1
+< ﻿Kyuhachi v0.5.0-t53a
+---
+> ﻿Kyuhachi v0.5.0-t52i
+47d46
+< 
+55c54
+< build t53a - sha dd0465d0
+---
+> build t52i - sha 04925613
+RELEASE_ZIP: /mnt/h/RETRO_SET/PC98_PLAYER/release/Kyuhachi-v0.5.0-t53a.zip sha256=72307e2987d5cc08c5b66485f94a530fb018a97feae70076cddb07ab403959ad size=8045131
+zip 안 exe sha16: dd0465d0f7a135a5 (시험한 exe: dd0465d0f7a135a5)
+Kyuhachi/
+Kyuhachi/Kyuhachi.exe
+Kyuhachi/LICENSE.txt
+Kyuhachi/README.txt
+Kyuhachi/games/
+Kyuhachi/games/PUT_GAMES_HERE.txt
+Kyuhachi/res/
+Kyuhachi/res/fonts/
+Kyuhachi/res/fonts/PUT_FONTS_HERE.txt
+Kyuhachi/res/fonts/shinonome16_LICENSE.txt
+Kyuhachi/res/fonts/shinonome16_jp.fnt
+Kyuhachi/res/rhythm/
+Kyuhachi/res/rhythm/PUT_RHYTHM_HERE.txt
+Kyuhachi/saves/
+Kyuhachi/saves/SAVES_ARE_CREATED_HERE.txt
+Kyuhachi/src/
+Kyuhachi/src/SOURCE_README.txt
+Kyuhachi/strings_en.txt
+Kyuhachi/strings_ja.txt
+Kyuhachi/strings_ko.txt
+== pack done 2026-11-03T09:17:07+09:00

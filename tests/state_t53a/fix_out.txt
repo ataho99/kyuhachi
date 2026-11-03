@@ -1,0 +1,42 @@
+== fix start 2026-11-03T09:10:07+09:00
+lang0:
+ui_01_boot1.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_02_boot3.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_03_boot5.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+lang1:
+ui_01_boot1.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_02_boot3.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_03_boot5.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+lang2:
+ui_01_boot1.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_02_boot3.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+ui_03_boot5.png diff y=114..123 x=184..198 (rows 16 미만이면 가림 영역)
+-- 정규화 비교 (시험 폴더 이름만 같게)
+T2: same
+T3: same
+key lines lang0: same
+settings_uikeys.ini lang0: DIFF
+1c1
+< ; Kyuhachi v0.5.0-t52i - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+---
+> ; Kyuhachi v0.5.0-t53a - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+key lines lang1: same
+settings_uikeys.ini lang1: DIFF
+1c1
+< ; Kyuhachi v0.5.0-t52i - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+---
+> ; Kyuhachi v0.5.0-t53a - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+key lines lang2: same
+settings_uikeys.ini lang2: DIFF
+1c1
+< ; Kyuhachi v0.5.0-t52i - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+---
+> ; Kyuhachi v0.5.0-t53a - PC-98 BOOTLOADER 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)
+-- golden FAIL 3줄 기준선 비교(full0)
+      1 T52E conf_restore before=8 changed=7 after=7 act=9 -> FAIL
+      1 T52G lang 2 게임 시작='ゲームスタート' want='ゲーム ス�
+      1 T52G lang cycle bad=1 flag=1 roundtrip=1 (phrases ko=665) -> FAIL
+      1 UITEST block_reason: mouse-required=[] normal=[] install-only=[설치 
+      1 UITEST settings roundtrip FAIL (effective(2).se=8 effective(0).se=8)
+      1 UITEST wm_next: x3->right FAIL, x3->right-again(no x4: grey) FAIL, cus
+== fix done 2026-11-03T09:10:11+09:00

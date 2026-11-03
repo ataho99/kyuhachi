@@ -45,20 +45,20 @@
 #if defined(WIN32)
 # include <windows.h>
 #endif
-#include "input/gensei_input12.h"
-#include "input/gensei_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
-#include "input/gensei_inputtypes.h"   /* S6 */
-#include "gensei_ui.h"
-#include "settings/gensei_prof.h"
+#include "input/kh_input12.h"
+#include "input/kh_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
+#include "input/kh_inputtypes.h"   /* S6 */
+#include "ui/kh_ui.h"
+#include "settings/kh_prof.h"
 #include "pc98_savestate.h"
 #include "pc98_gdc.h"
 #include "imagedisk_d88.h"
 #include "imagedisk_nfd.h"
 #include "gensei_boostaud.h"
-#include "settings/gensei_nkdb.h"
-#include "settings/gensei_addwork.h"
+#include "settings/kh_nkdb.h"
+#include "settings/kh_addwork.h"
 #include "platform/plat.h" /* S3: platform layer */
-#include "gensei_uilist.h"
+#include "ui/kh_uilist.h"
 #include "gensei_embed.h"   /* r019: 글꼴·셰이더 내장본 (빌드 스크립트가 생성) */
 
 /* ------------------------------------------------------------------ declarations (copied from sdlmain.cpp) */
@@ -420,9 +420,9 @@ static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bo
     if (other_on) { ov::osd_draw(oc, other_osd, true, y); y += 30; } if (!g_bk_osd.empty()) ov::osd_draw(oc, g_bk_osd, true, y);   /* t47a: 자동 입력 단계 줄 */
 }
 /* ---- t46x: 화면 키보드 오버레이 (경로 B) — 키 표(플랫폼 무관) + 상태·그리기. SDL 입력층은 gh_kbd_event 한 함수(아래 글루). */
-#include "input/gensei_kbtable.h"
-#include "input/gensei_kbov.h"
-#include "gensei_kbov_draw.h"   /* S6: kbov drawing half */
+#include "input/kh_kbtable.h"
+#include "input/kh_kbov.h"
+#include "ui/kh_kbov_draw.h"   /* S6: kbov drawing half */
 static volatile float g_scanv = 7.0f, g_maskv = 0.15f, g_bleedv = 0.0f, g_glowv = 0.0f, g_nearv = 0.0f;   /* t48c: 빛 번짐 · 밑 그림 nearest(1) */   /* crt 셰이더 uniform(렌더 스레드가 읽음) */
 static std::string g_exedir, g_cfgpath;
 /* ------------------------------------------------------------------ r020 (#247정정·#248): 공용 자원 run\res\fonts · run\res\rhythm */
@@ -1553,7 +1553,7 @@ static bool g_ob_held = false, g_ob_long = false; static unsigned g_ob_t0 = 0;  
 static bool gh_kb_send(int k, bool d) {   /* 코어로 보냄. 부팅 전·never_map 키는 보내지 않는다(기존 gh_game_event 와 같은 조건) */
     KBD_KEYS kk = (KBD_KEYS)k;
     if (!g_boot_tick || kk == KBD_NONE) return false;
-    if ((int)kk < 256 && gensei_never[(int)kk]) return false;
+    if ((int)kk < 256 && kh_never[(int)kk]) return false;
     KEYBOARD_AddKey(kk, d); g_kbsent_total++; if (g_ui.scr == ui::S_OSK) g_kbsent_text++; return true;
 }
 static bool gh_kb_ibm(void) { return pc98_force_ibm_layout; }
@@ -1679,18 +1679,18 @@ static bool gh_game_event(const SDL_Event & e) {
         if (k == SDLK_SCROLLLOCK) { if (d) { g_boost_tog = !g_boost_tog; gh_boost_update(); } return true; }
         if (k == SDLK_F10) return true;
         KBD_KEYS kk = gh_sdlkey(k);
-        if (kk != KBD_NONE && g_boot_tick && !((int)kk < 256 && gensei_never[(int)kk])) KEYBOARD_AddKey(kk, d);
+        if (kk != KBD_NONE && g_boot_tick && !((int)kk < 256 && kh_never[(int)kk])) KEYBOARD_AddKey(kk, d);
         return true; }
     case SDL_MOUSEMOTION: {   /* r020 (#249-2): 호스트 마우스 → 코어 PC-98 버스마우스. 창 픽셀 이동량을 640 폭 기준으로 환산 */
         if (!(g_mouse_game && g_boot_tick && !g_menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)g_mouse_game, (int)(g_boot_tick != 0), (int)g_menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
         int ww = 640, wh = 400; if (g_win) SDL_GetWindowSize(g_win, &ww, &wh); float sc = 640.0f / (float)(ww > 0 ? ww : 640);
-        { float fdx = (float)e.motion.xrel * sc, fdy = (float)e.motion.yrel * sc; gensei_vmouse_move_rel(fdx, fdy);   /* t48c (#639 ③): 코어로 넘긴 이동량을 20번마다(처음 한 번 포함) 한 줄로 */
+        { float fdx = (float)e.motion.xrel * sc, fdy = (float)e.motion.yrel * sc; kh_vmouse_move_rel(fdx, fdy);   /* t48c (#639 ③): 코어로 넘긴 이동량을 20번마다(처음 한 번 포함) 한 줄로 */
       static float mfx = 0, mfy = 0; static int mfn = 0; mfx += fdx; mfy += fdy; mfn++;
       if (mfn == 1 || mfn % 20 == 0) { gh_log("HOST MOUSEFWD dx=%.1f dy=%.1f x=%d y=%d btn=%u n=%d", (double)mfx, (double)mfy, e.motion.x, e.motion.y, (unsigned)SDL_GetMouseState(NULL, NULL), mfn); mfx = 0; mfy = 0; } return true; } }
     case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP: {
         if (!(g_mouse_game && g_boot_tick && !g_menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)g_mouse_game, (int)(g_boot_tick != 0), (int)g_menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
         int b = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : e.button.button == SDL_BUTTON_MIDDLE ? 2 : -1;
-        if (b >= 0) { gensei_vmouse_button(b, e.type == SDL_MOUSEBUTTONDOWN); gh_log("HOST MOUSEFWD dx=0.0 dy=0.0 x=%d y=%d btn=%u button=%d down=%d", e.button.x, e.button.y, (unsigned)SDL_GetMouseState(NULL, NULL), b, e.type == SDL_MOUSEBUTTONDOWN ? 1 : 0); } return true; }
+        if (b >= 0) { kh_vmouse_button(b, e.type == SDL_MOUSEBUTTONDOWN); gh_log("HOST MOUSEFWD dx=0.0 dy=0.0 x=%d y=%d btn=%u button=%d down=%d", e.button.x, e.button.y, (unsigned)SDL_GetMouseState(NULL, NULL), b, e.type == SDL_MOUSEBUTTONDOWN ? 1 : 0); } return true; }
     default: return false;
     }
 }
@@ -1735,19 +1735,19 @@ static bool gh_pad_parse(const std::string & v, GPadBind & b) {   /* none / mous
  * t48e: 순서 = 기본값(서양식이면 동·남 맞바꿈) < 전역 settings.ini btn_* < 프로필 옛 o/x/sq < 프로필 btn_* (이 작품 user.ini [pad] 가 가장 늦게 얹혀 이긴다).
  * refresh = true 면 (게임 도중 조작 설정을 바꿨을 때) 이 작품 user.ini [pad] 의 btn_* 를 파일에서 다시 읽는다 */
 static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
-    memset(gensei_never, 0, sizeof(gensei_never));
+    memset(kh_never, 0, sizeof(kh_never));
     std::vector<std::string> nm_all;   /* t48e3 (#662): never_map 은 ',' 와 '+' 둘 다 구분자 (예: XFER+ROLLUP+ROLLDOWN) */
     for (auto & part : prof::split_list(p.never_map)) for (auto & sub : prof::split_list(part, '+')) nm_all.push_back(sub);
-    for (auto & nm : nm_all) { KBD_KEYS k = gh_keyname_pad(nm); if (k != KBD_NONE && (int)k < 256) { gensei_never[(int)k] = true; gh_log("never_map: %s -> key %d", nm.c_str(), (int)k); } else gh_log("never_map: %s -> (알 수 없는 이름, 무시)", nm.c_str()); }
-    if (!refresh) gensei_western = (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size() ? g_ui.effective(g_cur_game) : g_ui.g).pad == 1;
-    gensei_pb_defaults();
+    for (auto & nm : nm_all) { KBD_KEYS k = gh_keyname_pad(nm); if (k != KBD_NONE && (int)k < 256) { kh_never[(int)k] = true; gh_log("never_map: %s -> key %d", nm.c_str(), (int)k); } else gh_log("never_map: %s -> (알 수 없는 이름, 무시)", nm.c_str()); }
+    if (!refresh) kh_western = (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size() ? g_ui.effective(g_cur_game) : g_ui.g).pad == 1;
+    kh_pb_defaults();
     std::map<std::string, std::string> pad = p.pad;
     if (refresh && g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) {
         for (auto it = pad.begin(); it != pad.end();) { if (it->first.compare(0, 4, "btn_") == 0) it = pad.erase(it); else ++it; }
         std::map<std::string, std::string> m; prof::get_pad_keys(g_ui.games[g_cur_game].dir, m); for (auto & kv : m) pad[kv.first] = kv.second;
     }
     /* 1) 전역 btn_* */
-    for (int i = 0; i < 7; i++) { auto it = g_ui.gpad.find(GH_PADBTN[i]); if (it != g_ui.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) gensei_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
+    for (int i = 0; i < 7; i++) { auto it = g_ui.gpad.find(GH_PADBTN[i]); if (it != g_ui.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
     /* 2) 프로필 옛 이름 o/x/sq — 옛 gh_keyname 으로 지금과 똑같이 */
     auto get = [&](const char * k) -> std::string { auto it = pad.find(k); return it == pad.end() ? std::string() : it->second; };
     std::string o = get("o"), x = get("x"), sq = get("sq");
@@ -1756,18 +1756,18 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
       if (lc(o) == "space") { gh_log("pad: 옛 o=%s = 기본값 → 기본 따름", o.c_str()); o.clear(); }
       if (lc(x) == "esc") { gh_log("pad: 옛 x=%s = 기본값 → 기본 따름", x.c_str()); x.clear(); }
       if (lc(sq) == "caps") { gh_log("pad: 옛 sq=%s = 기본값 → 기본 따름", sq.c_str()); sq.clear(); } }
-    if (o == "mouse_left") { gensei_padmouse = true; gh_log("pad: mouse mode (o=mouse_left)"); }
-    else if (!o.empty()) { KBD_KEYS k = gh_keyname(o); if (k != KBD_NONE) { gensei_pb[PB_EAST].type = PBT_KEY; gensei_pb[PB_EAST].key = k; } }
-    if (!x.empty() && x != "mouse_right") { KBD_KEYS k = gh_keyname(x); if (k != KBD_NONE) { gensei_pb[PB_SOUTH].type = PBT_KEY; gensei_pb[PB_SOUTH].key = k; } }
-    if (!sq.empty()) { KBD_KEYS k = gh_keyname(sq); if (k != KBD_NONE) { gensei_pb[PB_WEST].type = PBT_KEY; gensei_pb[PB_WEST].key = k; } }
+    if (o == "mouse_left") { kh_padmouse = true; gh_log("pad: mouse mode (o=mouse_left)"); }
+    else if (!o.empty()) { KBD_KEYS k = gh_keyname(o); if (k != KBD_NONE) { kh_pb[PB_EAST].type = PBT_KEY; kh_pb[PB_EAST].key = k; } }
+    if (!x.empty() && x != "mouse_right") { KBD_KEYS k = gh_keyname(x); if (k != KBD_NONE) { kh_pb[PB_SOUTH].type = PBT_KEY; kh_pb[PB_SOUTH].key = k; } }
+    if (!sq.empty()) { KBD_KEYS k = gh_keyname(sq); if (k != KBD_NONE) { kh_pb[PB_WEST].type = PBT_KEY; kh_pb[PB_WEST].key = k; } }
     /* 3) 프로필 btn_* (옛 이름 위에 얹는다) */
-    for (int i = 0; i < 7; i++) { std::string v = get(GH_PADBTN[i]); if (v.empty()) continue; GPadBind b; if (gh_pad_parse(v, b)) gensei_pb[GH_PADIDX[i]] = b; else gh_log("pad: 프로필 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], v.c_str()); }
+    for (int i = 0; i < 7; i++) { std::string v = get(GH_PADBTN[i]); if (v.empty()) continue; GPadBind b; if (gh_pad_parse(v, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 프로필 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], v.c_str()); }
     /* never_map 에 걸린 키는 옛 규칙대로 되돌린다: 동 → Space(없으면 Esc) · 남 → Esc · 서 → 없음. 그 밖의 버튼은 없음 */
-    for (int i = 0; i < PB_N; i++) if (gensei_pb[i].type == PBT_KEY && (int)gensei_pb[i].key < 256 && gensei_never[(int)gensei_pb[i].key]) {
-        if (i == PB_EAST) gensei_pb[i].key = KBD_space; else if (i == PB_SOUTH) gensei_pb[i].key = KBD_esc; else { gensei_pb[i].type = PBT_NONE; gensei_pb[i].key = KBD_NONE; } }
+    for (int i = 0; i < PB_N; i++) if (kh_pb[i].type == PBT_KEY && (int)kh_pb[i].key < 256 && kh_never[(int)kh_pb[i].key]) {
+        if (i == PB_EAST) kh_pb[i].key = KBD_space; else if (i == PB_SOUTH) kh_pb[i].key = KBD_esc; else { kh_pb[i].type = PBT_NONE; kh_pb[i].key = KBD_NONE; } }
     auto nm = [](const GPadBind & b) -> std::string { if (b.type == PBT_NONE) return "none"; if (b.type == PBT_ML) return "mouse_left"; if (b.type == PBT_MR) return "mouse_right"; return std::to_string((int)b.key); };
-    gh_log("pad: western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s%s", gensei_western ? 1 : 0, nm(gensei_pb[PB_EAST]).c_str(), nm(gensei_pb[PB_SOUTH]).c_str(), nm(gensei_pb[PB_WEST]).c_str(), nm(gensei_pb[PB_START]).c_str(), nm(gensei_pb[PB_L1]).c_str(), nm(gensei_pb[PB_R1]).c_str(), nm(gensei_pb[PB_BACK]).c_str(), refresh ? " (갱신)" : "");
-    GPLOG("BINDS western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s", gensei_western ? 1 : 0, nm(gensei_pb[PB_EAST]).c_str(), nm(gensei_pb[PB_SOUTH]).c_str(), nm(gensei_pb[PB_WEST]).c_str(), nm(gensei_pb[PB_START]).c_str(), nm(gensei_pb[PB_L1]).c_str(), nm(gensei_pb[PB_R1]).c_str(), nm(gensei_pb[PB_BACK]).c_str());
+    gh_log("pad: western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str(), refresh ? " (갱신)" : "");
+    GPLOG("BINDS western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str());
 }
 static std::map<std::string, std::vector<std::string>> g_fdfiles;   /* 작품 id -> 디스크 교체 후보 파일(UiGame::fds 와 같은 순서) */
 
@@ -2151,8 +2151,8 @@ static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
     if (e.type == SDL_CONTROLLERBUTTONDOWN) {
         switch (e.cbutton.button) {
         case SDL_CONTROLLER_BUTTON_START: return UK_OK;
-        case SDL_CONTROLLER_BUTTON_B: return gensei_western ? UK_CANCEL : UK_OK;   /* t48e (#651 4): 일본식 = 동쪽(B/○) 결정 · 서양식 = 남쪽(A/×) 결정 */
-        case SDL_CONTROLLER_BUTTON_A: return gensei_western ? UK_OK : UK_CANCEL;
+        case SDL_CONTROLLER_BUTTON_B: return kh_western ? UK_CANCEL : UK_OK;   /* t48e (#651 4): 일본식 = 동쪽(B/○) 결정 · 서양식 = 남쪽(A/×) 결정 */
+        case SDL_CONTROLLER_BUTTON_A: return kh_western ? UK_OK : UK_CANCEL;
         case SDL_CONTROLLER_BUTTON_X: return UK_SQ; case SDL_CONTROLLER_BUTTON_Y: return UK_TRI; case SDL_CONTROLLER_BUTTON_BACK: return UK_SELECT;
         case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return UK_L; case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return UK_R;
         case SDL_CONTROLLER_BUTTON_DPAD_UP: return UK_UP; case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return UK_DOWN; case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return UK_LEFT; case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return UK_RIGHT;
@@ -2297,7 +2297,7 @@ static void gh_spawn_stage(const std::string & entry) {   /* 같은 실행 인�
 static void gh_sendkey(int arg) {
     static const KBD_KEYS K9[9] = { KBD_f10, KBD_1, KBD_2, KBD_3, KBD_4, KBD_5, KBD_6, KBD_7, KBD_kana };
     if (arg < 0 || arg > 8) return;
-    if ((int)K9[arg] < 256 && gensei_never[(int)K9[arg]]) { gh_log("sendkey #%d blocked (never_map)", arg); g_osd = phr_("이 작품에서는 보낼 수 없는 키입니다"); g_osd_until = SDL_GetTicks() + 2000; return; }
+    if ((int)K9[arg] < 256 && kh_never[(int)K9[arg]]) { gh_log("sendkey #%d blocked (never_map)", arg); g_osd = phr_("이 작품에서는 보낼 수 없는 키입니다"); g_osd_until = SDL_GetTicks() + 2000; return; }
     g_key_down = K9[arg]; g_key_release_at = SDL_GetTicks() + 100; KEYBOARD_AddKey(g_key_down, true);
     gh_log("sendkey #%d", arg);
 }
@@ -2336,7 +2336,7 @@ static void gh_menu_run(void) {
             case ui::A_LOAD: { if (!U.games[g_cur_game].slot[a.slot].used) { gh_osd(phr_("비어 있는 슬롯입니다"), 1500); break; }
                 bool ok = gh_do_load(gh_slot_n(g_cur_game, a.slot)); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 을 불러왔습니다") : std::string(phr_("불러오기에 실패했습니다")), 2000); done = true; break; }
             case ui::A_DELSLOT: gh_delete_slot(g_cur_game, a.slot); break;
-            case ui::A_APPLY: gh_apply_settings(U.eff(), true); gensei_western = U.eff().pad == 1; gh_apply_profile_input(g_prof, true); break;   /* t48e (#646): 조작 설정 변경을 바로 입력 층에 */
+            case ui::A_APPLY: gh_apply_settings(U.eff(), true); kh_western = U.eff().pad == 1; gh_apply_profile_input(g_prof, true); break;   /* t48e (#646): 조작 설정 변경을 바로 입력 층에 */
             case ui::A_SHOT: g_scr_req = true; break;   /* t41: 메뉴가 닫힌 뒤 다음 프레임에서 찍는다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
             case ui::A_FULLSCR: gh_fs_toggle(); break;
@@ -2410,7 +2410,7 @@ static bool gh_ui_main_(std::string & out_id) {
             if (e.type == SDL_TEXTEDITING) { U.ime_edit(e.edit.text); continue; }   /* t48a: IME 조합 중 글자 */
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT && U.scr == ui::S_OSK && U.osk_hg) {   /* t48b: 마우스·터치(터치는 SDL 이 마우스로 바꿔 준다) */
                 int vx = 0, vy = 0; bool ok = gh_menu_win2virt(e.button.x, e.button.y, vx, vy); bool hit = ok && U.pointer(vx, vy); gh_log("HGPTR win=%d,%d virt=%d,%d hit=%d", e.button.x, e.button.y, vx, vy, hit ? 1 : 0); continue; }
-            if ((e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) && e.cbutton.button == (gensei_western ? SDL_CONTROLLER_BUTTON_A : SDL_CONTROLLER_BUTTON_B) && U.scr == ui::S_OSK && U.osk_hg) {   /* t48b (#629 2): ○ 는 뗄 때 입력, 0.5초 넘게 누르면 SHIFT(어깨 버튼이 없는 패드용) */
+            if ((e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) && e.cbutton.button == (kh_western ? SDL_CONTROLLER_BUTTON_A : SDL_CONTROLLER_BUTTON_B) && U.scr == ui::S_OSK && U.osk_hg) {   /* t48b (#629 2): ○ 는 뗄 때 입력, 0.5초 넘게 누르면 SHIFT(어깨 버튼이 없는 패드용) */
                 if (e.type == SDL_CONTROLLERBUTTONDOWN) { g_ob_held = true; g_ob_long = false; g_ob_t0 = SDL_GetTicks(); }
                 else { if (g_ob_held && !g_ob_long) U.key(ui::UK_OK); g_ob_held = false; }
                 continue; }
@@ -2421,7 +2421,7 @@ static bool gh_ui_main_(std::string & out_id) {
             case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; g_cur_game = a.game; g_resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
             case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = g_cur_game = a.game; g_resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
             case ui::A_DELSLOT: gh_delete_slot(a.game, a.slot); break;
-            case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); gensei_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
+            case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); kh_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
             case ui::A_FULLSCR: gh_fs_toggle(); break;
             case ui::A_ADD: gh_add_action(a.arg); break;
@@ -2651,7 +2651,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
 void GFX_Events(void) {
     static unsigned int last_ev = 0;
     unsigned int now = SDL_GetTicks();
-    gensei_input_tick();
+    kh_input_tick();
     if (now != last_ev) {
         last_ev = now;
         SDL_Event e;
@@ -2702,7 +2702,7 @@ void GFX_Events(void) {
             while (g_next_inj < g_inj.size() && since + g_inj_base >= g_inj[g_next_inj].at) { gh_inj_run(g_inj[g_next_inj], since + g_inj_base); g_next_inj++; }   /* t48e (#648): --inject · t51a: 창 안 전환을 건너도 시험 시계가 이어지게 g_inj_base 를 더한다 */
             kbov::tick();   /* t52f: 빠른 불러오기 길게 누름(0.6초) 판정 */
             if (!g_headless && g_win && g_use_gl) gh_kbtest_tick(since);   /* t46x 시험 전용(옵션이 없으면 아무 일도 안 함) */
-            gensei_vmouse_pump();   /* t34: 호스트 마우스 이동량을 20ms 마다 ±100 이하로 코어에 */
+            kh_vmouse_pump();   /* t34: 호스트 마우스 이동량을 20ms 마다 ±100 이하로 코어에 */
             if (g_key_down != KBD_NONE && now >= g_key_release_at) { KEYBOARD_AddKey(g_key_down, false); g_key_down = KBD_NONE; }
             if (!g_bk_paused && g_next_bk < g_prof.bootkeys.size() && g_bk_t >= g_prof.bootkeys[g_next_bk].at_ms && g_key_down == KBD_NONE) {   /* t36cd: bootkeys — 실행 항목이 정한 부팅 후 키·명령 */
                 g_key_down = g_prof.bootkeys[g_next_bk].key; g_key_release_at = now + g_keyhold;
@@ -3201,16 +3201,16 @@ int main(int argc, char * argv[]) {
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     CreateThread(NULL, 0, gh_boxkiller, NULL, 0, NULL);
 #endif
-    gensei_db_dir = g_exedir;   /* t48e (#651 2): <exe>\res\gamecontrollerdb.txt */
-    gensei_input_init();
-    gensei_hotplug_hook = gh_hotplug_hook;
+    kh_db_dir = g_exedir;   /* t48e (#651 2): <exe>\res\gamecontrollerdb.txt */
+    kh_input_init();
+    kh_hotplug_hook = gh_hotplug_hook;
     gh_help_init(); if (g_helplog) ov::g_help_logfn = gh_help_logfn; ov::g_helpdev = SDL_NumJoysticks() > 0 ? 0 : 1;   /* t49a (#812): 시작값 = 패드가 연결돼 있으면 패드, 없으면 키보드 */
     gensei_lock = true;
     gh_ui_init_games();
     ui::settings_load(g_ui, g_cfgpath);
     if (g_cli_lang >= 0 && g_cli_lang <= 2) g_ui.lang = g_cli_lang;   /* t52g 시험: --lang N */
     phr_set_lang(g_ui.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", g_ui.lang, phr_loaded_count, phr_("게임 시작"));
-    gensei_western = g_ui.g.pad == 1;   /* t48e: 시작 메뉴용(게임 시작 때 작품별 값으로 다시 정함) */
+    kh_western = g_ui.g.pad == 1;   /* t48e: 시작 메뉴용(게임 시작 때 작품별 값으로 다시 정함) */
     if (g_uitest_dir.empty()) {   /* r017: 게임 폴더 · 작품 추가(시험용 CLI) */
         gh_nk_load_once();
         if (!g_gamefolder_cli.empty()) g_ui.gamefolder = aw::acp_to_u8(g_gamefolder_cli);

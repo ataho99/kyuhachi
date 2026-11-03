@@ -1,4 +1,4 @@
-// gensei_prof.h — 원본 파일 구조 기반 자동 프로필 + game.ini 덮어쓰기 + 게임 DB(sha1 → 작품). (#230/#237)
+// kh_prof.h — 원본 파일 구조 기반 자동 프로필 + game.ini 덮어쓰기 + 게임 DB(sha1 → 작품). (#230/#237)
 // 헤더만으로 형식을 판별한다(확장자 무시). 호스트(Windows)·시험 도구(Linux) 공용. 원본은 읽기만 한다.
 #pragma once
 #include <stdint.h>

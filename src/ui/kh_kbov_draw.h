@@ -1,5 +1,5 @@
 #pragma once
-/* kbov drawing half (uses ov::Canvas/ov::text, so it cannot live in input). Split from input/gensei_kbov.h in S6, code unchanged. Moves to ui/ in S7. */
+/* kbov drawing half (uses ov::Canvas/ov::text, so it cannot live in input). Split from input/kh_kbov.h in S6, code unchanged. Moves to ui/ in S7. */
 namespace kbov {
 
 /* ---- 그리기 (가상 캔버스에 ARGB 로 그린 뒤 프레임에 알파 합성) */

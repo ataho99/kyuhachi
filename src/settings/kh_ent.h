@@ -1,4 +1,4 @@
-/* gensei_ent.h -- t39: 실행 방법(entry) 편집 로직 (UI·호스트·하니스 공용, 화면과 무관한 순수 함수) */
+/* kh_ent.h -- t39: 실행 방법(entry) 편집 로직 (UI·호스트·하니스 공용, 화면과 무관한 순수 함수) */
 #pragma once
 #include <string>
 #include <vector>

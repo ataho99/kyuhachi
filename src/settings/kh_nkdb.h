@@ -1,9 +1,9 @@
-/* gensei_nkdb.h -- r017 (#239 5번): Neo Kobe dat 기반 게임 DB(gamedb_nk.tsv) 읽기 + 변형(패치판 추정) 판정.
+/* kh_nkdb.h -- r017 (#239 5번): Neo Kobe dat 기반 게임 DB(gamedb_nk.tsv) 읽기 + 변형(패치판 추정) 판정.
  * 호스트(Windows)·시험 도구(Linux) 공용. 입력은 prof::ImgInfo 목록(경로·크기·sha1·형식·라벨·FAT 서명).
  * 판정 등급:  A = 모든 이미지 sha1 일치(원판)  B = 크기·구성이 원판과 같고 제목/라벨·실행파일명/크기 유일성 중 하나 이상이 받쳐 줌(변형, 패치판 추정)
  *            C = 크기만 같고 근거가 약함(후보)  - = 근거 없음 */
 #pragma once
-#include "gensei_prof.h"
+#include "settings/kh_prof.h"
 #include <unordered_map>
 #include <set>
 

@@ -1,4 +1,4 @@
-/* gensei_padnames_t48e.h -- t48e (#646/#651): 키 이름 표 확장. kbtable 의 모든 라벨을 저장용 이름(소문자 ASCII)으로 바꾸고 되찾는다.
+/* kh_padnames_t48e.h -- t48e (#646/#651): 키 이름 표 확장. kbtable 의 모든 라벨을 저장용 이름(소문자 ASCII)으로 바꾸고 되찾는다.
  * 옛 이름(rollup/pageup/rolldown/pagedown 포함)은 호스트의 gh_keyname 이 먼저 처리해 지금과 똑같이 동작한다 — 여기는 옛 이름에 없는 것만 맡는다.
  * 새 이름: rlup = ROLL UP(0x36, KBD_pagedown) · rldn = ROLL DOWN(0x37, KBD_pageup). */
 #pragma once
@@ -7,7 +7,7 @@
 #include <set>
 #include <ctype.h>
 #include "keyboard.h"
-#include "gensei_kbtable.h"
+#include "input/kh_kbtable.h"
 
 namespace pn {
 struct E { std::string name; int idx; };

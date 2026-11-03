@@ -1,5 +1,5 @@
 #pragma once
-/* gensei_settings.h -- S5: ui::Settings 구조체·옛 형식 변환(fx_*)·settings.ini 한 구역 읽기/쓰기(ini_put·ini_set). gensei_ui.h 에서 코드 그대로 옮김, 네임스페이스 ui:: 유지(이름 정리는 S7) */
+/* kh_settings.h -- S5: ui::Settings 구조체·옛 형식 변환(fx_*)·settings.ini 한 구역 읽기/쓰기(ini_put·ini_set). kh_ui.h 에서 코드 그대로 옮김, 네임스페이스 ui:: 유지(이름 정리는 S7) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>

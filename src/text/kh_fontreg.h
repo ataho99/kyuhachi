@@ -1,6 +1,6 @@
-/* gensei_fontreg.h -- t39 (#291): res\fonts 의 bmp 글꼴 자동 등록·검사·배치 묶음 판정 (UI·호스트·하니스 공용) */
+/* kh_fontreg.h -- t39 (#291): res\fonts 의 bmp 글꼴 자동 등록·검사·배치 묶음 판정 (UI·호스트·하니스 공용) */
 #pragma once
-#include "gensei_ov.h"
+#include "text/kh_font.h"
 #include <string>
 #include <vector>
 #include <math.h>

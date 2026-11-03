@@ -1,12 +1,12 @@
-/* gensei_addwork.h -- r017 (#239 4번): 작품 추가 · 게임 폴더 자동 등록. 호스트(Windows)·시험 도구(Linux) 공용.
+/* kh_addwork.h -- r017 (#239 4번): 작품 추가 · 게임 폴더 자동 등록. 호스트(Windows)·시험 도구(Linux) 공용.
  * 흐름: 이미지 모음(Work) → 형식 판별(헤더) → sha1(캐시) → 게임 DB/NK DB 판정 → 구조 판정(prof::auto_profile) → games\<id>\game.ini 기록.
  * 경로는 "시스템 문자열"(Windows 에서는 ANSI) 그대로, 화면에 보이는 글(제목·판정)은 UTF-8. */
 #pragma once
 #include <set>
 #include <cctype>
-#include "gensei_prof.h"
-#include "gensei_nkdb.h"
-#include "gensei_zip.h"
+#include "settings/kh_prof.h"
+#include "settings/kh_nkdb.h"
+#include "settings/kh_zip.h"
 #include <sys/stat.h>
 #include <set>
 #include "platform/plat.h" /* S3: platform layer */

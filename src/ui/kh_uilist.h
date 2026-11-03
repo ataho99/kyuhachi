@@ -1,7 +1,7 @@
-/* gensei_uilist.h -- t39: 작품 목록의 t39 필드 채우기(언어·short·변형 접기·실행 방법 목록). 호스트와 하니스가 같은 코드를 쓴다. */
+/* kh_uilist.h -- t39: 작품 목록의 t39 필드 채우기(언어·short·변형 접기·실행 방법 목록). 호스트와 하니스가 같은 코드를 쓴다. */
 #pragma once
-#include "gensei_ui.h"
-#include "settings/gensei_prof.h"
+#include "ui/kh_ui.h"
+#include "settings/kh_prof.h"
 #include <set>
 
 namespace ulist {

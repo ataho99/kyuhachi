@@ -1,4 +1,4 @@
-/* gensei_zip.h -- r018 (#240 ③): zip 읽기. 중앙 디렉터리 해석(ZIP64 포함) + 자체 inflate(RFC1951) + CRC32 검사.
+/* kh_zip.h -- r018 (#240 ③): zip 읽기. 중앙 디렉터리 해석(ZIP64 포함) + 자체 inflate(RFC1951) + CRC32 검사.
  * 외부 라이브러리 없음. 호스트(Windows)·시험 도구(Linux) 공용. 경로는 "시스템 문자열"(Windows 에서는 ANSI). */
 #pragma once
 #include <stdint.h>

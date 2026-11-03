@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include "gensei_kbtable.h"
+#include "input/kh_kbtable.h"
 
 namespace kbov {
 /* ---- 배치 (가상 640x400) */

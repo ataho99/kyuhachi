@@ -6,6 +6,7 @@
 #endif
 #include <windows.h>
 namespace plat {
+typedef HWND native_win;   /* S9e-N 3: window handle type seen by callers */
 /* HKCU\...\Personalize\AppsUseLightTheme == 1 이면 true, 그 밖(값 없음·0·읽기 실패)은 false */
 inline bool apps_use_light_theme() {
     HKEY k; DWORD v = 0, sz = sizeof v, ty = 0; bool light = false;
@@ -33,5 +34,13 @@ inline bool close_window_titled(const char * title) {
     HWND h = FindWindowA(NULL, title); if (!h) return false;
     PostMessage(h, WM_CLOSE, 0, 0); PostMessage(h, WM_COMMAND, IDOK, 0); return true;
 }
+}
+#else
+namespace plat {
+typedef void * native_win;
+inline bool apps_use_light_theme() { return false; }
+inline int dwm_dark_titlebar(native_win, bool, unsigned *, long *) { return 1; }
+inline void redraw_frame(native_win) {}
+inline bool close_window_titled(const char *) { return false; }
 }
 #endif

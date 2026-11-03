@@ -100,7 +100,7 @@ static void gh_ui_env_setup(void) {
         for (auto & d : ds) { ui::FileItem f; f.name = aw::acp_to_u8(d); f.dir = true; r.push_back(f); }
         for (auto & n : fs) { ui::FileItem f; f.name = aw::acp_to_u8(n); uint64_t sz = 0, mt = 0; if (aw::file_stat(aw::join(pa, n), sz, mt)) f.size = (long long)sz; r.push_back(f); }
         return r; };
-    E.roots = []() { std::vector<std::string> r; DWORD m = GetLogicalDrives(); for (int i = 0; i < 26; i++) if (m & (1u << i)) r.push_back(std::string(1, (char)('A' + i)) + ":\\"); return r; };
+    E.roots = []() { return plat::drive_roots(); };
     E.has_img = [](int g, const std::string & n) {
         if (n.empty() || g < 0 || g >= (int)gApp.ui_.games.size()) return false; std::string pa = aw::sys_from_ini(n);
         bool abs = (pa.size() > 1 && pa[1] == ':') || pa[0] == '\\' || pa[0] == '/'; std::string full = abs ? pa : aw::join(gApp.ui_.imgdir_of(g), pa);
@@ -251,12 +251,7 @@ static void gh_ui_init_games(void) {
     gh_log("games: %d", (int)gApp.ui_.games.size());
 }
 /* ------------------------------------------------------------------ r017: 작품 추가 · 게임 폴더 자동 등록 */
-#include <SDL_syswm.h>
-#include <shlobj.h>
-#include <commdlg.h>
-#pragma comment(lib, "comdlg32.lib")
-#pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "ole32.lib")
+#include "platform/plat_dialog.h"   /* S9e-N 3: OS headers and dialogs live in platform */
 static void gh_nk_load_once(void) {
     static bool done = false; if (done) return; done = true;
     std::string p = gApp.nkdb_path.empty() ? gApp.exedir + "\\gamedb_nk.tsv" : gApp.nkdb_path;
@@ -264,7 +259,7 @@ static void gh_nk_load_once(void) {
     else gh_log("gamedb_nk: none (%s)", p.c_str());
     gApp.shacache.load(gApp.exedir + "\\sha_cache.tsv");
 }
-static HWND gh_hwnd(void) { SDL_SysWMinfo wi; SDL_VERSION(&wi.version); if (gApp.win && SDL_GetWindowWMInfo(gApp.win, &wi)) return wi.info.win.window; return NULL; }
+static plat::native_win gh_hwnd(void) { return gApp.win ? plat::window_native(gApp.win) : NULL; }
 
 /* ---- t52a (#54/#55): 제목표시줄이 윈도우 앱 테마를 따른다 ---------------------------------------------
  * HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\AppsUseLightTheme == 1 이면 밝게, 그 밖(값 없음·0·읽기 실패)은 어둡게.
@@ -276,7 +271,7 @@ static bool gh_apps_light(void) {
 }
 static void gh_titlebar_apply(const char * why, bool force) {
     try {
-        HWND hw = gh_hwnd(); if (!hw) return;
+        plat::native_win hw = gh_hwnd(); if (!hw) return;
         if (gApp.tb_last == -3 && !force) return;
         int want = gh_apps_light() ? 0 : 1;
         if (!force && want == gApp.tb_last) return;
@@ -292,12 +287,8 @@ static void gh_titlebar_apply(const char * why, bool force) {
 }
 static void gh_titlebar_event(const SDL_Event * e) {
     try {
-        if (e->type == SDL_SYSWMEVENT) {
-            const SDL_SysWMmsg * w = e->syswm.msg;
-            if (w && w->subsystem == SDL_SYSWM_WINDOWS && w->msg.win.msg == WM_SETTINGCHANGE && w->msg.win.lParam) {
-                const char * a = (const char *)w->msg.win.lParam; const wchar_t * u = (const wchar_t *)w->msg.win.lParam;
-                if (strcmp(a, "ImmersiveColorSet") == 0 || (a[0] == 'I' && a[1] == 0 && wcscmp(u, L"ImmersiveColorSet") == 0)) gh_titlebar_apply("settingchange", true);
-            }
+        if (plat::is_theme_change_event(e)) {
+            gh_titlebar_apply("settingchange", true);
         } else if (e->type == SDL_WINDOWEVENT && gApp.win && (e->window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e->window.event == SDL_WINDOWEVENT_RESTORED || e->window.event == SDL_WINDOWEVENT_SHOWN)) {
             unsigned now = SDL_GetTicks(); if (now - gApp.tb_tick > 400u) { gApp.tb_tick = now; gh_titlebar_apply("window", true); }   /* 전체화면 <-> 창 전환 뒤에도 유지 */
         }
@@ -305,21 +296,16 @@ static void gh_titlebar_event(const SDL_Event * e) {
 }
 
 static bool gh_pick_files(std::vector<std::string> & out) {   /* 시스템(ANSI) 경로로 돌려준다 */
-    static char buf[1 << 16]; memset(buf, 0, sizeof buf); OPENFILENAMEA o; memset(&o, 0, sizeof o); o.lStructSize = sizeof o; o.hwndOwner = gh_hwnd();
     std::string t = aw::u8_to_acp(phr_("추가할 디스크 이미지를 고르세요 (여러 개 가능)"));
     std::string f1 = aw::u8_to_acp(phr_("디스크 이미지")), f2 = aw::u8_to_acp(phr_("모든 파일"));
     std::string flt = f1 + std::string(1, '\0') + "*.fdi;*.hdi;*.nhd;*.d88;*.d77;*.88d;*.98d;*.nfd;*.hdm;*.dup;*.xdf;*.dsk;*.fim;*.flp;*.img;*.ima;*.thd;*.hdd;*.hdn;*.dim;*.tfd;*.fdd;*.bin;*.zip" + std::string(1, '\0') + f2 + std::string(1, '\0') + "*.*" + std::string(2, '\0');
-    o.lpstrFilter = flt.c_str(); o.lpstrFile = buf; o.nMaxFile = sizeof buf; o.lpstrTitle = t.c_str(); o.Flags = OFN_EXPLORER | OFN_ALLOWMULTISELECT | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
-    if (!GetOpenFileNameA(&o)) return false;
-    std::string first = buf; const char * p = buf + first.size() + 1;
-    if (!*p) out.push_back(first); else { while (*p) { out.push_back(aw::join(first, p)); p += strlen(p) + 1; } }
+    std::vector<std::string> parts; if (!plat::pick_files_a(gh_hwnd(), t, flt, parts)) return false;
+    if (parts.size() == 1) out.push_back(parts[0]); else { for (size_t i = 1; i < parts.size(); i++) out.push_back(aw::join(parts[0], parts[i])); }
     return !out.empty();
 }
 static bool gh_pick_folder(const char * title_u8, std::string & out) {
-    static bool com = false; if (!com) { com = true; CoInitializeEx(NULL, COINIT_APARTMENTTHREADED); }
-    char disp[MAX_PATH]; BROWSEINFOA b; memset(&b, 0, sizeof b); b.hwndOwner = gh_hwnd(); b.pszDisplayName = disp; std::string t = aw::u8_to_acp(title_u8); b.lpszTitle = t.c_str(); b.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
-    LPITEMIDLIST id = SHBrowseForFolderA(&b); if (!id) return false;
-    char path[MAX_PATH]; bool ok = SHGetPathFromIDListA(id, path) != 0; CoTaskMemFree(id); if (ok) out = path; return ok;
+    std::string t = aw::u8_to_acp(title_u8);
+    return plat::pick_folder_a(gh_hwnd(), t, out);
 }
 static aw::Ctx gh_aw_ctx(void) {
     gh_db_load_once(); gh_nk_load_once(); aw::Ctx c; c.games_dir = gApp.exedir + "\\games"; c.on_dir = gh_res_on_work; c.db = &gApp.db; c.nk = gApp.nk_.loaded ? &gApp.nk_ : NULL; c.cache = &gApp.shacache; { std::vector<std::string> ml; int mv = aw::merge_dups(c, &ml); for (auto & l : ml) gh_log("%s", l.c_str()); if (mv) gh_log("중복 합침 %d건", mv); } aw::index_registered(c); return c;

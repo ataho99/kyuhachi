@@ -102,5 +102,12 @@ inline void list_dir_acp(const std::string & dir, std::vector<std::string> & fil
     closedir(d);
 }
 #endif
+#if defined(_WIN32)
+inline std::vector<std::string> drive_roots() {
+    std::vector<std::string> r; DWORD m = GetLogicalDrives(); for (int i = 0; i < 26; i++) if (m & (1u << i)) r.push_back(std::string(1, (char)('A' + i)) + ":\\"); return r;
+}
+#else
+inline std::vector<std::string> drive_roots() { return std::vector<std::string>(1, "/"); }
+#endif
 }
 #endif

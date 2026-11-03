@@ -7,7 +7,7 @@ static bool gh_png_decode(const std::vector<uint8_t> & png, std::vector<uint32_t
     bool ok = png_image_finish_read(&im, NULL, out.data(), 0, NULL) != 0; png_image_free(&im); return ok;
 }
 static void gh_refresh_game_slots(int gi) {
-    ui::UiGame & G = g_ui.games[gi]; G.lastslot = -1; G.thmb.clear(); unsigned long long best = 0;
+    ui::UiGame & G = gApp.ui_.games[gi]; G.lastslot = -1; G.thmb.clear(); unsigned long long best = 0;
     for (int i = 0; i < 8; i++) {
         ui::SlotInfo & s = G.slot[i]; s = ui::SlotInfo();
         std::string p = gh_slot_n(gi, i); plat::FileInfo fa;
@@ -44,15 +44,15 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
     std::vector<std::string> nm_all;   /* t48e3 (#662): never_map 은 ',' 와 '+' 둘 다 구분자 (예: XFER+ROLLUP+ROLLDOWN) */
     for (auto & part : prof::split_list(p.never_map)) for (auto & sub : prof::split_list(part, '+')) nm_all.push_back(sub);
     for (auto & nm : nm_all) { KBD_KEYS k = gh_keyname_pad(nm); if (k != KBD_NONE && (int)k < 256) { kh_never[(int)k] = true; gh_log("never_map: %s -> key %d", nm.c_str(), (int)k); } else gh_log("never_map: %s -> (알 수 없는 이름, 무시)", nm.c_str()); }
-    if (!refresh) kh_western = (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size() ? g_ui.effective(g_cur_game) : g_ui.g).pad == 1;
+    if (!refresh) kh_western = (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size() ? gApp.ui_.effective(gApp.cur_game) : gApp.ui_.g).pad == 1;
     kh_pb_defaults();
     std::map<std::string, std::string> pad = p.pad;
-    if (refresh && g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) {
+    if (refresh && gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) {
         for (auto it = pad.begin(); it != pad.end();) { if (it->first.compare(0, 4, "btn_") == 0) it = pad.erase(it); else ++it; }
-        std::map<std::string, std::string> m; prof::get_pad_keys(g_ui.games[g_cur_game].dir, m); for (auto & kv : m) pad[kv.first] = kv.second;
+        std::map<std::string, std::string> m; prof::get_pad_keys(gApp.ui_.games[gApp.cur_game].dir, m); for (auto & kv : m) pad[kv.first] = kv.second;
     }
     /* 1) 전역 btn_* */
-    for (int i = 0; i < 7; i++) { auto it = g_ui.gpad.find(GH_PADBTN[i]); if (it != g_ui.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
+    for (int i = 0; i < 7; i++) { auto it = gApp.ui_.gpad.find(GH_PADBTN[i]); if (it != gApp.ui_.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
     /* 2) 프로필 옛 이름 o/x/sq — 옛 gh_keyname 으로 지금과 똑같이 */
     auto get = [&](const char * k) -> std::string { auto it = pad.find(k); return it == pad.end() ? std::string() : it->second; };
     std::string o = get("o"), x = get("x"), sq = get("sq");
@@ -74,13 +74,8 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
     gh_log("pad: western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str(), refresh ? " (갱신)" : "");
     GPLOG("BINDS western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str());
 }
-static std::map<std::string, std::vector<std::string>> g_fdfiles;   /* 작품 id -> 디스크 교체 후보 파일(UiGame::fds 와 같은 순서) */
 
 /* ------------------------------------------------------------------ t39: 실행 방법 UI 가 쓰는 환경(파일·저장) */
-static std::map<std::string, std::string> g_vlabel;     /* 변형 폴더 id -> 목록에 보일 이름 */
-static std::string g_uikeys_file;                        /* t39: --uikeys <파일> (시험 전용) */
-static bool g_titletest = false, g_titlelegacy = false;  /* t39: --titletest / --titlelegacy */
-static bool g_helplog = false;   /* t49a: --helplog (조작 설명 폭 실측 로그) */
 #define KH_WT_SUFFIX " - " KH_FULLNAME   /* t49a (#811): 창 제목 접미(항상 전부 남김, 30바이트) */
 #define KH_WT_TITLEMAX (113 - (int)(sizeof(KH_WT_SUFFIX) - 1))                /* 제목 쪽 상한 = 옛 합계 113 - 접미 30 */
 static std::string gh_window_title(const ui::UiGame & tg, bool legacy) {   /* 작품 제목만 줄임, 한글 3바이트 경계 유지 */
@@ -98,7 +93,7 @@ static bool gh_make_blank_hdi(const std::string & path, int mb) {
     fclose(f); if (!ok) plat::remove_file(path.c_str()); return ok;
 }
 static void gh_ui_env_setup(void) {
-    ui::Env & E = g_ui.env; E.sep = '\\';
+    ui::Env & E = gApp.ui_.env; E.sep = '\\';
     E.list_dir = [](const std::string & p) {
         std::vector<ui::FileItem> r; std::string pa = aw::sys_from_ini(p); std::vector<std::string> fs, ds; aw::list_dir(pa, fs, &ds);
         std::sort(ds.begin(), ds.end()); std::sort(fs.begin(), fs.end());
@@ -107,51 +102,51 @@ static void gh_ui_env_setup(void) {
         return r; };
     E.roots = []() { std::vector<std::string> r; DWORD m = GetLogicalDrives(); for (int i = 0; i < 26; i++) if (m & (1u << i)) r.push_back(std::string(1, (char)('A' + i)) + ":\\"); return r; };
     E.has_img = [](int g, const std::string & n) {
-        if (n.empty() || g < 0 || g >= (int)g_ui.games.size()) return false; std::string pa = aw::sys_from_ini(n);
-        bool abs = (pa.size() > 1 && pa[1] == ':') || pa[0] == '\\' || pa[0] == '/'; std::string full = abs ? pa : aw::join(g_ui.imgdir_of(g), pa);
+        if (n.empty() || g < 0 || g >= (int)gApp.ui_.games.size()) return false; std::string pa = aw::sys_from_ini(n);
+        bool abs = (pa.size() > 1 && pa[1] == ':') || pa[0] == '\\' || pa[0] == '/'; std::string full = abs ? pa : aw::join(gApp.ui_.imgdir_of(g), pa);
         uint64_t sz = 0, mt = 0; return aw::file_stat(full, sz, mt); };
-    E.save = [](int g, const std::string & name, const ent::Kv & kv, const std::string & setdef) { return prof::save_entry(g_ui.games[g].dir, name, kv, setdef); };
-    E.del = [](int g, const std::string & name, bool reset) { return prof::delete_entry(g_ui.games[g].dir, name, reset); };
-    E.setkey = [](int g, const std::string & k, const std::string & v) { return prof::set_game_key(g_ui.games[g].dir, k, v); };
-    E.pad_get = [](int g, std::map<std::string, std::string> & m) { m.clear(); if (g >= 0 && g < (int)g_ui.games.size()) prof::get_pad_keys(g_ui.games[g].dir, m); };   /* t48e (#646): 이 작품 user.ini [pad] btn_* */
-    E.pad_set = [](int g, const std::string & k, const std::string & v) { if (g < 0 || g >= (int)g_ui.games.size()) return false; bool ok = prof::set_pad_key(g_ui.games[g].dir, k, v); gh_log("pad_set: %s [pad] %s=%s -> %s", g_ui.games[g].dir.c_str(), k.c_str(), v.c_str(), ok ? "OK" : "FAIL"); return ok; };
+    E.save = [](int g, const std::string & name, const ent::Kv & kv, const std::string & setdef) { return prof::save_entry(gApp.ui_.games[g].dir, name, kv, setdef); };
+    E.del = [](int g, const std::string & name, bool reset) { return prof::delete_entry(gApp.ui_.games[g].dir, name, reset); };
+    E.setkey = [](int g, const std::string & k, const std::string & v) { return prof::set_game_key(gApp.ui_.games[g].dir, k, v); };
+    E.pad_get = [](int g, std::map<std::string, std::string> & m) { m.clear(); if (g >= 0 && g < (int)gApp.ui_.games.size()) prof::get_pad_keys(gApp.ui_.games[g].dir, m); };   /* t48e (#646): 이 작품 user.ini [pad] btn_* */
+    E.pad_set = [](int g, const std::string & k, const std::string & v) { if (g < 0 || g >= (int)gApp.ui_.games.size()) return false; bool ok = prof::set_pad_key(gApp.ui_.games[g].dir, k, v); gh_log("pad_set: %s [pad] %s=%s -> %s", gApp.ui_.games[g].dir.c_str(), k.c_str(), v.c_str(), ok ? "OK" : "FAIL"); return ok; };
     E.padkind = []() { return gensei_padkind(); };
     E.padkeys = []() { return pn::picker_names(); };
     E.hdd_make = [](int g, int mb, std::string & out) {
-        std::string dir = g_ui.imgdir_of(g), id = g_ui.games[g].id; for (auto & ch : id) if (!(isalnum((unsigned char)ch) || ch == '_' || ch == '-')) ch = '_';
+        std::string dir = gApp.ui_.imgdir_of(g), id = gApp.ui_.games[g].id; for (auto & ch : id) if (!(isalnum((unsigned char)ch) || ch == '_' || ch == '-')) ch = '_';
         for (int i = 1; i < 100; i++) { std::string nm = id + "_hdd_" + std::to_string(i) + ".hdi"; uint64_t sz, mt; if (aw::file_stat(aw::join(dir, nm), sz, mt)) continue;
             if (!gh_make_blank_hdi(aw::join(dir, nm), mb)) return false; out = nm; gh_log("hdd_make: %s %dMB", nm.c_str(), mb); return true; }
         return false; };
     E.save_test = [](int g, const std::string & name, const ent::Kv & kv) {
-        (void)g; std::string td = g_exedir + "\\logs\\_test"; plat::mkdir((g_exedir + "\\logs").c_str()); plat::mkdir(td.c_str());
+        (void)g; std::string td = gApp.exedir + "\\logs\\_test"; plat::mkdir((gApp.exedir + "\\logs").c_str()); plat::mkdir(td.c_str());
         plat::remove_file((td + "\\user.ini").c_str()); return prof::save_entry(td, name, kv, name); };
     E.resolved = [](int g, ent::Kv & out) {
-        out.clear(); if (g < 0 || g >= (int)g_ui.games.size()) return false;
-        std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(g_ui.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
+        out.clear(); if (g < 0 || g >= (int)gApp.ui_.games.size()) return false;
+        std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(gApp.ui_.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
         static const char * K[4] = { "disk_a", "disk_b", "disk_c", "disk_d" };
         for (int i = 0; i < 4; i++) if (p.disk[i]) out[K[i]] = aw::acp_to_u8(p.disk[i]);
         out["boot"] = std::string(1, p.bootletter); { auto it = p.kv.find("cd"); if (it != p.kv.end() && !it->second.empty()) out["cd"] = it->second; }
         for (const char * k : { "mouse", "font", "font_kind", "bootkeys", "autoexec" }) { auto it = p.kv.find(k); if (it != p.kv.end() && !it->second.empty()) out[k] = it->second; }
         return true; };
-    E.reload = [](int g) { ulist::reload_one(g_ui.games, g, &g_vlabel); int keep = g_ui.cur; g_ui.rebuild_vis(keep); };
+    E.reload = [](int g) { ulist::reload_one(gApp.ui_.games, g, &gApp.vlabel); int keep = gApp.ui_.cur; gApp.ui_.rebuild_vis(keep); };
     E.values = [](int g, std::vector<ui::ValRow> & out) {   /* t48a (#614 ③): 키별 최종값·출처·덮인 값(기본 항목 기준) */
-        out.clear(); if (g < 0 || g >= (int)g_ui.games.size()) return false;
-        std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(g_ui.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
+        out.clear(); if (g < 0 || g >= (int)gApp.ui_.games.size()) return false;
+        std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(gApp.ui_.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
         static const char * const PRI[] = { "title", "disk_a", "disk_b", "disk_c", "disk_d", "boot", "swap", "cd", "keys", "bootkeys", "autoexec", "cycles", "font", "font_kind", "lang_eff", "lang", "mouse", "sound", "joystick", "entry_name" };
         std::vector<std::string> ks; for (auto & kv : p.kv) if (kv.first.compare(0, 6, "__val.") == 0) ks.push_back(kv.first.substr(6));
         auto pr = [&](const std::string & k) -> int { for (size_t i = 0; i < sizeof PRI / sizeof PRI[0]; i++) if (k == PRI[i]) return (int)i; return 1000; };
         std::stable_sort(ks.begin(), ks.end(), [&](const std::string & a, const std::string & b) { int x = pr(a), y = pr(b); return x != y ? x < y : a < b; });
         for (auto & k : ks) { ui::ValRow r; r.key = k; r.val = p.kv["__val." + k]; auto s = p.kv.find("__src." + k); r.src = s == p.kv.end() ? std::string() : s->second; auto c = p.kv.find("__cov." + k); r.cov = c == p.kv.end() ? std::string() : c->second; if (r.val.empty()) r.val = phr_("(비어 있음)"); out.push_back(r); }
-        { ui::ValRow r; r.key = phr_("(실행 막힘 사유)"); r.val = g_ui.games[g].block.empty() ? std::string(phr_("없음 (실행 가능)")) : g_ui.games[g].block; r.src = phr_("계산"); out.push_back(r); }
+        { ui::ValRow r; r.key = phr_("(실행 막힘 사유)"); r.val = gApp.ui_.games[g].block.empty() ? std::string(phr_("없음 (실행 가능)")) : gApp.ui_.games[g].block; r.src = phr_("계산"); out.push_back(r); }
         return true; };
-    E.font_group = [](const std::string & nm) { for (auto & f : g_ui.fonts) if (f.name == nm) return f.group; return std::string(); };
+    E.font_group = [](const std::string & nm) { for (auto & f : gApp.ui_.fonts) if (f.name == nm) return f.group; return std::string(); };
 }
 static void gh_delete_slot(int gi, int slot) { plat::remove_file(gh_slot_n(gi, slot).c_str()); gh_refresh_game_slots(gi); }   /* S3 retro-test token */
 static void gh_spawn_test(const std::string & id, const std::string & entry, int secs) {
-    std::string exe = plat::exe_path(); std::string td = g_exedir + "\\logs\\_test";
+    std::string exe = plat::exe_path(); std::string td = gApp.exedir + "\\logs\\_test";
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --entry \"" + aw::u8_to_acp(entry) + "\" --userini \"" + td + "\\user.ini\" --sec " + std::to_string(secs > 0 ? secs : 20) + " --bkosd 1 --savedir \"" + td + "\\saves\" --windowed --noboot --out \"" + td + "\"";
     unsigned long perr = 0;
-    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("test run: %s", cmd.c_str()); }
+    if (plat::spawn(exe, cmd, gApp.exedir, &perr)) { gh_log("test run: %s", cmd.c_str()); }
     else gh_log("test run FAIL err=%lu", (unsigned long)perr);
 }
 static void gh_launch_note(ui::Ui & U, const ui::Act & a) {   /* 실행 요청의 항목 이름을 프로필 결정에 넘기고 최근 실행 시각을 적는다 */
@@ -164,19 +159,19 @@ static void gh_rebuild_fds(const GProfile & p, ui::UiGame & g) {   /* 디스크 
     auto flb = [&](const std::string & f) -> std::string { std::string n = f; size_t dd = n.find_last_of('.'); if (dd != std::string::npos && n.size() - dd <= 5) n = n.substr(0, dd); return n; };
     g.fds.clear(); g.cur_fd[0].clear(); g.cur_fd[1].clear(); for (auto & f : files) g.fds.push_back(flb(f));
     for (int i = 0; i < 2; i++) if (p.disk[i]) g.cur_fd[i] = flb(p.disk[i]);
-    g_fdfiles[p.id] = files;
+    gApp.fdfiles[p.id] = files;
 }
 static void gh_ui_init_games(void) {
     struct ErGuard { std::string k; ErGuard() : k(prof::g_entry_req) { prof::g_entry_req.clear(); } ~ErGuard() { prof::g_entry_req = k; } } er_guard;   /* t48a (#615/#616): 직전 실행의 항목 이름(전역 한 칸)이 모든 작품의 목록 판정에 끼지 않게 한다 */
-    g_ui.games.clear(); g_vlabel.clear(); gh_ui_env_setup();
+    gApp.ui_.games.clear(); gApp.vlabel.clear(); gh_ui_env_setup();
     {   /* t39: 글꼴 폴더 자동 등록 */
         std::string fd = aw::dir_of(gh_res_font_path("kyuhachi_font")); std::vector<std::string> ff, fs2; aw::list_dir(fd, ff, &fs2);
-        std::vector<fontreg::Info> inf = fontreg::scan(fd, ff, "\\"); g_ui.fonts.clear();
-        for (auto & i : inf) { ui::UiFont u; u.name = i.name; u.group = i.group; u.path = i.path; u.why = i.why; u.ok = i.ok; g_ui.fonts.push_back(u); }
+        std::vector<fontreg::Info> inf = fontreg::scan(fd, ff, "\\"); gApp.ui_.fonts.clear();
+        for (auto & i : inf) { ui::UiFont u; u.name = i.name; u.group = i.group; u.path = i.path; u.why = i.why; u.ok = i.ok; gApp.ui_.fonts.push_back(u); }
     }
     struct E { int order; ui::UiGame g; };
     std::vector<E> es;
-    std::vector<std::string> files, subs; gh_list_dir(g_exedir + "\\games", files, &subs);
+    std::vector<std::string> files, subs; gh_list_dir(gApp.exedir + "\\games", files, &subs);
     std::sort(subs.begin(), subs.end());
     auto lbl = [](const GProfile & p, int i) -> std::string {
         static const char L[4] = { 'A', 'B', 'C', 'D' };
@@ -191,14 +186,14 @@ static void gh_ui_init_games(void) {
         E e; e.order = 100; auto o = p.kv.find("order"); if (o != p.kv.end()) e.order = atoi(o->second.c_str());
         e.g.id = d; e.g.title = p.title; e.g.src = p.src; e.g.ov = p.ov;
         e.g.title_db = p.title;   /* t49a (#809): 사용자 지정 표시 제목 — user.ini [game] title_user= (비면 DB·game.ini 제목) */
-        { prof::Ini u_; std::string ud = g_exedir + "\\games\\" + d; if (prof::ini_load(ud + "/user.ini", u_) && u_.count("game") && u_["game"].count("title_user")) e.g.title_user = u_["game"]["title_user"]; if (!e.g.title_user.empty()) e.g.title = e.g.title_user; }
+        { prof::Ini u_; std::string ud = gApp.exedir + "\\games\\" + d; if (prof::ini_load(ud + "/user.ini", u_) && u_.count("game") && u_["game"].count("title_user")) e.g.title_user = u_["game"]["title_user"]; if (!e.g.title_user.empty()) e.g.title = e.g.title_user; }
         {   /* t39: 언어·short·변형·글꼴 묶음 */
-            ulist::fill(e.g, g_exedir + "\\games\\" + d, p.imgdir, p.kv, p.title); e.g.need_install = p.install_required;
+            ulist::fill(e.g, gApp.exedir + "\\games\\" + d, p.imgdir, p.kv, p.title); e.g.need_install = p.install_required;
             if (!e.g.title_user.empty()) e.g.short_t.clear();   /* t49a: 바꾼 제목은 자동 줄임을 새로 만든다 */
-            { auto vl = p.kv.find("variant_label"); if (vl != p.kv.end() && !vl->second.empty()) g_vlabel[d] = vl->second; }
+            { auto vl = p.kv.find("variant_label"); if (vl != p.kv.end() && !vl->second.empty()) gApp.vlabel[d] = vl->second; }
             std::string fn = p.font; { size_t sl = fn.find_last_of("\\/"); if (sl != std::string::npos) fn = fn.substr(sl + 1); if (fn.size() > 4 && (fn.compare(fn.size() - 4, 4, ".bmp") == 0 || fn.compare(fn.size() - 4, 4, ".BMP") == 0)) fn.resize(fn.size() - 4); }
             if (fn.empty()) { auto fk = p.kv.find("font_kind"); e.g.fgroup = (fk != p.kv.end() && fk->second == "jp") ? "jis" : (e.g.lang == "jp" ? "jis" : "ks2350"); }
-            else { e.g.fgroup = "custom"; e.g.gfont = fn; for (auto & f : g_ui.fonts) if (f.ok && f.name == fn && p.font.find_first_of("\\/:.") == std::string::npos) e.g.fgroup = f.group; }
+            else { e.g.fgroup = "custom"; e.g.gfont = fn; for (auto & f : gApp.ui_.fonts) if (f.ok && f.name == fn && p.font.find_first_of("\\/:.") == std::string::npos) e.g.fgroup = f.group; }
         }
         { auto kvs = [&](const char * k) -> std::string { auto it = p.kv.find(k); return it == p.kv.end() ? std::string() : it->second; };
           e.g.company = kvs("company"); e.g.year = kvs("year"); e.g.genre = kvs("genre"); e.g.patch = kvs("patch"); e.g.devices = kvs("devices");
@@ -230,7 +225,7 @@ static void gh_ui_init_games(void) {
           std::vector<std::string> files; auto addf = [&](const char * f) { if (!f || !*f) return; for (auto & x : files) if (x == f) return; files.push_back(f); };
           for (int i = 0; i < 2; i++) addf(p.disk[i]); for (auto & s : p.swap) addf(s.c_str()); addf(demo.c_str());
           for (auto & f : files) { e.g.fds.push_back(flb(f)); }
-          g_fdfiles[d] = files;
+          gApp.fdfiles[d] = files;
           for (int i = 0; i < 2; i++) if (p.disk[i]) e.g.cur_fd[i] = flb(p.disk[i]);
           int nfd = 0; for (auto & f : files) if (f != demo) nfd++; bool hd = p.disk[2] || p.disk[3];
           e.g.disknote = hd ? (nfd ? "HDD + FD " + std::to_string(nfd) + phr_("장") : std::string("HDD")) : (nfd ? "FD " + std::to_string(nfd) + phr_("장") : std::string("-"));
@@ -243,17 +238,17 @@ static void gh_ui_init_games(void) {
         es.push_back(e);
     }
     std::stable_sort(es.begin(), es.end(), [](const E & a, const E & b) { return a.order < b.order; });
-    for (auto & e : es) g_ui.games.push_back(e.g);
-    ulist::load_all(g_ui.games, &g_vlabel);
-    if (g_ui.games.empty()) {
-        ui::UiGame g; g.id = ""; g.title = phr_("작품이 없습니다"); g.disk[0] = phr_("games 폴더에 작품 폴더를 넣어 주세요"); g.boot_note = ""; g_ui.games.push_back(g);
-        if (!g_uitest_dir.empty()) {   /* 캡처 시험용 표본 */
-            g_ui.games.clear(); const char * T[4][2] = { { "hukyou", phr_("환세풍광전") }, { "kaitou", phr_("환세쾌도전") }, { "kitan", phr_("환세희담") }, { "torimono", phr_("환세포물장") } };
-            for (int i = 0; i < 4; i++) { ui::UiGame x; x.id = T[i][0]; x.title = T[i][1]; x.disk[0] = std::string("A: ") + T[i][1] + phr_(" 디스크"); x.boot_note = phr_("부팅  A 드라이브"); g_ui.games.push_back(x); }
+    for (auto & e : es) gApp.ui_.games.push_back(e.g);
+    ulist::load_all(gApp.ui_.games, &gApp.vlabel);
+    if (gApp.ui_.games.empty()) {
+        ui::UiGame g; g.id = ""; g.title = phr_("작품이 없습니다"); g.disk[0] = phr_("games 폴더에 작품 폴더를 넣어 주세요"); g.boot_note = ""; gApp.ui_.games.push_back(g);
+        if (!gApp.uitest_dir.empty()) {   /* 캡처 시험용 표본 */
+            gApp.ui_.games.clear(); const char * T[4][2] = { { "hukyou", phr_("환세풍광전") }, { "kaitou", phr_("환세쾌도전") }, { "kitan", phr_("환세희담") }, { "torimono", phr_("환세포물장") } };
+            for (int i = 0; i < 4; i++) { ui::UiGame x; x.id = T[i][0]; x.title = T[i][1]; x.disk[0] = std::string("A: ") + T[i][1] + phr_(" 디스크"); x.boot_note = phr_("부팅  A 드라이브"); gApp.ui_.games.push_back(x); }
         }
     }
-    g_ui.build = std::string("v" KH_VERSION);   /* t52a (#53): 내부 빌드명은 로그에만 */
-    gh_log("games: %d", (int)g_ui.games.size());
+    gApp.ui_.build = std::string("v" KH_VERSION);   /* t52a (#53): 내부 빌드명은 로그에만 */
+    gh_log("games: %d", (int)gApp.ui_.games.size());
 }
 /* ------------------------------------------------------------------ r017: 작품 추가 · 게임 폴더 자동 등록 */
 #include <SDL_syswm.h>
@@ -264,36 +259,34 @@ static void gh_ui_init_games(void) {
 #pragma comment(lib, "ole32.lib")
 static void gh_nk_load_once(void) {
     static bool done = false; if (done) return; done = true;
-    std::string p = g_nkdb_path.empty() ? g_exedir + "\\gamedb_nk.tsv" : g_nkdb_path;
-    if (nk::load(p, g_nk)) { nk::load_sig(g_exedir + "\\gamedb_nk_sig.tsv", g_nk); gh_log("gamedb_nk: %d games, %d sha1 (nk=%s tosec=%s)", (int)g_nk.g.size(), (int)g_nk.bysha.size(), g_nk.ver_nk.c_str(), g_nk.ver_tosec.c_str()); }
+    std::string p = gApp.nkdb_path.empty() ? gApp.exedir + "\\gamedb_nk.tsv" : gApp.nkdb_path;
+    if (nk::load(p, gApp.nk_)) { nk::load_sig(gApp.exedir + "\\gamedb_nk_sig.tsv", gApp.nk_); gh_log("gamedb_nk: %d games, %d sha1 (nk=%s tosec=%s)", (int)gApp.nk_.g.size(), (int)gApp.nk_.bysha.size(), gApp.nk_.ver_nk.c_str(), gApp.nk_.ver_tosec.c_str()); }
     else gh_log("gamedb_nk: none (%s)", p.c_str());
-    g_shacache.load(g_exedir + "\\sha_cache.tsv");
+    gApp.shacache.load(gApp.exedir + "\\sha_cache.tsv");
 }
-static HWND gh_hwnd(void) { SDL_SysWMinfo wi; SDL_VERSION(&wi.version); if (g_win && SDL_GetWindowWMInfo(g_win, &wi)) return wi.info.win.window; return NULL; }
+static HWND gh_hwnd(void) { SDL_SysWMinfo wi; SDL_VERSION(&wi.version); if (gApp.win && SDL_GetWindowWMInfo(gApp.win, &wi)) return wi.info.win.window; return NULL; }
 
 /* ---- t52a (#54/#55): 제목표시줄이 윈도우 앱 테마를 따른다 ---------------------------------------------
  * HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\AppsUseLightTheme == 1 이면 밝게, 그 밖(값 없음·0·읽기 실패)은 어둡게.
  * DwmSetWindowAttribute 20(DWMWA_USE_IMMERSIVE_DARK_MODE) 을 먼저, 실패하면 19(구 Win10 1809~1903 값). 둘 다 실패하거나 DWM 이 없으면(Win7/8, Win10 1809 미만)
  * 아무것도 하지 않아 기본 제목표시줄이 그대로 남는다. 실행 중 앱 테마가 바뀌면(WM_SETTINGCHANGE "ImmersiveColorSet") 다시 적용.
  * dwmapi.dll 은 LoadLibrary 로 부르므로 링크 목록은 늘지 않는다. */
-static int g_tb_last = -1;          /* -1 아직 안 함 · 0 밝게 · 1 어둡게 · -3 이 윈도우에서는 지원 안 됨 */
-static unsigned g_tb_tick = 0;
 static bool gh_apps_light(void) {
     return plat::apps_use_light_theme();
 }
 static void gh_titlebar_apply(const char * why, bool force) {
     try {
         HWND hw = gh_hwnd(); if (!hw) return;
-        if (g_tb_last == -3 && !force) return;
+        if (gApp.tb_last == -3 && !force) return;
         int want = gh_apps_light() ? 0 : 1;
-        if (!force && want == g_tb_last) return;
+        if (!force && want == gApp.tb_last) return;
         unsigned at = 0; long r = 0; int dr = plat::dwm_dark_titlebar(hw, want != 0, &at, &r);
-        if (dr == 1) { if (g_tb_last != -3) gh_log("TITLEBAR %s: DwmSetWindowAttribute 없음 -> 기본 제목표시줄 유지", why); g_tb_last = -3; return; }
-        if (dr == 2) { if (g_tb_last != -3) gh_log("TITLEBAR %s: 실패 hr=0x%08lX -> 기본 제목표시줄 유지 (apps_light=%d)", why, (unsigned long)r, 1 - want); g_tb_last = -3; return; }
-        bool changed = (want != g_tb_last); g_tb_last = want;
+        if (dr == 1) { if (gApp.tb_last != -3) gh_log("TITLEBAR %s: DwmSetWindowAttribute 없음 -> 기본 제목표시줄 유지", why); gApp.tb_last = -3; return; }
+        if (dr == 2) { if (gApp.tb_last != -3) gh_log("TITLEBAR %s: 실패 hr=0x%08lX -> 기본 제목표시줄 유지 (apps_light=%d)", why, (unsigned long)r, 1 - want); gApp.tb_last = -3; return; }
+        bool changed = (want != gApp.tb_last); gApp.tb_last = want;
         if (changed) {
             gh_log("TITLEBAR %s: apps_light=%d -> %s 제목표시줄 (attr=%u)", why, 1 - want, want ? "어두운" : "밝은", (unsigned)at);
-            if (g_win && !(SDL_GetWindowFlags(g_win) & SDL_WINDOW_FULLSCREEN_DESKTOP)) plat::redraw_frame(hw);   /* 바로 다시 그리게 */
+            if (gApp.win && !(SDL_GetWindowFlags(gApp.win) & SDL_WINDOW_FULLSCREEN_DESKTOP)) plat::redraw_frame(hw);   /* 바로 다시 그리게 */
         }
     } catch (...) { }
 }
@@ -305,8 +298,8 @@ static void gh_titlebar_event(const SDL_Event * e) {
                 const char * a = (const char *)w->msg.win.lParam; const wchar_t * u = (const wchar_t *)w->msg.win.lParam;
                 if (strcmp(a, "ImmersiveColorSet") == 0 || (a[0] == 'I' && a[1] == 0 && wcscmp(u, L"ImmersiveColorSet") == 0)) gh_titlebar_apply("settingchange", true);
             }
-        } else if (e->type == SDL_WINDOWEVENT && g_win && (e->window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e->window.event == SDL_WINDOWEVENT_RESTORED || e->window.event == SDL_WINDOWEVENT_SHOWN)) {
-            unsigned now = SDL_GetTicks(); if (now - g_tb_tick > 400u) { g_tb_tick = now; gh_titlebar_apply("window", true); }   /* 전체화면 <-> 창 전환 뒤에도 유지 */
+        } else if (e->type == SDL_WINDOWEVENT && gApp.win && (e->window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e->window.event == SDL_WINDOWEVENT_RESTORED || e->window.event == SDL_WINDOWEVENT_SHOWN)) {
+            unsigned now = SDL_GetTicks(); if (now - gApp.tb_tick > 400u) { gApp.tb_tick = now; gh_titlebar_apply("window", true); }   /* 전체화면 <-> 창 전환 뒤에도 유지 */
         }
     } catch (...) { }
 }
@@ -329,43 +322,43 @@ static bool gh_pick_folder(const char * title_u8, std::string & out) {
     char path[MAX_PATH]; bool ok = SHGetPathFromIDListA(id, path) != 0; CoTaskMemFree(id); if (ok) out = path; return ok;
 }
 static aw::Ctx gh_aw_ctx(void) {
-    gh_db_load_once(); gh_nk_load_once(); aw::Ctx c; c.games_dir = g_exedir + "\\games"; c.on_dir = gh_res_on_work; c.db = &g_db; c.nk = g_nk.loaded ? &g_nk : NULL; c.cache = &g_shacache; { std::vector<std::string> ml; int mv = aw::merge_dups(c, &ml); for (auto & l : ml) gh_log("%s", l.c_str()); if (mv) gh_log("중복 합침 %d건", mv); } aw::index_registered(c); return c;
+    gh_db_load_once(); gh_nk_load_once(); aw::Ctx c; c.games_dir = gApp.exedir + "\\games"; c.on_dir = gh_res_on_work; c.db = &gApp.db; c.nk = gApp.nk_.loaded ? &gApp.nk_ : NULL; c.cache = &gApp.shacache; { std::vector<std::string> ml; int mv = aw::merge_dups(c, &ml); for (auto & l : ml) gh_log("%s", l.c_str()); if (mv) gh_log("중복 합침 %d건", mv); } aw::index_registered(c); return c;
 }
 static void gh_reload_games(void) {   /* 목록을 다시 만들고 보던 작품을 id 로 되찾는다 */
-    std::string keep = (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) ? g_ui.games[g_cur_game].id : std::string();
-    ui::settings_save(g_ui, g_cfgpath);
-    g_fdfiles.clear();
-    gh_ui_init_games(); ui::settings_load(g_ui, g_cfgpath);
-    for (size_t i = 0; i < g_ui.games.size(); i++) if (g_ui.games[i].id == keep) { g_cur_game = (int)i; g_ui.cur = (int)i; g_ui.pick = (int)i; }
-    if (!g_headless) for (size_t i = 0; i < g_ui.games.size(); i++) gh_refresh_game_slots((int)i);
+    std::string keep = (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) ? gApp.ui_.games[gApp.cur_game].id : std::string();
+    ui::settings_save(gApp.ui_, gApp.cfgpath);
+    gApp.fdfiles.clear();
+    gh_ui_init_games(); ui::settings_load(gApp.ui_, gApp.cfgpath);
+    for (size_t i = 0; i < gApp.ui_.games.size(); i++) if (gApp.ui_.games[i].id == keep) { gApp.cur_game = (int)i; gApp.ui_.cur = (int)i; gApp.ui_.pick = (int)i; }
+    if (!gApp.headless) for (size_t i = 0; i < gApp.ui_.games.size(); i++) gh_refresh_game_slots((int)i);
 }
 static aw::Summary gh_add_works(const std::vector<aw::Work> & ws, const char * what) {
-    aw::Ctx c = gh_aw_ctx(); aw::Summary S; aw::run_works(c, ws, S); g_shacache.save();
+    aw::Ctx c = gh_aw_ctx(); aw::Summary S; aw::run_works(c, ws, S); gApp.shacache.save();
     char h[200]; snprintf(h, sizeof h, "%s: 추가%d 있음%d 건너뜀%d 불가%d", what, S.added, S.exists, S.skipped, S.blocked);
-    g_ui.add_log.clear(); g_ui.add_log.push_back(what); g_ui.add_log.push_back(std::string(phr_("추가")) + std::to_string(S.added) + phr_(" 있음") + std::to_string(S.exists) + phr_(" 건너뜀") + std::to_string(S.skipped) + phr_(" 불가") + std::to_string(S.blocked)); for (auto & l : S.lines) g_ui.add_log.push_back(l);
+    gApp.ui_.add_log.clear(); gApp.ui_.add_log.push_back(what); gApp.ui_.add_log.push_back(std::string(phr_("추가")) + std::to_string(S.added) + phr_(" 있음") + std::to_string(S.exists) + phr_(" 건너뜀") + std::to_string(S.skipped) + phr_(" 불가") + std::to_string(S.blocked)); for (auto & l : S.lines) gApp.ui_.add_log.push_back(l);
     gh_log("ADDWORK %s", h); for (auto & l : S.lines) gh_log("ADDWORK   %s", l.c_str());
-    gh_log("ADDWORK sha1 cache hits=%u miss=%u", g_shacache.hits, g_shacache.miss);
+    gh_log("ADDWORK sha1 cache hits=%u miss=%u", gApp.shacache.hits, gApp.shacache.miss);
     return S;
 }
 /* 게임 폴더: 켤 때마다 훑어 새 작품만 자동 등록 */
 static int gh_scan_gamefolder(const char * why) {
-    if (g_ui.gamefolder.empty()) return 0;
-    std::string dir = aw::u8_to_acp(g_ui.gamefolder); if (!aw::dir_exists(dir)) { gh_log("GAMEFOLDER %s: 폴더 없음 (%s)", why, dir.c_str()); if (!g_ui.add_log.empty()) g_ui.add_log.clear(); g_ui.add_log.push_back(phr_("게임 폴더를 찾을 수 없습니다")); return 0; }
+    if (gApp.ui_.gamefolder.empty()) return 0;
+    std::string dir = aw::u8_to_acp(gApp.ui_.gamefolder); if (!aw::dir_exists(dir)) { gh_log("GAMEFOLDER %s: 폴더 없음 (%s)", why, dir.c_str()); if (!gApp.ui_.add_log.empty()) gApp.ui_.add_log.clear(); gApp.ui_.add_log.push_back(phr_("게임 폴더를 찾을 수 없습니다")); return 0; }
     std::vector<aw::Work> ws; aw::collect(dir, 3, ws); aw::Summary S = gh_add_works(ws, why);
     gh_log("GAMEFOLDER %s: %d 후보, 추가 %d", why, (int)ws.size(), S.added);
     if (S.added > 0) gh_reload_games(); return S.added;
 }
 static void gh_add_action(int arg) {
-    ui::Ui & U = g_ui;
+    ui::Ui & U = gApp.ui_;
     if (arg == 0) { std::vector<std::string> fs; if (!gh_pick_files(fs)) return; std::vector<aw::Work> ws; aw::from_files(fs, ws); aw::Summary S = gh_add_works(ws, phr_("파일 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
     else if (arg == 1) { std::string d; if (!gh_pick_folder(phr_("추가할 작품 폴더를 고르세요"), d)) return; std::vector<aw::Work> ws; aw::collect(d, 3, ws); aw::Summary S = gh_add_works(ws, phr_("폴더 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
-    else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, g_cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정")); }
+    else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, gApp.cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정")); }
     else if (arg == 3) { gh_scan_gamefolder(phr_("다시 검색")); if (!U.add_log.empty() && U.gamefolder.empty()) U.add_log.clear(); }
-    else if (arg == 4) { U.gamefolder.clear(); ui::settings_save(U, g_cfgpath); U.add_log.clear(); U.add_log.push_back(phr_("게임 폴더를 해제했습니다 (등록된 작품은 그대로입니다)")); }
+    else if (arg == 4) { U.gamefolder.clear(); ui::settings_save(U, gApp.cfgpath); U.add_log.clear(); U.add_log.push_back(phr_("게임 폴더를 해제했습니다 (등록된 작품은 그대로입니다)")); }
 }
 /* t44a (#494): 사용자 「언어」 지정 — user.ini [game] lang=ko|jp (자동 = 키 삭제). 저장 후 목록을 다시 만들고 보던 작품·항목 화면 대상을 id 로 되찾는다 */
 static void gh_setlang(int gi, int mode) {
-    ui::Ui & U = g_ui; if (gi < 0 || gi >= (int)U.games.size()) return;
+    ui::Ui & U = gApp.ui_; if (gi < 0 || gi >= (int)U.games.size()) return;
     std::string id = U.games[gi].id, eid = (U.entg >= 0 && U.entg < (int)U.games.size()) ? U.games[U.entg].id : std::string();
     const char * v = mode == 1 ? "ko" : mode == 2 ? "jp" : "";
     bool ok = prof::set_game_key(U.games[gi].dir, "lang", v);
@@ -376,7 +369,7 @@ static void gh_setlang(int gi, int mode) {
 }
 /* t49a (#809): 표시 제목 저장 — user.ini [game] title_user= (빈 값 = 키 삭제 = DB 제목 복귀). 원본 DB·game.ini 무변경 */
 static void gh_settitle(int gi, const std::string & t) {
-    ui::Ui & U = g_ui; if (gi < 0 || gi >= (int)U.games.size()) return;
+    ui::Ui & U = gApp.ui_; if (gi < 0 || gi >= (int)U.games.size()) return;
     std::string id = U.games[gi].id, eid = (U.entg >= 0 && U.entg < (int)U.games.size()) ? U.games[U.entg].id : std::string();
     bool ok = prof::set_game_key(U.games[gi].dir, "title_user", t);
     gh_log("SETTITLE %s title_user=%s ok=%d", id.c_str(), t.empty() ? "(없음)" : t.c_str(), ok ? 1 : 0);
@@ -386,23 +379,21 @@ static void gh_settitle(int gi, const std::string & t) {
     else if (!t.empty()) U.msg = phr_("표시 제목을 바꿨습니다. 원본 DB는 그대로입니다.");
 }
 /* --addwork PATH [--dry] [--report DIR] : 파일/폴더를 등록(또는 시험 판정)하고 판정표(match_table.tsv)를 남긴다 — 헤드리스 시험용 */
-static bool g_aw_dry = false;
-static bool g_batest = false;
 static void gh_cli_addwork(void) {
-    std::vector<aw::Work> ws; std::string p = g_addwork_cli;
+    std::vector<aw::Work> ws; std::string p = gApp.addwork_cli;
     if (aw::dir_exists(p)) aw::collect(p, 3, ws); else { std::vector<std::string> v; v.push_back(p); aw::from_files(v, ws); }
     aw::Ctx c = gh_aw_ctx(); aw::Summary S; std::string tsv = phr_("작업\t파일(크기)\t등급\t판정(짧게)\t판정(전체)\tid\t제목\t제작사\t연도\t출처\t실행불가\t비고\n");
     for (auto & w : ws) {
-        aw::Result r = aw::register_work(c, w, g_aw_dry);
+        aw::Result r = aw::register_work(c, w, gApp.aw_dry);
         if (r.st == aw::Result::ADDED) { S.added++; if (!r.block.empty()) S.blocked++; } else if (r.st == aw::Result::EXISTS) S.exists++; else S.skipped++;
         std::string fl; for (auto & f : w.files) { uint64_t sz = 0, mt = 0; aw::file_stat(aw::join(w.dir, f), sz, mt); if (!fl.empty()) fl += " | "; fl += aw::acp_to_u8(f) + " (" + std::to_string((unsigned long long)sz) + ")"; }
         auto cl = [](std::string s) { for (auto & ch : s) if (ch == '\t' || ch == '\n' || ch == '\r') ch = ' '; return s; };
         tsv += cl(aw::pretty(w.name)) + "\t" + cl(fl) + "\t" + (r.grade.empty() ? std::string("-") : r.grade) + "\t" + cl(r.jshort) + "\t" + cl(r.judge) + "\t" + r.id + "\t" + cl(r.title) + "\t" + cl(r.maker) + "\t" + r.year + "\t" + cl(r.metasrc) + "\t" + cl(r.block) + "\t" + cl(r.note) + "\n";
-        gh_log("ADDWORK%s %s | %s | %s | %s", g_aw_dry ? "(dry)" : "", aw::pretty(w.name).c_str(), r.grade.c_str(), r.judge.c_str(), r.note.c_str());
+        gh_log("ADDWORK%s %s | %s | %s | %s", gApp.aw_dry ? "(dry)" : "", aw::pretty(w.name).c_str(), r.grade.c_str(), r.judge.c_str(), r.note.c_str());
     }
-    gh_log("ADDWORK summary: works=%d added=%d exists=%d skipped=%d blocked=%d dry=%d", (int)ws.size(), S.added, S.exists, S.skipped, S.blocked, (int)g_aw_dry);
-    if (!g_report_dir.empty()) { plat::mkdir(g_report_dir.c_str()); FILE * f = fopen((g_report_dir + "\\match_table.tsv").c_str(), "wb"); if (f) { fwrite(tsv.data(), 1, tsv.size(), f); fclose(f); } }
-    g_shacache.save(); if (!g_aw_dry && S.added) gh_reload_games();
+    gh_log("ADDWORK summary: works=%d added=%d exists=%d skipped=%d blocked=%d dry=%d", (int)ws.size(), S.added, S.exists, S.skipped, S.blocked, (int)gApp.aw_dry);
+    if (!gApp.report_dir.empty()) { plat::mkdir(gApp.report_dir.c_str()); FILE * f = fopen((gApp.report_dir + "\\match_table.tsv").c_str(), "wb"); if (f) { fwrite(tsv.data(), 1, tsv.size(), f); fclose(f); } }
+    gApp.shacache.save(); if (!gApp.aw_dry && S.added) gh_reload_games();
 }
 /* --batest : 「배속 중 소리」 DSP 단독 시험(소리 장치 없음). 440 Hz 사인을 x 배 속도로 먹이고 출력의 음높이·크기·끊김을 잰다.
  * 기대: 빠르게(1) → 440*x Hz · 음높이 유지(2) → 440 Hz */
@@ -445,12 +436,12 @@ static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
     using namespace ui;
     if (anykey) *anykey = (e.type == SDL_KEYDOWN && !e.key.repeat) || e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_MOUSEBUTTONDOWN;
     { int nd = -1; if (e.type == SDL_KEYDOWN && !e.key.repeat) nd = 1; else if (e.type == SDL_CONTROLLERBUTTONDOWN) nd = 0; else if (e.type == SDL_CONTROLLERAXISMOTION && (e.caxis.value > 16000 || e.caxis.value < -16000)) nd = 0;   /* t49a (#812): 마지막 입력 장치(마우스 제외) */
-      if (nd >= 0 && ov::g_helpdev != nd) { ov::g_helpdev = nd; if (g_helplog) gh_log("HELPDEV 입력 장치 -> %s (clock=game)", nd ? "키보드" : "패드"); } }
+      if (nd >= 0 && ov::g_helpdev != nd) { ov::g_helpdev = nd; if (gApp.helplog) gh_log("HELPDEV 입력 장치 -> %s (clock=game)", nd ? "키보드" : "패드"); } }
     if (e.type == SDL_KEYDOWN) {
         if (e.key.keysym.mod & KMOD_ALT) return UK_NONE;
-        if (g_ui.scr == ui::S_OSK && e.key.keysym.sym >= 0x20 && e.key.keysym.sym < 0x7f && (e.key.keysym.sym != SDLK_SPACE || g_ui.osk_hg)) return UK_NONE;   /* t39: 글자 입력 화면에서는 글자 키가 패드 키로 겹치지 않게 (t48b: 한글 키보드에서는 공백도 글자 이벤트로만) */
-        if (g_ui.scr == ui::S_OSK && e.key.keysym.sym == SDLK_BACKSPACE) return UK_SQ;   /* t48b: 글자 입력 화면의 백스페이스 = 지움(예전에는 취소로 나가 버렸다) */
-        if (g_ui.scr == ui::S_OSK && g_ui.osk_hg && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER)) return UK_SELECT;   /* t48b: 한글 키보드에서 엔터 = 완료 */
+        if (gApp.ui_.scr == ui::S_OSK && e.key.keysym.sym >= 0x20 && e.key.keysym.sym < 0x7f && (e.key.keysym.sym != SDLK_SPACE || gApp.ui_.osk_hg)) return UK_NONE;   /* t39: 글자 입력 화면에서는 글자 키가 패드 키로 겹치지 않게 (t48b: 한글 키보드에서는 공백도 글자 이벤트로만) */
+        if (gApp.ui_.scr == ui::S_OSK && e.key.keysym.sym == SDLK_BACKSPACE) return UK_SQ;   /* t48b: 글자 입력 화면의 백스페이스 = 지움(예전에는 취소로 나가 버렸다) */
+        if (gApp.ui_.scr == ui::S_OSK && gApp.ui_.osk_hg && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_KP_ENTER)) return UK_SELECT;   /* t48b: 한글 키보드에서 엔터 = 완료 */
         return gh_keytab_lookup(e.key.keysym.sym);   /* t49a: 표 한 곳(GH_KEYTAB) */
     }
     if (e.type == SDL_CONTROLLERBUTTONDOWN) {

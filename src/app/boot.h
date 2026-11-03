@@ -14,29 +14,28 @@ static bool gh_copy_file(const std::string & from, const std::string & to) {
     fclose(a); if (fclose(b) != 0) ok = false; if (!ok) { plat::remove_file((to + ".tmp").c_str()); return false; }
     plat::remove_file(to.c_str()); return plat::move_file(to + ".tmp", to);
 }
-static std::string gh_disk_dir(void) { return g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x") + "\\disk"; }
+static std::string gh_disk_dir(void) { return gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x") + "\\disk"; }
 static std::string gh_workpath(const std::string & name) {
-    std::string orig = g_imgdir + "\\" + name, dd = gh_disk_dir(); std::string base = name; { size_t p = base.find_last_of("\\/"); if (p != std::string::npos) base = base.substr(p + 1); }
+    std::string orig = gApp.imgdir + "\\" + name, dd = gh_disk_dir(); std::string base = name; { size_t p = base.find_last_of("\\/"); if (p != std::string::npos) base = base.substr(p + 1); }
     std::string wp = dd + "\\" + base;
     plat::FileInfo ao, aw; if (!plat::stat_file(orig, ao)) return orig;
     bool have = plat::stat_file(wp, aw) && aw.size_hi == ao.size_hi && aw.size_lo == ao.size_lo;
-    if (!have) { plat::mkdir(g_savedir.c_str()); plat::mkdir((g_savedir + "\\" + std::string(g_prof.id ? g_prof.id : "x")).c_str()); plat::mkdir(dd.c_str());
+    if (!have) { plat::mkdir(gApp.savedir.c_str()); plat::mkdir((gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x")).c_str()); plat::mkdir(dd.c_str());
         if (!gh_copy_file(orig, wp)) { gh_log("작업 사본 만들기 실패 -> 원본을 읽기 전용으로 연다: %s", orig.c_str()); return orig; } gh_log("작업 사본 만듦: %s", wp.c_str()); }
     return wp;
 }
 static int gh_reset_disks(const std::string & id) {   /* 「원본 디스크로 초기화」: 작품 저장폴더의 디스크 작업 사본을 지운다(다음 실행 때 원본에서 다시 만든다) */
-    std::string dd = g_savedir + "\\" + id + "\\disk"; int n = 0;
+    std::string dd = gApp.savedir + "\\" + id + "\\disk"; int n = 0;
     plat::find_a(dd + "\\*", [&](const plat::DirEnt & fd) { if (fd.is_dir) return true; if (plat::remove_file(dd + "\\" + fd.name)) n++; return true; });
     plat::remove_dir(dd); gh_log("원본 디스크로 초기화: %s 사본 %d개 삭제", id.c_str(), n); return n;
 }
-static int g_disk_ix[4] = { -1, -1, -1, -1 };   /* 드라이브 -> g_disks 위치 (교체 때 같은 자리를 갱신) */
 static bool gh_attach(int idx, const char * name, bool replace = false) {
-    std::string orig_path = g_imgdir + "\\" + name, path = gh_workpath(name); bool iscopy = path != orig_path;   /* t43h: 쓰기는 작업 사본에만 */
+    std::string orig_path = gApp.imgdir + "\\" + name, path = gh_workpath(name); bool iscopy = path != orig_path;   /* t43h: 쓰기는 작업 사본에만 */
     uint64_t sz = 0;
     FILE * f = gh_open_rw(path, &sz, iscopy);
     if (!f) { gh_log("ERROR: cannot open image %s", path.c_str());
-        if (!replace) gh_human(std::string(phr_("게임 디스크 이미지 파일을 열 수 없습니다.\n파일: ")) + aw::acp_to_u8(std::string(name)) + phr_("\n찾은 곳: ") + aw::acp_to_u8(g_imgdir) + phr_("\n파일이 없거나 옮겨졌을 수 있습니다. 작품 폴더 game.ini 의 imgdir(이미지 폴더) 줄과 파일 이름을 확인해 주세요.\n[위치 지정] 단추는 다음 판(롬 루트 연결)에서 제공합니다."));
-        else { gh_human(std::string(phr_("교체할 디스크 파일을 열 수 없습니다: ")) + aw::acp_to_u8(std::string(name)) + phr_("\n(찾은 곳: ") + aw::acp_to_u8(g_imgdir) + ")"); gh_msgbox(g_errmsg.c_str()); }
+        if (!replace) gh_human(std::string(phr_("게임 디스크 이미지 파일을 열 수 없습니다.\n파일: ")) + aw::acp_to_u8(std::string(name)) + phr_("\n찾은 곳: ") + aw::acp_to_u8(gApp.imgdir) + phr_("\n파일이 없거나 옮겨졌을 수 있습니다. 작품 폴더 game.ini 의 imgdir(이미지 폴더) 줄과 파일 이름을 확인해 주세요.\n[위치 지정] 단추는 다음 판(롬 루트 연결)에서 제공합니다."));
+        else { gh_human(std::string(phr_("교체할 디스크 파일을 열 수 없습니다: ")) + aw::acp_to_u8(std::string(name)) + phr_("\n(찾은 곳: ") + aw::acp_to_u8(gApp.imgdir) + ")"); gh_msgbox(gApp.errmsg.c_str()); }
         return false; }
     imageDisk * img; { prof::ImgInfo pi = prof::probe(path); uint32_t szk = (uint32_t)(sz / 1024ull);   /* r017: 클래스는 확장자가 아니라 파일 머리로 고른다 */
         if (pi.fmt == prof::F_D88) { img = new imageDiskD88(f, name, szk, false); gh_log("image[%d] class=D88 (header)", idx); }
@@ -53,7 +52,7 @@ static bool gh_attach(int idx, const char * name, bool replace = false) {
         fseeko64(fc, 0, SEEK_SET);
         for (;;) { size_t n = fread(&buf[0], 1, buf.size(), fc); if (!n) break; for (size_t i = 0; i < n; i++) d.crc32 = tab[(d.crc32 ^ buf[i]) & 0xFFu] ^ (d.crc32 >> 8); }
         d.crc32 ^= 0xFFFFFFFFu; if (fc != f) fclose(fc); fseeko64(f, 0, SEEK_SET);
-        if (replace && idx >= 0 && idx < 4 && g_disk_ix[idx] >= 0 && g_disk_ix[idx] < (int)g_disks.size()) g_disks[g_disk_ix[idx]] = d; else { if (idx >= 0 && idx < 4) g_disk_ix[idx] = (int)g_disks.size(); g_disks.push_back(d); }
+        if (replace && idx >= 0 && idx < 4 && gApp.disk_ix[idx] >= 0 && gApp.disk_ix[idx] < (int)gApp.disks.size()) gApp.disks[gApp.disk_ix[idx]] = d; else { if (idx >= 0 && idx < 4) gApp.disk_ix[idx] = (int)gApp.disks.size(); gApp.disks.push_back(d); }
         gh_log("image[%d] crc32=%08x", idx, d.crc32);
     }
     imageDiskList[idx] = img; imageDiskChange[idx] = true; img->Addref();
@@ -68,8 +67,8 @@ static bool gh_attach(int idx, const char * name, bool replace = false) {
 }
 
 static void gh_bda_dump(const char * tag) {
-    if (!g_bda) return;
-    char p[1024]; snprintf(p, sizeof(p), "%s\\bda_%s.bin", g_outdir.c_str(), tag);
+    if (!gApp.bda) return;
+    char p[1024]; snprintf(p, sizeof(p), "%s\\bda_%s.bin", gApp.outdir.c_str(), tag);
     FILE * f = fopen(p, "wb"); if (!f) { gh_log("bda dump: cannot open %s", p); return; }
     for (unsigned a = 0; a < 0x600; a++) { unsigned char b = mem_readb((PhysPt)a); fwrite(&b, 1, 1, f); }
     fclose(f); gh_log("bda dump: %s (0x000-0x5FF)", p);
@@ -80,8 +79,8 @@ static bool gh_boot_dos_kernel() {
     void DOS_Startup(Section *); void DRIVES_Startup(Section *); void DOS_InitClock(); void DOS_KeyboardLayout_Startup(Section *); void XMS_Startup(Section *); void EMS_Startup(Section *);
     void SHELL_MessagesInit(); void CONFIGSHELL_Init(); void CONFIGSHELL_Run(); void SHELL_Init(); void AUTOEXEC_Startup(Section *); void MSCDEX_Startup(Section *); void SHELL_Run();
     void update_pc98_function_row(unsigned char setting, bool force_redraw);
-    gh_log("DOS boot: 내장 DOS 커널 시작 (cd=%s)", g_prof.cd.c_str());
-    { extern uint8_t MOUSE_IRQ; MOUSE_IRQ = g_mirq12 ? 12 : 13; }
+    gh_log("DOS boot: 내장 DOS 커널 시작 (cd=%s)", gApp.prof_.cd.c_str());
+    { extern uint8_t MOUSE_IRQ; MOUSE_IRQ = gApp.mirq12 ? 12 : 13; }
     Init_MemHandles();
     DispatchVMEvent(VM_EVENT_DOS_BOOT);
     dos_kernel_disabled = false;
@@ -103,28 +102,28 @@ static bool gh_boot_dos_kernel() {
     MSCDEX_Startup(NULL);
     DispatchVMEvent(VM_EVENT_DOS_INIT_AUTOEXEC_BAT_DONE);
     DispatchVMEvent(VM_EVENT_DOS_INIT_AT_PROMPT);
-    g_boot_tick = SDL_GetTicks(); if (!g_boot_tick) g_boot_tick = 1; g_pic0 = PIC_Ticks;
-    if (!g_headless) gh_apply_settings(g_ui.effective(g_cur_game), true);
+    gApp.boot_tick = SDL_GetTicks(); if (!gApp.boot_tick) gApp.boot_tick = 1; gApp.pic0 = PIC_Ticks;
+    if (!gApp.headless) gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
     gh_log("DOS boot: 프롬프트 도달 — 셸 실행");
     SHELL_Run();
     gh_log("DOS boot: 셸 종료");
-    g_quit = true;
+    gApp.quit = true;
     return true;
 }
 
 /* BOOT (PC-98 branch) re-done without the DOS kernel; called from cb_bios_boot__func */
 bool VM_Boot_DOSBox_Kernel() {
-    if (g_dosmode) return gh_boot_dos_kernel();
-    int drive = g_prof.bootletter;
+    if (gApp.dosmode) return gh_boot_dos_kernel();
+    int drive = gApp.prof_.bootletter;
     int di = drive - 'A';
     gh_log("direct boot: drive %c", drive);
-    gh_bda_dump(g_boot_n > 1 ? "pre2" : "pre");
+    gh_bda_dump(gApp.boot_n > 1 ? "pre2" : "pre");
     /* PC-98 bus mouse tick IRQ: core sets MOUSE_IRQ=13 in MOUSE_OnReset(), which this host never runs -> it stayed 12 (FM board) */
-    { extern uint8_t MOUSE_IRQ; MOUSE_IRQ = g_mirq12 ? 12 : 13; }
+    { extern uint8_t MOUSE_IRQ; MOUSE_IRQ = gApp.mirq12 ? 12 : 13; }
     /* t32: INT 18h 감싸기는 BIOS 리셋(포트 F0h, 약 2초) 뒤에 한다 — t31 은 리셋이 콜백 영역을 다시 써서 감싼 것이 사라졌다 */
     /* official DOSBox-X boots from inside its DOS kernel; the XMS driver has already taken all extended memory (BDA 0401h = 0), so games see no extended RAM */
-    if (g_ext0) mem_writeb(0x401, 0x00);   /* t28: no longer needed - root cause was MOUSE_IRQ (t27); kept only as --ext0 test option */
-    if (di < 0 || di >= MAX_DISK_IMAGES || !imageDiskList[di]) { gh_log("ERROR: no image on boot drive"); gh_human(phr_("부팅할 디스크가 연결되어 있지 않습니다.\n작품 폴더 game.ini 의 disk_a / boot 줄을 확인해 주세요.")); gh_msgbox(g_errmsg.c_str()); g_quit = true; return true; }
+    if (gApp.ext0) mem_writeb(0x401, 0x00);   /* t28: no longer needed - root cause was MOUSE_IRQ (t27); kept only as --ext0 test option */
+    if (di < 0 || di >= MAX_DISK_IMAGES || !imageDiskList[di]) { gh_log("ERROR: no image on boot drive"); gh_human(phr_("부팅할 디스크가 연결되어 있지 않습니다.\n작품 폴더 game.ini 의 disk_a / boot 줄을 확인해 주세요.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
     bootSector bootarea;
     memset(&bootarea, 0, sizeof(bootarea));
     imageDisk * img = imageDiskList[di];
@@ -146,9 +145,9 @@ bool VM_Boot_DOSBox_Kernel() {
     Bitu stack_seg = 0x0030;
     if ((stack_seg + 0x20) > max_seg) stack_seg = max_seg - 0x20;
     if (!has_read) {
-        if (img->Read_Sector(0, 0, 1, (uint8_t *)&bootarea) != Int13Status::NoError) { gh_log("ERROR: boot sector read failed"); gh_human(phr_("첫 디스크의 부트 섹터를 읽지 못했습니다.\n이미지 파일이 손상됐거나 지원하지 않는 형식일 수 있습니다.")); gh_msgbox(g_errmsg.c_str()); g_quit = true; return true; }
+        if (img->Read_Sector(0, 0, 1, (uint8_t *)&bootarea) != Int13Status::NoError) { gh_log("ERROR: boot sector read failed"); gh_human(phr_("첫 디스크의 부트 섹터를 읽지 못했습니다.\n이미지 파일이 손상됐거나 지원하지 않는 형식일 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
     }
-    if (bootarea.rawdata[0] == 0 && bootarea.rawdata[1] == 0) { gh_log("ERROR: boot sector empty"); gh_human(phr_("첫 디스크의 부트 영역이 비어 있습니다.\n부팅 디스크가 아닌 이미지(데이터 디스크)를 첫 칸에 넣었을 수 있습니다.")); gh_msgbox(g_errmsg.c_str()); g_quit = true; return true; }
+    if (bootarea.rawdata[0] == 0 && bootarea.rawdata[1] == 0) { gh_log("ERROR: boot sector empty"); gh_human(phr_("첫 디스크의 부트 영역이 비어 있습니다.\n부팅 디스크가 아닌 이미지(데이터 디스크)를 첫 칸에 넣었을 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
 
     if (drive == 'A' || drive == 'B') FDC_AssignINT13Disk((unsigned char)(drive - 'A'));
     GetDMAChannel(2)->tcount = true;
@@ -164,9 +163,9 @@ bool VM_Boot_DOSBox_Kernel() {
     reg_ip = 0; reg_ebx = 0x200; reg_esp = 0xD8;
     SegSet16(ss, (uint16_t)stack_seg);
     reg_esi = (uint32_t)load_seg; reg_ecx = 0x200; reg_ebp = 0; reg_eax = 0x30; reg_edx = 0x1;
-    reg_edi = g_di0 ? 0x0000u : 0xFFFEu;   /* official log: first IPL INT 1Bh shows DI=FFFE */
+    reg_edi = gApp.di0 ? 0x0000u : 0xFFFEu;   /* official log: first IPL INT 1Bh shows DI=FFFE */
 
-    if (g_boot400) { reg_eax = 0x4200; reg_ecx = 0xC000; CALLBACK_RunRealInt(0x18); }   /* 640x400 (old r020 behaviour, --boot400) */
+    if (gApp.boot400) { reg_eax = 0x4200; reg_ecx = 0xC000; CALLBACK_RunRealInt(0x18); }   /* 640x400 (old r020 behaviour, --boot400) */
     else { reg_eax = 0x4200; reg_ecx = 0x8000; CALLBACK_RunRealInt(0x18); }   /* 640x200 = official DOSBox-X default (pc98_640x200) */
     reg_eax = 0x4100; CALLBACK_RunRealInt(0x18);                    /* hide graphics */
     CPU_Push16((uint16_t)(BIOS_bootfail_code_offset >> 4));
@@ -193,16 +192,16 @@ bool VM_Boot_DOSBox_Kernel() {
 
     bootguest = false;
     bootdrive = drive - 65;
-    if (!(g_boot_n > 1 && g_inwin_testfail == "noboot")) {   /* t51a: 시험 주입 noboot = 두 번째 부팅의 「도달 신호」 를 일부러 내지 않는다 */
-        g_boot_tick = SDL_GetTicks();
-        if (!g_boot_tick) g_boot_tick = 1;
+    if (!(gApp.boot_n > 1 && gApp.inwin_testfail == "noboot")) {   /* t51a: 시험 주입 noboot = 두 번째 부팅의 「도달 신호」 를 일부러 내지 않는다 */
+        gApp.boot_tick = SDL_GetTicks();
+        if (!gApp.boot_tick) gApp.boot_tick = 1;
     }
-    g_pic0 = PIC_Ticks;
-    if (g_boot_n > 1) gh_log("INWIN 부팅 신호 n=%d (전환 뒤 %u ms)", g_boot_n, SDL_GetTicks() - g_inwin_t0);
-    if (!g_headless) gh_apply_settings(g_ui.effective(g_cur_game), true);
+    gApp.pic0 = PIC_Ticks;
+    if (gApp.boot_n > 1) gh_log("INWIN 부팅 신호 n=%d (전환 뒤 %u ms)", gApp.boot_n, SDL_GetTicks() - gApp.inwin_t0);
+    if (!gApp.headless) gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
     gh_log("boot: CS:IP=%04x:%04x SS:SP=%04x:%04x", SegValue(cs), (unsigned)reg_ip, SegValue(ss), (unsigned)reg_sp);
-    gh_bda_dump(g_boot_n > 1 ? "post2" : "post");
-    gh_log("boot: regs AX=%04X BX=%04X CX=%04X DX=%04X SI=%04X DI=%04X BP=%04X boot400=%d", (unsigned)reg_ax, (unsigned)reg_bx, (unsigned)reg_cx, (unsigned)reg_dx, (unsigned)reg_si, (unsigned)reg_di, (unsigned)reg_bp, (int)g_boot400);
+    gh_bda_dump(gApp.boot_n > 1 ? "post2" : "post");
+    gh_log("boot: regs AX=%04X BX=%04X CX=%04X DX=%04X SI=%04X DI=%04X BP=%04X boot400=%d", (unsigned)reg_ax, (unsigned)reg_bx, (unsigned)reg_cx, (unsigned)reg_dx, (unsigned)reg_si, (unsigned)reg_di, (unsigned)reg_bp, (int)gApp.boot400);
     return true;
 }
 

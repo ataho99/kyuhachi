@@ -22,13 +22,11 @@ static KBD_KEYS gh_sdlkey(SDL_Keycode k) {
 }
 /* ---- t46x: 화면 키보드(경로 B) 호스트 글루 — SDL 입력층은 이 블록뿐이다(안드로이드는 이 블록만 교체). 키 표 = gensei_kbtable.h, 상태·그리기 = gensei_kbov.h */
 extern bool pc98_force_ibm_layout; extern bool pc98_caps(void); extern bool pc98_kana(void);
-static unsigned g_kbsent_total = 0, g_kbsent_text = 0;   /* t48b (#629 3): kbov 가 코어로 보낸 키 수 · 그중 텍스트 입력 화면(S_OSK) 중에 보낸 수 */
-static bool g_ob_held = false, g_ob_long = false; static unsigned g_ob_t0 = 0;   /* t48b (#629 2): 패드 ○ 길게 누르기 */
 static bool gh_kb_send(int k, bool d) {   /* 코어로 보냄. 부팅 전·never_map 키는 보내지 않는다(기존 gh_game_event 와 같은 조건) */
     KBD_KEYS kk = (KBD_KEYS)k;
-    if (!g_boot_tick || kk == KBD_NONE) return false;
+    if (!gApp.boot_tick || kk == KBD_NONE) return false;
     if ((int)kk < 256 && kh_never[(int)kk]) return false;
-    KEYBOARD_AddKey(kk, d); g_kbsent_total++; if (g_ui.scr == ui::S_OSK) g_kbsent_text++; return true;
+    KEYBOARD_AddKey(kk, d); gApp.kbsent_total++; if (gApp.ui_.scr == ui::S_OSK) gApp.kbsent_text++; return true;
 }
 static bool gh_kb_ibm(void) { return pc98_force_ibm_layout; }
 static bool gh_kb_caps(void) { return pc98_caps(); }
@@ -37,31 +35,30 @@ static void gh_kb_log(const char * s) { gh_log("KBOV %s", s); }
 /* t52f (#132): 오버레이 버튼 동작. 빠른 저장·불러오기는 Alt+F5 / Alt+F9 와 같은 슬롯 1, 배속은 ScrollLock 과 같은 토글 */
 static void gh_ov_act(int a) {
     if (a == 5) { gh_osd(phr_("길게 누르세요"), 1500); gh_log("OVBTN load 짧게 누름 -> 동작 안 함 (「길게 누르세요」 표시)"); return; }
-    if (!g_boot_tick) { gh_log("OVBTN act=%d 무시 (아직 부팅 전)", a); return; }
-    if (a == 1) { g_menu_req = true; gh_log("OVBTN menu -> g_menu_req"); }
+    if (!gApp.boot_tick) { gh_log("OVBTN act=%d 무시 (아직 부팅 전)", a); return; }
+    if (a == 1) { gApp.menu_req = true; gh_log("OVBTN menu -> g_menu_req"); }
     else if (a == 2) { std::string p = gh_slot_path(); bool ok = gh_do_save(p, false); gh_log("OVBTN save slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 에 저장했습니다") : phr_("저장에 실패했습니다"), 2000); }
     else if (a == 3) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("OVBTN load slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); }
-    else if (a == 4) { g_boost_tog = !g_boost_tog; gh_boost_update(); gh_log("OVBTN boost toggle -> tog=%d on=%d", (int)g_boost_tog, (int)g_boost_on); }
+    else if (a == 4) { gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); gh_log("OVBTN boost toggle -> tog=%d on=%d", (int)gApp.boost_tog, (int)gApp.boost_on); }
 }
-static bool gh_ov_boostlit(void) { return g_boost_on; }
+static bool gh_ov_boostlit(void) { return gApp.boost_on; }
 static unsigned gh_ov_now(void) { return (unsigned)SDL_GetTicks(); }
 static bool g_kb_inited = (kbov::g_send = gh_kb_send, kbov::g_ibm_fn = gh_kb_ibm, kbov::g_caps_fn = gh_kb_caps, kbov::g_kana_fn = gh_kb_kana, kbov::g_logfn = gh_kb_log, kbov::g_act = gh_ov_act, kbov::g_boost_fn = gh_ov_boostlit, kbov::g_now = gh_ov_now, true);
-static int g_kb_prevcur = -1; static unsigned g_kb_cons = 0, g_kb_pass = 0;
 static void gh_kb_cursor(void) {   /* 키보드가 보이는 동안은 커서를 보이게(전체화면 마우스 클릭용). 끄면 원래대로 */
-    if (!g_win) return;
-    if (kbov::g_vis) { if (g_kb_prevcur < 0) g_kb_prevcur = SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE ? 1 : 0; SDL_ShowCursor(SDL_ENABLE); }
-    else if (g_kb_prevcur >= 0) { SDL_ShowCursor(g_kb_prevcur ? SDL_ENABLE : SDL_DISABLE); g_kb_prevcur = -1; }
+    if (!gApp.win) return;
+    if (kbov::g_vis) { if (gApp.kb_prevcur < 0) gApp.kb_prevcur = SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE ? 1 : 0; SDL_ShowCursor(SDL_ENABLE); }
+    else if (gApp.kb_prevcur >= 0) { SDL_ShowCursor(gApp.kb_prevcur ? SDL_ENABLE : SDL_DISABLE); gApp.kb_prevcur = -1; }
 }
 static void gh_kb_toggle(void) { kbov::set_visible(!kbov::g_vis); gh_kb_cursor(); gh_osd(kbov::g_vis ? phr_("화면 키보드 켜짐 (Alt+K 로 끔)") : phr_("화면 키보드 꺼짐"), 1500); }
 static bool gh_kb_geom(int & ww, int & wh, int & dw, int & dh, int & rx, int & ry, int & rw, int & rh) {   /* 창 ↔ 화면 표시 사각형: GL 스레드와 같은 gl_rect 로 계산(곡면 왜곡은 반영하지 않음) */
-    if (!g_win || g_fbw <= 0 || g_fbh <= 0) return false;
-    SDL_GetWindowSize(g_win, &ww, &wh); SDL_GL_GetDrawableSize(g_win, &dw, &dh);
+    if (!gApp.win || gApp.fbw <= 0 || gApp.fbh <= 0) return false;
+    SDL_GetWindowSize(gApp.win, &ww, &wh); SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
     if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) return false;
-    gl_rect(dw, dh, g_fbw, g_fbh, (int)g_fit, rx, ry, rw, rh); return rw > 0 && rh > 0;
+    gl_rect(dw, dh, gApp.fbw, gApp.fbh, (int)gApp.fit, rx, ry, rw, rh); return rw > 0 && rh > 0;
 }
-static bool gh_kb_curved(void) { return (int)g_shader == (int)SH_CRT && (int)g_fit != (int)FIT_INT && g_curve > 0.0f && g_kbshader != 0; }   /* GL 스레드와 같은 조건: crt 셰이더 + 곡면 > 0 (정수배는 nearest 로 바뀌어 곡면 없음) */
+static bool gh_kb_curved(void) { return (int)gApp.shader == (int)SH_CRT && (int)gApp.fit != (int)FIT_INT && gApp.curve > 0.0f && gApp.kbshader != 0; }   /* GL 스레드와 같은 조건: crt 셰이더 + 곡면 > 0 (정수배는 nearest 로 바뀌어 곡면 없음) */
 static void gh_kb_warp(double & u, double & v) {   /* 화면 uv(0..1) → 프레임 uv. pc98_crt_t42.glsl 의 warp() 와 같은 식 */
-    double c = (double)g_curve, px = u * 2.0 - 1.0, py = v * 2.0 - 1.0; double nx = px * (1.0 + py * py * c), ny = py * (1.0 + px * px * c * 1.33); u = nx * 0.5 + 0.5; v = ny * 0.5 + 0.5;
+    double c = (double)gApp.curve, px = u * 2.0 - 1.0, py = v * 2.0 - 1.0; double nx = px * (1.0 + py * py * c), ny = py * (1.0 + px * px * c * 1.33); u = nx * 0.5 + 0.5; v = ny * 0.5 + 0.5;
 }
 static bool gh_kb_win2virt(int mx, int my, int & vx, int & vy) {
     int ww, wh, dw, dh, rx, ry, rw, rh; if (!gh_kb_geom(ww, wh, dw, dh, rx, ry, rw, rh)) return false;
@@ -70,11 +67,11 @@ static bool gh_kb_win2virt(int mx, int my, int & vx, int & vy) {
     vx = (int)(u * 640.0 + (u < 0 ? -0.5 : 0.5)); vy = (int)(v * 400.0 + (v < 0 ? -0.5 : 0.5)); return true;
 }
 static bool gh_menu_win2virt(int mx, int my, int & vx, int & vy) {   /* t48b: 메뉴 프레임(640x400, 창 맞춤 gl_rect) 위의 창 좌표 → 가상 좌표. 곡면이면 셰이더 warp 와 같은 식 */
-    if (!g_win) return false; int ww = 0, wh = 0, dw = 0, dh = 0, rx, ry, rw, rh; SDL_GetWindowSize(g_win, &ww, &wh); SDL_GL_GetDrawableSize(g_win, &dw, &dh);
+    if (!gApp.win) return false; int ww = 0, wh = 0, dw = 0, dh = 0, rx, ry, rw, rh; SDL_GetWindowSize(gApp.win, &ww, &wh); SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
     if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) return false;
-    gl_rect(dw, dh, 640, 400, (int)g_fit, rx, ry, rw, rh); if (rw <= 0 || rh <= 0) return false;
+    gl_rect(dw, dh, 640, 400, (int)gApp.fit, rx, ry, rw, rh); if (rw <= 0 || rh <= 0) return false;
     double u = ((double)mx * dw / ww - rx) / rw, v = ((double)my * dh / wh - ry) / rh;
-    if ((int)g_shader == (int)SH_CRT && (int)g_fit != (int)FIT_INT && g_curve > 0.0f) gh_kb_warp(u, v);
+    if ((int)gApp.shader == (int)SH_CRT && (int)gApp.fit != (int)FIT_INT && gApp.curve > 0.0f) gh_kb_warp(u, v);
     vx = (int)(u * 640.0 + (u < 0 ? -0.5 : 0.5)); vy = (int)(v * 400.0 + (v < 0 ? -0.5 : 0.5)); return true;
 }
 static bool gh_kb_virt2win(int vx, int vy, int & wx, int & wy) {   /* 시험 전용 역변환: 곡면이면 warp 의 역을 고정점 반복으로 푼다 */
@@ -85,7 +82,7 @@ static bool gh_kb_virt2win(int vx, int vy, int & wx, int & wy) {   /* 시험 전
 }
 /* 마우스 이벤트 → 오버레이. 숨김 상태(+버튼 꺼짐)면 0건 소비. 보임 상태에서도 패널·버튼 영역 밖은 false(게임으로 그대로 감 — 마우스 게임도 같은 규칙, 대장방 판정 #1169 5⒝) */
 static bool gh_kbd_event(const SDL_Event & e) {
-    if (g_headless || !g_win || !g_use_gl || !g_boot_tick || g_menu_open || (g_loading && !g_noload)) return false;
+    if (gApp.headless || !gApp.win || !gApp.use_gl || !gApp.boot_tick || gApp.menu_open || (gApp.loading && !gApp.noload)) return false;
     int ph, mx, my;
     if (e.type == SDL_MOUSEBUTTONDOWN) { ph = 0; mx = e.button.x; my = e.button.y; }
     else if (e.type == SDL_MOUSEBUTTONUP) { ph = 1; mx = e.button.x; my = e.button.y; }
@@ -93,28 +90,27 @@ static bool gh_kbd_event(const SDL_Event & e) {
     else return false;
     kbov::wake();   /* t52f: 마우스가 움직이거나 터치가 있으면 버튼 줄을 몇 초 진하게 */
     if (!kbov::active()) return false;
-    if (g_relmouse && !kbov::g_vis && !kbov::any_owned()) return false;   /* 마우스 가둠 중(키보드 숨김)에는 창 좌표를 믿을 수 없다 → 버튼 사용 불가, Alt+K·메뉴로 켠다 */
+    if (gApp.relmouse && !kbov::g_vis && !kbov::any_owned()) return false;   /* 마우스 가둠 중(키보드 숨김)에는 창 좌표를 믿을 수 없다 → 버튼 사용 불가, Alt+K·메뉴로 켠다 */
     int vx = -1000, vy = -1000; if (!gh_kb_win2virt(mx, my, vx, vy) && !kbov::any_owned()) return false;
     int btn = (e.type == SDL_MOUSEMOTION) ? SDL_BUTTON_LEFT : e.button.button;
-    if (btn != SDL_BUTTON_LEFT) { bool in = kbov::in_ui(vx, vy); if (in && ph != 2) { g_kb_cons++; return true; } return false; }
+    if (btn != SDL_BUTTON_LEFT) { bool in = kbov::in_ui(vx, vy); if (in && ph != 2) { gApp.kb_cons++; return true; } return false; }
     bool c = kbov::pointer(0, ph, vx, vy);
-    if (ph != 2) { if (c) g_kb_cons++; else g_kb_pass++; }
+    if (ph != 2) { if (c) gApp.kb_cons++; else gApp.kb_pass++; }
     return c;
 }
 /* 시험 전용(--kbshow/--kbhide/--kbclick/--kbbtn): SDL 마우스 이벤트를 창 좌표로 밀어 넣어 hit-test·표시 사각형 변환까지 통과시킨다(키 함수를 직접 부르지 않음) */
-static unsigned g_kbt_show_ms = 0, g_kbt_hide_ms = 0, g_kbt_click_ms = 0; static std::vector<std::string> g_kbt_seq;
 static void gh_parse_kbclick(const char * a) {   /* "<시작초>:라벨,라벨,..." — 라벨은 키 표의 label, 같은 이름이 여럿이면 라벨#n(0부터), BTN = 토글 버튼, OUT = 영역 밖 */
-    g_kbt_click_ms = (unsigned)(atof(a) * 1000.0); const char * p = strchr(a, ':'); if (!p) return; p++;
-    std::string cur; for (const char * q = p;; q++) { if (*q == ',' || !*q) { if (!cur.empty()) g_kbt_seq.push_back(cur); cur.clear(); if (!*q) break; } else cur += *q; }
+    gApp.kbt_click_ms = (unsigned)(atof(a) * 1000.0); const char * p = strchr(a, ':'); if (!p) return; p++;
+    std::string cur; for (const char * q = p;; q++) { if (*q == ',' || !*q) { if (!cur.empty()) gApp.kbt_seq.push_back(cur); cur.clear(); if (!*q) break; } else cur += *q; }
 }
 static void gh_kbtest_tick(unsigned since) {
     static bool shown = false, hidden = false; static size_t ci = 0; static unsigned nextat = 0; static int phase = 0;
-    if (g_kbt_show_ms && !shown && since >= g_kbt_show_ms) { shown = true; kbov::set_visible(true); gh_kb_cursor(); }
-    if (g_kbt_hide_ms && !hidden && since >= g_kbt_hide_ms) { hidden = true; kbov::set_visible(false); gh_kb_cursor(); }
-    if (ci >= g_kbt_seq.size()) return;
-    if (nextat == 0) nextat = g_kbt_click_ms ? g_kbt_click_ms : 1;
+    if (gApp.kbt_show_ms && !shown && since >= gApp.kbt_show_ms) { shown = true; kbov::set_visible(true); gh_kb_cursor(); }
+    if (gApp.kbt_hide_ms && !hidden && since >= gApp.kbt_hide_ms) { hidden = true; kbov::set_visible(false); gh_kb_cursor(); }
+    if (ci >= gApp.kbt_seq.size()) return;
+    if (nextat == 0) nextat = gApp.kbt_click_ms ? gApp.kbt_click_ms : 1;
     if (since < nextat) return;
-    std::string lb = g_kbt_seq[ci]; bool hold = false; if (!lb.empty() && lb[lb.size() - 1] == '!') { hold = true; lb.erase(lb.size() - 1); } int vx = 320, vy = 100;   /* 라벨 끝 ! = 누른 채로 둠(뗌 없음) */
+    std::string lb = gApp.kbt_seq[ci]; bool hold = false; if (!lb.empty() && lb[lb.size() - 1] == '!') { hold = true; lb.erase(lb.size() - 1); } int vx = 320, vy = 100;   /* 라벨 끝 ! = 누른 채로 둠(뗌 없음) */
     bool lng = false; int ovs = -1; if (lb.size() >= 3 && lb[0] == 'O' && lb[1] == 'V' && lb[2] >= '1' && lb[2] <= '4') { ovs = lb[2] - '0'; lng = lb.size() > 3 && lb[3] == 'L'; }   /* t52f: OV1 메뉴 · OV2 저장 · OV3 불러오기 · OV4 배속, 끝 L = 0.9초 누름 */
     if (ovs >= 0) { vx = kbov::sx(ovs) + kbov::BW / 2; vy = kbov::BY + kbov::BH / 2; }
     else if (lb == "BTN") { vx = kbov::BX + kbov::BW / 2; vy = kbov::BY + kbov::BH / 2; }
@@ -122,9 +118,9 @@ static void gh_kbtest_tick(unsigned since) {
         int ix = kbov::find_label(nm.c_str(), nth); if (ix < 0 || !kbov::key_center(ix, vx, vy)) { gh_log("KBTEST 라벨 없음: %s", lb.c_str()); ci++; return; } }
     int wx = 0, wy = 0; if (!gh_kb_virt2win(vx, vy, wx, wy)) { gh_log("KBTEST 창 좌표 변환 실패(%s)", lb.c_str()); ci++; return; }
     SDL_Event se; memset(&se, 0, sizeof se);
-    se.type = phase == 0 ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP; se.button.windowID = SDL_GetWindowID(g_win); se.button.button = SDL_BUTTON_LEFT; se.button.state = phase == 0 ? SDL_PRESSED : SDL_RELEASED; se.button.clicks = 1; se.button.x = wx; se.button.y = wy;
+    se.type = phase == 0 ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP; se.button.windowID = SDL_GetWindowID(gApp.win); se.button.button = SDL_BUTTON_LEFT; se.button.state = phase == 0 ? SDL_PRESSED : SDL_RELEASED; se.button.clicks = 1; se.button.x = wx; se.button.y = wy;
     SDL_PushEvent(&se);
-    gh_log("KBTEST %s %s at %u ms win=(%d,%d) virt=(%d,%d) 소비=%u 통과=%u", lb.c_str(), phase == 0 ? "누름" : "뗌", since, wx, wy, vx, vy, g_kb_cons, g_kb_pass);
+    gh_log("KBTEST %s %s at %u ms win=(%d,%d) virt=(%d,%d) 소비=%u 통과=%u", lb.c_str(), phase == 0 ? "누름" : "뗌", since, wx, wy, vx, vy, gApp.kb_cons, gApp.kb_pass);
     if (phase == 0) { if (hold) { ci++; nextat = since + 300; } else { phase = 1; nextat = since + (lng ? 900 : 80); } } else { phase = 0; ci++; nextat = since + 300; }
 }
 /* 게임 중 이벤트(메뉴가 닫혀 있을 때). true = 소비 */
@@ -132,37 +128,37 @@ static bool gh_game_event(const SDL_Event & e) {
     switch (e.type) {
     case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: {
         bool d = e.type == SDL_CONTROLLERBUTTONDOWN;
-        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_Y) { if (d && g_boot_tick) g_menu_req = true; return true; }
-        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) { if (d) { g_boost_tog = !g_boost_tog; GPLOG("L3 boost toggle -> %d", (int)g_boost_tog); gh_boost_update(); } return true; }
+        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_Y) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
+        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) { if (d) { gApp.boost_tog = !gApp.boost_tog; GPLOG("L3 boost toggle -> %d", (int)gApp.boost_tog); gh_boost_update(); } return true; }
         return false; }
     case SDL_CONTROLLERAXISMOTION: {
         /* r015: 트리거/오른쪽 스틱 축 이벤트를 로그에 남긴다(값이 4096 단위로 바뀔 때만). 배속 R2 임계값: 켜짐 > 16000, 꺼짐 < 8000 (SDL 트리거 범위 0..32767) */
         { static int lastbin[6] = { -99, -99, -99, -99, -99, -99 }; int ax = e.caxis.axis; if (ax >= 2 && ax < 6 && ax != 0) { int bin = e.caxis.value / 4096; if (bin != lastbin[ax]) { lastbin[ax] = bin; GPLOG("AXIS %d(%s) value=%d", ax, SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)ax), (int)e.caxis.value); } } }
         if (e.caxis.axis != SDL_CONTROLLER_AXIS_TRIGGERRIGHT) return false;
         static bool on = false;
-        if (!on && e.caxis.value > 16000) { on = true; g_boost_hold = true; GPLOG("R2 boost hold ON (value=%d > 16000)", (int)e.caxis.value); gh_log("R2 hold ON v=%d", (int)e.caxis.value); gh_boost_update(); }
-        else if (on && e.caxis.value < 8000) { on = false; g_boost_hold = false; GPLOG("R2 boost hold OFF (value=%d < 8000)", (int)e.caxis.value); gh_log("R2 hold OFF v=%d", (int)e.caxis.value); gh_boost_update(); }
+        if (!on && e.caxis.value > 16000) { on = true; gApp.boost_hold = true; GPLOG("R2 boost hold ON (value=%d > 16000)", (int)e.caxis.value); gh_log("R2 hold ON v=%d", (int)e.caxis.value); gh_boost_update(); }
+        else if (on && e.caxis.value < 8000) { on = false; gApp.boost_hold = false; GPLOG("R2 boost hold OFF (value=%d < 8000)", (int)e.caxis.value); gh_log("R2 hold OFF v=%d", (int)e.caxis.value); gh_boost_update(); }
         return true; }
     case SDL_KEYDOWN: case SDL_KEYUP: {
         bool d = e.type == SDL_KEYDOWN; SDL_Keycode k = e.key.keysym.sym;
         if (e.key.repeat) return true;
-        if (k == SDLK_F12) { if (d && g_boot_tick) g_menu_req = true; return true; }
-        if (k == SDLK_PRINTSCREEN) { if (d && g_boot_tick) g_scr_req = true; return true; }
-        if (k == SDLK_F11) { if ((e.key.keysym.mod & KMOD_ALT) || (SDL_GetModState() & KMOD_ALT)) { if (d) { g_boost_tog = !g_boost_tog; gh_boost_update(); } return true; }   /* t52d (#129): Alt+F11 = 배속 토글(ScrollLock 없는 키보드용) */
-            g_boost_hold = d; gh_boost_update(); return true; }
-        if (k == SDLK_SCROLLLOCK) { if (d) { g_boost_tog = !g_boost_tog; gh_boost_update(); } return true; }
+        if (k == SDLK_F12) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
+        if (k == SDLK_PRINTSCREEN) { if (d && gApp.boot_tick) gApp.scr_req = true; return true; }
+        if (k == SDLK_F11) { if ((e.key.keysym.mod & KMOD_ALT) || (SDL_GetModState() & KMOD_ALT)) { if (d) { gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); } return true; }   /* t52d (#129): Alt+F11 = 배속 토글(ScrollLock 없는 키보드용) */
+            gApp.boost_hold = d; gh_boost_update(); return true; }
+        if (k == SDLK_SCROLLLOCK) { if (d) { gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); } return true; }
         if (k == SDLK_F10) return true;
         KBD_KEYS kk = gh_sdlkey(k);
-        if (kk != KBD_NONE && g_boot_tick && !((int)kk < 256 && kh_never[(int)kk])) KEYBOARD_AddKey(kk, d);
+        if (kk != KBD_NONE && gApp.boot_tick && !((int)kk < 256 && kh_never[(int)kk])) KEYBOARD_AddKey(kk, d);
         return true; }
     case SDL_MOUSEMOTION: {   /* r020 (#249-2): 호스트 마우스 → 코어 PC-98 버스마우스. 창 픽셀 이동량을 640 폭 기준으로 환산 */
-        if (!(g_mouse_game && g_boot_tick && !g_menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)g_mouse_game, (int)(g_boot_tick != 0), (int)g_menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
-        int ww = 640, wh = 400; if (g_win) SDL_GetWindowSize(g_win, &ww, &wh); float sc = 640.0f / (float)(ww > 0 ? ww : 640);
+        if (!(gApp.mouse_game && gApp.boot_tick && !gApp.menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)gApp.mouse_game, (int)(gApp.boot_tick != 0), (int)gApp.menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
+        int ww = 640, wh = 400; if (gApp.win) SDL_GetWindowSize(gApp.win, &ww, &wh); float sc = 640.0f / (float)(ww > 0 ? ww : 640);
         { float fdx = (float)e.motion.xrel * sc, fdy = (float)e.motion.yrel * sc; kh_vmouse_move_rel(fdx, fdy);   /* t48c (#639 ③): 코어로 넘긴 이동량을 20번마다(처음 한 번 포함) 한 줄로 */
       static float mfx = 0, mfy = 0; static int mfn = 0; mfx += fdx; mfy += fdy; mfn++;
       if (mfn == 1 || mfn % 20 == 0) { gh_log("HOST MOUSEFWD dx=%.1f dy=%.1f x=%d y=%d btn=%u n=%d", (double)mfx, (double)mfy, e.motion.x, e.motion.y, (unsigned)SDL_GetMouseState(NULL, NULL), mfn); mfx = 0; mfy = 0; } return true; } }
     case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP: {
-        if (!(g_mouse_game && g_boot_tick && !g_menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)g_mouse_game, (int)(g_boot_tick != 0), (int)g_menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
+        if (!(gApp.mouse_game && gApp.boot_tick && !gApp.menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)gApp.mouse_game, (int)(gApp.boot_tick != 0), (int)gApp.menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */
         int b = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : e.button.button == SDL_BUTTON_MIDDLE ? 2 : -1;
         if (b >= 0) { kh_vmouse_button(b, e.type == SDL_MOUSEBUTTONDOWN); gh_log("HOST MOUSEFWD dx=0.0 dy=0.0 x=%d y=%d btn=%u button=%d down=%d", e.button.x, e.button.y, (unsigned)SDL_GetMouseState(NULL, NULL), b, e.type == SDL_MOUSEBUTTONDOWN ? 1 : 0); } return true; }
     default: return false;

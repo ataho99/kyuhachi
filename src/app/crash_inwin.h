@@ -4,9 +4,8 @@
 #include <dbghelp.h>
 static void gh_dump_stubs(void);
 /* r011b: 실패는 로그 파일로만 끝내지 않고 메시지 창으로 이유를 보인다(헤드리스 시험 실행은 제외) */
-static volatile bool g_eexit_seen = false;
 static void gh_msgbox(const char * utf8text) {
-    if (g_headless) return;
+    if (gApp.headless) return;
     plat::msgbox_utf8(utf8text, 1, 1024);
 }
 static LONG WINAPI gh_seh(EXCEPTION_POINTERS * ep) {
@@ -35,16 +34,15 @@ static LONG WINAPI gh_seh(EXCEPTION_POINTERS * ep) {
         gh_log("  #%02d %p %s+0x%llx %s:%u", i, (void *)sf.AddrPC.Offset, hs ? sym->Name : "?", (unsigned long long)d64, hl ? ln.FileName : "", hl ? (unsigned)ln.LineNumber : 0u);
     }
     gh_dump_stubs();
-    if (g_log) { fflush(g_log); }
+    if (gApp.log) { fflush(gApp.log); }
     gh_msgbox(phr_("프로그램 내부에서 예기치 않은 오류가 났습니다.\n로그 폴더의 kyuhachi_log.txt 를 보내 주세요."));
     TerminateProcess(GetCurrentProcess(), 0xC5);
     return EXCEPTION_EXECUTE_HANDLER;
 }
-static int g_traceexc = 0, g_traceexc_n = 0;   /* t37cd: --traceexc — 잡힌 C++ 예외(bad_alloc 등)의 던진 자리를 로그로 (EMS 가 왜 죽는지 찾는 용도) */
 static LONG CALLBACK gh_veh(EXCEPTION_POINTERS * ep) {
-    if (!g_traceexc || ep->ExceptionRecord->ExceptionCode != 0xE06D7363 || g_traceexc_n >= 6) return EXCEPTION_CONTINUE_SEARCH;
-    g_traceexc_n++;
-    gh_log("C++EXC #%d (E06D7363)", g_traceexc_n);
+    if (!gApp.traceexc || ep->ExceptionRecord->ExceptionCode != 0xE06D7363 || gApp.traceexc_n >= 6) return EXCEPTION_CONTINUE_SEARCH;
+    gApp.traceexc_n++;
+    gh_log("C++EXC #%d (E06D7363)", gApp.traceexc_n);
     HANDLE proc = GetCurrentProcess(); static bool symok = false;
     if (!symok) { SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS); SymInitialize(proc, NULL, TRUE); symok = true; }
     CONTEXT ctx = *ep->ContextRecord;
@@ -63,7 +61,7 @@ static LONG CALLBACK gh_veh(EXCEPTION_POINTERS * ep) {
 static DWORD WINAPI gh_boxkiller(LPVOID) {
     for (;;) {
         plat::sleep_ms(200);
-        if (plat::close_window_titled("E_Exit")) { g_eexit_seen = true; if (g_log) { fprintf(g_log, "HOST E_Exit message box closed by watchdog\n"); fflush(g_log); } }
+        if (plat::close_window_titled("E_Exit")) { gApp.eexit_seen = true; if (gApp.log) { fprintf(gApp.log, "HOST E_Exit message box closed by watchdog\n"); fflush(gApp.log); } }
     }
     return 0;
 }
@@ -71,7 +69,7 @@ static DWORD WINAPI gh_boxkiller(LPVOID) {
 
 static void gh_dump_stubs(void) {
     FILE * f = NULL;
-    std::string p = g_outdir + "\\stub_calls.txt";
+    std::string p = gApp.outdir + "\\stub_calls.txt";
     f = fopen(p.c_str(), "w");
     if (!f) return;
     int n = gensei_stub_n, called = 0;
@@ -84,18 +82,18 @@ static void Gh_Null_Init(Section *) {}
 
 /* dump + hard exit: the extracted modules are not built to be torn down (skip static/Config destructors) */
 static void gh_finish(int rc) {
-    gh_log("exit rc=%d frames=%llu", rc, g_frames);
-    if (g_stage_go) { g_stage_go = false; gh_spawn_stage(g_stage_next); }   /* t49a (#845): 다음 단계 = 새 프로세스 */
-    if (!g_headless && g_wm_dirty) { g_wm_dirty = false; ui::settings_save(g_ui, g_cfgpath); }
-    g_shacache.save();
-    if (!g_headless && g_boot_tick && gh_play_commit()) ui::settings_save(g_ui, g_cfgpath);
+    gh_log("exit rc=%d frames=%llu", rc, gApp.frames);
+    if (gApp.stage_go) { gApp.stage_go = false; gh_spawn_stage(gApp.stage_next); }   /* t49a (#845): 다음 단계 = 새 프로세스 */
+    if (!gApp.headless && gApp.wm_dirty) { gApp.wm_dirty = false; ui::settings_save(gApp.ui_, gApp.cfgpath); }
+    gApp.shacache.save();
+    if (!gApp.headless && gApp.boot_tick && gh_play_commit()) ui::settings_save(gApp.ui_, gApp.cfgpath);
     gh_dump_stubs();
-    if (g_log) { fflush(g_log); fclose(g_log); g_log = NULL; }
+    if (gApp.log) { fflush(gApp.log); fclose(gApp.log); gApp.log = NULL; }
     fflush(NULL);
 #if defined(WIN32)
-    if (rc >= 2 && rc <= 4) gh_msgbox(rc == 2 ? (g_errmsg.empty() ? std::string(phr_("게임 디스크 이미지를 열 수 없습니다.\nimg 폴더에 이미지가 있는지 확인해 주세요. (자세한 내용: logs 폴더의 kyuhachi_log.txt)")) : g_errmsg + phr_("\n(자세한 내용: logs 폴더의 kyuhachi_log.txt)")).c_str()
+    if (rc >= 2 && rc <= 4) gh_msgbox(rc == 2 ? (gApp.errmsg.empty() ? std::string(phr_("게임 디스크 이미지를 열 수 없습니다.\nimg 폴더에 이미지가 있는지 확인해 주세요. (자세한 내용: logs 폴더의 kyuhachi_log.txt)")) : gApp.errmsg + phr_("\n(자세한 내용: logs 폴더의 kyuhachi_log.txt)")).c_str()
                                    : phr_("실행 중 오류로 종료했습니다.\n(자세한 내용: logs 폴더의 kyuhachi_log.txt)"));
-    else if (g_eexit_seen) gh_msgbox(phr_("에뮬레이터 내부 오류로 종료했습니다.\n(자세한 내용: logs 폴더의 kyuhachi_log.txt)"));
+    else if (gApp.eexit_seen) gh_msgbox(phr_("에뮬레이터 내부 오류로 종료했습니다.\n(자세한 내용: logs 폴더의 kyuhachi_log.txt)"));
 #endif
     _exit(rc);
 }
@@ -108,7 +106,7 @@ static void gh_spawn_game(const std::string & id, const std::string & entry, int
     std::string exe = plat::exe_path();
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --noboot"; if (!entry.empty()) cmd += " --entry \"" + aw::u8_to_acp(entry) + "\""; if (resume > 0) cmd += " --resume " + std::to_string(resume);
     unsigned long perr = 0;
-    if (plat::spawn(exe, cmd, g_exedir, &perr)) { gh_log("spawn game OK: %s", cmd.c_str()); }
+    if (plat::spawn(exe, cmd, gApp.exedir, &perr)) { gh_log("spawn game OK: %s", cmd.c_str()); }
     else gh_log("spawn game FAIL err=%lu", (unsigned long)perr);
 }
 static std::string gh_conf_sig(const GProfile & p) {   /* 시작 때 한 번만 코어 설정에 들어가는 프로필 값(cycles · 글꼴 · extra · sound). 다르면 같은 창 재부팅으로 못 바꾸므로 폴백 */
@@ -125,11 +123,11 @@ static unsigned long long gh_mem_ws(void) {   /* 작업 집합(바이트). psapi
     PMC m; memset(&m, 0, sizeof m); m.cb = sizeof m; if (fn && fn(GetCurrentProcess(), &m, sizeof m)) return (unsigned long long)m.WorkingSetSize; return 0ull;
 }
 static void gh_inwin_stat(const char * tag) {   /* 시험 판정용: 프로세스 ID · 창 핸들 · 핸들 수 · 메모리 · 창 크기/전체화면/맞춤/셰이더/배속/패드 */
-    DWORD hc = 0; GetProcessHandleCount(GetCurrentProcess(), &hc); int ww = 0, wh = 0; unsigned fl = 0; if (g_win) { SDL_GetWindowSize(g_win, &ww, &wh); fl = SDL_GetWindowFlags(g_win); }
-    gh_log("INWIN %s pid=%lu win=%p glctx=%p handles=%lu ws=%lluKB boot_n=%d inwin_n=%d size=%dx%d fs=%d fit=%d shader=%d boost=%d joys=%d fb=%dx%d", tag, (unsigned long)GetCurrentProcessId(), (void *)g_win, (void *)g_glctx, (unsigned long)hc, gh_mem_ws() / 1024ull, g_boot_n, g_inwin_n, ww, wh, (fl & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP ? 1 : 0, (int)g_fit, (int)g_shader, (int)g_boost_on, SDL_NumJoysticks(), g_fbw, g_fbh);
+    DWORD hc = 0; GetProcessHandleCount(GetCurrentProcess(), &hc); int ww = 0, wh = 0; unsigned fl = 0; if (gApp.win) { SDL_GetWindowSize(gApp.win, &ww, &wh); fl = SDL_GetWindowFlags(gApp.win); }
+    gh_log("INWIN %s pid=%lu win=%p glctx=%p handles=%lu ws=%lluKB boot_n=%d inwin_n=%d size=%dx%d fs=%d fit=%d shader=%d boost=%d joys=%d fb=%dx%d", tag, (unsigned long)GetCurrentProcessId(), (void *)gApp.win, (void *)gApp.glctx, (unsigned long)hc, gh_mem_ws() / 1024ull, gApp.boot_n, gApp.inwin_n, ww, wh, (fl & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP ? 1 : 0, (int)gApp.fit, (int)gApp.shader, (int)gApp.boost_on, SDL_NumJoysticks(), gApp.fbw, gApp.fbh);
 }
 static bool gh_inwin_loading(unsigned ms) {   /* 검은 화면 + 「불러오는 중」 한 줄. true = 도중에 창 닫기 요청 */
-    if (g_headless || !g_use_gl) return false;
+    if (gApp.headless || !gApp.use_gl) return false;
     static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; bool quit = false; unsigned t0 = SDL_GetTicks();
     std::string s = phr_("불러오는 중..."); int x = (640 - ov::tw(s)) / 2; if (x < 0) x = 0;
     do {
@@ -137,75 +135,75 @@ static bool gh_inwin_loading(unsigned ms) {   /* 검은 화면 + 「불러오는
         gh_wm_poll();
         c.rect(0, 0, 640, 400, ov::K); ov::text(c, x, 192, s, ov::WH, ov::K);
         gh_publish(buf, 640, 400);
-        if (g_inwin_testfail == "shot" && SDL_GetTicks() - t0 > 200u) { static int shot_n = 0; if (shot_n < 99) { char pp[1024]; snprintf(pp, sizeof pp, "%s\\inwin_loading_%02d.png", g_outdir.c_str(), shot_n++); gh_png(pp, buf, 640, 400); gh_log("INWIN loading 화면 저장 %s", pp); } t0 -= 100000u; }   /* 시험: 불러오는 중 화면 1장 저장(그 뒤 바로 끝냄) */
+        if (gApp.inwin_testfail == "shot" && SDL_GetTicks() - t0 > 200u) { static int shot_n = 0; if (shot_n < 99) { char pp[1024]; snprintf(pp, sizeof pp, "%s\\inwin_loading_%02d.png", gApp.outdir.c_str(), shot_n++); gh_png(pp, buf, 640, 400); gh_log("INWIN loading 화면 저장 %s", pp); } t0 -= 100000u; }   /* 시험: 불러오는 중 화면 1장 저장(그 뒤 바로 끝냄) */
         SDL_Delay(16);
     } while (!quit && SDL_GetTicks() - t0 < ms);
     return quit;
 }
 /* true = 같은 창에서 다시 부팅 준비 끝(main 이 RunMachine 재진입) · false = 폴백 준비를 마침(main 이 gh_finish) */
 static bool gh_inwin_cycle(void) {
-    int kind = g_inwin_req; g_inwin_req = 0; bool tmo = g_inwin_timeout; g_inwin_timeout = false; g_inwin_wait = false;
+    int kind = gApp.inwin_req; gApp.inwin_req = 0; bool tmo = gApp.inwin_timeout; gApp.inwin_timeout = false; gApp.inwin_wait = false;
     auto fail = [&](const std::string & w) -> bool {
-        gh_log("STAGE 창 안 전환 실패(%s) → 재실행 (종류=%d)", w.c_str(), g_inw_kind);
-        if (g_inw_kind == 2) { if (g_inw_menu_pick) gh_spawn_game(g_inw_sel_id, prof::g_entry_req, g_resume_slot); else gh_spawn_menu(); }
-        else { g_stage_next = g_inwin_target; g_stage_go = true; }
+        gh_log("STAGE 창 안 전환 실패(%s) → 재실행 (종류=%d)", w.c_str(), gApp.inw_kind);
+        if (gApp.inw_kind == 2) { if (gApp.inw_menu_pick) gh_spawn_game(gApp.inw_sel_id, prof::g_entry_req, gApp.resume_slot); else gh_spawn_menu(); }
+        else { gApp.stage_next = gApp.inwin_target; gApp.stage_go = true; }
         return false; };
     if (tmo) return fail("부팅 신호가 8초 안에 없음");
-    g_inw_kind = kind; g_inw_menu_pick = false;
+    gApp.inw_kind = kind; gApp.inw_menu_pick = false;
     try {
         gh_inwin_stat(kind == 2 ? "전환 시작(메인 메뉴)" : "전환 시작(다음 단계)");
         gh_log("INWIN rms 이전 구간 samples=%llu rms=%.2f", gensei_out_n, gensei_out_n ? sqrt(gensei_out_sumsq / (double)gensei_out_n) : 0.0);
-        { unsigned nw = SDL_GetTicks(); if (g_boot_tick) g_inj_base += nw - g_boot_tick; g_inj_stamp = nw | 1u; g_boot_tick = 0; }   /* 시험 inject 시계는 전환을 건너 이어 간다(제품 동작 무관) */
-        gh_play_commit(); if (!g_headless) ui::settings_save(g_ui, g_cfgpath);
+        { unsigned nw = SDL_GetTicks(); if (gApp.boot_tick) gApp.inj_base += nw - gApp.boot_tick; gApp.inj_stamp = nw | 1u; gApp.boot_tick = 0; }   /* 시험 inject 시계는 전환을 건너 이어 간다(제품 동작 무관) */
+        gh_play_commit(); if (!gApp.headless) ui::settings_save(gApp.ui_, gApp.cfgpath);
         kbov::release_all(); fflush(NULL);   /* 디스크 작업 사본에 쓰던 내용을 먼저 내보낸다(새 연결이 같은 파일을 다시 열기 때문) */
-        std::string sel_id = g_pid;
+        std::string sel_id = gApp.pid;
         if (kind == 2) {
-            std::string chosen; bool nb = g_noboot; g_noboot = true; g_quit = false; g_resume_slot = 0; prof::g_entry_req.clear();
-            bool ok = gh_ui_main(chosen); g_noboot = nb;
+            std::string chosen; bool nb = gApp.noboot; gApp.noboot = true; gApp.quit = false; gApp.resume_slot = 0; prof::g_entry_req.clear();
+            bool ok = gh_ui_main(chosen); gApp.noboot = nb;
             if (!ok) { gh_log("ui: quit (창 안 메인 메뉴)"); gh_finish(0); }
-            sel_id = chosen; g_inw_sel_id = chosen; g_inw_menu_pick = true;
-            gh_log("INWIN 메인 메뉴에서 고름: '%s' 항목='%s' resume=%d", chosen.c_str(), prof::g_entry_req.c_str(), g_resume_slot);
-        } else prof::g_entry_req = g_inwin_target;
+            sel_id = chosen; gApp.inw_sel_id = chosen; gApp.inw_menu_pick = true;
+            gh_log("INWIN 메인 메뉴에서 고름: '%s' 항목='%s' resume=%d", chosen.c_str(), prof::g_entry_req.c_str(), gApp.resume_slot);
+        } else prof::g_entry_req = gApp.inwin_target;
         GProfile np; if (!gh_profile(sel_id, np)) return fail("프로필 읽기");
-        if (g_dosmode || g_dosfd) return fail("지금 내장 DOS/CD 부팅(범위 밖)");
-        if (g_demo) return fail("--demo 시작(범위 밖)");
+        if (gApp.dosmode || gApp.dosfd) return fail("지금 내장 DOS/CD 부팅(범위 밖)");
+        if (gApp.demo) return fail("--demo 시작(범위 밖)");
         if (gh_prof_isdos(np)) return fail("다음이 내장 DOS/CD 부팅(범위 밖)");
-        if (np.disk[2] || np.disk[3] || g_prof.disk[2] || g_prof.disk[3] || imageDiskList[2] || imageDiskList[3]) return fail("HDD 칸 있음(범위 밖)");
+        if (np.disk[2] || np.disk[3] || gApp.prof_.disk[2] || gApp.prof_.disk[3] || imageDiskList[2] || imageDiskList[3]) return fail("HDD 칸 있음(범위 밖)");
         if (!np.disk[0] && !np.disk[1]) return fail("부팅 가능한 디스크 없음");
         if (np.bootletter != 'A' && np.bootletter != 'B') return fail("부팅 드라이브가 A/B 가 아님");
         for (int i = 0; i < 2; i++) if (imageDiskList[i] && !np.disk[i]) return fail("다음 항목의 칸이 지금보다 적음");
-        if (gh_conf_sig(np) != gh_conf_sig(g_prof)) return fail("코어 설정(cycles·글꼴·extra·sound)이 지금과 다름");
-        if (g_inwin_testfail == "attach") return fail("시험 주입: 디스크 연결 실패");
+        if (gh_conf_sig(np) != gh_conf_sig(gApp.prof_)) return fail("코어 설정(cycles·글꼴·extra·sound)이 지금과 다름");
+        if (gApp.inwin_testfail == "attach") return fail("시험 주입: 디스크 연결 실패");
         if (gh_inwin_loading(450)) { gh_log("창 닫기 요청(전환 중)"); gh_finish(0); }
-        g_prof = np; g_pid = sel_id;
-        for (size_t i = 0; i < g_ui.games.size(); i++) if (g_ui.games[i].id == sel_id) g_cur_game = (int)i;
-        if (!g_imgdir_given && !g_prof.imgdir.empty()) g_imgdir = g_prof.imgdir;
-        g_disks.clear(); for (int i = 0; i < 4; i++) g_disk_ix[i] = -1;
-        for (int i = 0; i < 2; i++) if (g_prof.disk[i] && !(g_noB && i == 1)) if (!gh_attach(i, g_prof.disk[i])) return fail(std::string("디스크 연결 실패: ") + g_prof.disk[i]);
-        if (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) gh_rebuild_fds(g_prof, g_ui.games[g_cur_game]);
-        { auto mk = g_prof.kv.find("mouse"); g_mouse_game = (mk != g_prof.kv.end() && !mk->second.empty() && mk->second != "none") || !g_amouse.empty(); gh_log("mouse: 이 작품의 마우스 = %s (창 안 전환)", mk == g_prof.kv.end() ? "(미지정)" : mk->second.c_str()); }
-        gh_apply_profile_input(g_prof);
-        g_ui.cur = g_cur_game;
-        if (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) {
-            gh_refresh_game_slots(g_cur_game); gh_apply_settings(g_ui.effective(g_cur_game), false);
-            if (g_win) SDL_SetWindowTitle(g_win, gh_window_title(g_ui.games[g_cur_game], g_titlelegacy).c_str());
+        gApp.prof_ = np; gApp.pid = sel_id;
+        for (size_t i = 0; i < gApp.ui_.games.size(); i++) if (gApp.ui_.games[i].id == sel_id) gApp.cur_game = (int)i;
+        if (!gApp.imgdir_given && !gApp.prof_.imgdir.empty()) gApp.imgdir = gApp.prof_.imgdir;
+        gApp.disks.clear(); for (int i = 0; i < 4; i++) gApp.disk_ix[i] = -1;
+        for (int i = 0; i < 2; i++) if (gApp.prof_.disk[i] && !(gApp.noB && i == 1)) if (!gh_attach(i, gApp.prof_.disk[i])) return fail(std::string("디스크 연결 실패: ") + gApp.prof_.disk[i]);
+        if (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) gh_rebuild_fds(gApp.prof_, gApp.ui_.games[gApp.cur_game]);
+        { auto mk = gApp.prof_.kv.find("mouse"); gApp.mouse_game = (mk != gApp.prof_.kv.end() && !mk->second.empty() && mk->second != "none") || !gApp.amouse.empty(); gh_log("mouse: 이 작품의 마우스 = %s (창 안 전환)", mk == gApp.prof_.kv.end() ? "(미지정)" : mk->second.c_str()); }
+        gh_apply_profile_input(gApp.prof_);
+        gApp.ui_.cur = gApp.cur_game;
+        if (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) {
+            gh_refresh_game_slots(gApp.cur_game); gh_apply_settings(gApp.ui_.effective(gApp.cur_game), false);
+            if (gApp.win) SDL_SetWindowTitle(gApp.win, gh_window_title(gApp.ui_.games[gApp.cur_game], gApp.titlelegacy).c_str());
         }
         gh_stage_init();
-        if (g_inwin_testfail == "throw") throw std::runtime_error("시험 주입: 예외");
+        if (gApp.inwin_testfail == "throw") throw std::runtime_error("시험 주입: 예외");
         /* 원본 reboot 순서 (sdlmain.cpp L10601~10628) */
         void CPU_Snap_Back_To_Real_Mode(); void CPU_Snap_Back_Forget(); void MAPPER_ReleaseAllKeys(); void MAPPER_LosingFocus(void);
         CPU_Snap_Back_To_Real_Mode(); CPU_Snap_Back_Forget();
         DispatchVMEvent(VM_EVENT_RESET);
         MAPPER_ReleaseAllKeys(); MAPPER_LosingFocus();
         /* 호스트 쪽 부팅 상태 되돌림(설계 §4) */
-        g_boot_tick = 0; g_pon_tick = SDL_GetTicks() | 1u; g_pon_pic = PIC_Ticks; g_loading = true;
-        g_next_bk = 0; g_bk_started = false; g_bk_t = 0; g_bk_paused = false; g_bk_last = SDL_GetTicks(); g_bkp_a = g_bkp_b = false;
-        g_next_key = 0; g_play_last = 0; g_menu_open = false; g_key_down = KBD_NONE; g_swap_done = false; kbov::wake();
+        gApp.boot_tick = 0; gApp.pon_tick = SDL_GetTicks() | 1u; gApp.pon_pic = PIC_Ticks; gApp.loading = true;
+        gApp.next_bk = 0; gApp.bk_started = false; gApp.bk_t = 0; gApp.bk_paused = false; gApp.bk_last = SDL_GetTicks(); gApp.bkp_a = gApp.bkp_b = false;
+        gApp.next_key = 0; gApp.play_last = 0; gApp.menu_open = false; gApp.key_down = KBD_NONE; gApp.swap_done = false; kbov::wake();
         gensei_out_sumsq = 0.0; gensei_out_n = 0ull;
-        g_quit = false; g_boot_n++; g_inwin_n++;
+        gApp.quit = false; gApp.boot_n++; gApp.inwin_n++;
         DispatchVMEvent(VM_EVENT_RESET_END);
-        g_inwin_wait = true; g_inwin_t0 = SDL_GetTicks();
-        gh_log("STAGE 창 안 전환: 같은 창에서 리셋 n=%d 작품='%s' 항목='%s' A=%s B=%s", g_inwin_n, sel_id.c_str(), prof::g_entry_req.c_str(), g_prof.disk[0] ? g_prof.disk[0] : "-", g_prof.disk[1] ? g_prof.disk[1] : "-");
+        gApp.inwin_wait = true; gApp.inwin_t0 = SDL_GetTicks();
+        gh_log("STAGE 창 안 전환: 같은 창에서 리셋 n=%d 작품='%s' 항목='%s' A=%s B=%s", gApp.inwin_n, sel_id.c_str(), prof::g_entry_req.c_str(), gApp.prof_.disk[0] ? gApp.prof_.disk[0] : "-", gApp.prof_.disk[1] ? gApp.prof_.disk[1] : "-");
         gh_inwin_stat("리셋 직후");
         return true;
     } catch (const std::exception & ex) { return fail(std::string("예외 ") + ex.what()); }

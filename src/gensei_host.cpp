@@ -121,13 +121,14 @@ ScalerLineHandler_t RENDER_DrawLine = NULL;
 uint32_t GFX_Rmask = 0x00FF0000, GFX_Gmask = 0x0000FF00, GFX_Bmask = 0x000000FF, GFX_Amask = 0xFF000000;
 unsigned char GFX_Rshift = 16, GFX_Gshift = 8, GFX_Bshift = 0, GFX_bpp = 32;
 
+#include "app/state.h"   /* S9d */
 #include "app/opts_log.h"   /* S9b */
 #include "app/res_prof.h"   /* S9b */
 #include "app/video_sink.h"   /* S9a */
 #include "app/frame.h"   /* S9a */
 void RENDER_SetPal(uint8_t, uint8_t, uint8_t, uint8_t) {}
 bool RENDER_IsScalerCompatibleWithDoublescan(void) { return false; }
-SDL_Window * GFX_GetSDLWindow(void) { return g_win; }
+SDL_Window * GFX_GetSDLWindow(void) { return gApp.win; }
 
 /* ------------------------------------------------------------------ GameLink RAM (C_GAMELINK=1 이라 memory.cpp 가 호출; 서브셋에 없어 NULL 스텁이 되던 것) */
 namespace GameLink {
@@ -173,17 +174,17 @@ void MAPPER_AddHandler(MAPPER_Handler *, MapKeys, Bitu, char const * const event
 
 int main(int argc, char * argv[]) {
     SDL_SetMainReady();
-    for (int i = 0; i < argc; i++) g_argv_saved.push_back(argv[i]);   /* t49a (#845): 단계 전환 때 같은 인자로 다시 띄운다 */
+    for (int i = 0; i < argc; i++) gApp.argv_saved.push_back(argv[i]);   /* t49a (#845): 단계 전환 때 같은 인자로 다시 띄운다 */
     std::string id;
     { int rc = gh_main_args(argc, argv, id); if (rc >= 0) return rc; }   /* S9c */
     /* r011b/r012: exe 위치 기준 기본값(인자 없이 더블클릭해도 돌도록) */
-    { std::string s = plat::exe_path(); size_t sl = s.find_last_of("\\/"); g_exedir = (sl == std::string::npos) ? std::string(".") : s.substr(0, sl); }
+    { std::string s = plat::exe_path(); size_t sl = s.find_last_of("\\/"); gApp.exedir = (sl == std::string::npos) ? std::string(".") : s.substr(0, sl); }
     /* t52g (#133): 화면 문구 파일은 설정(언어)을 읽은 뒤 phr_set_lang() 이 읽는다 (strings_ko/en/ja.txt · 한국어는 strings.txt 가 덮어씀) */
-    const std::string & exedir = g_exedir;
+    const std::string & exedir = gApp.exedir;
     if (!plat::exists("res\\fonts\\kyuhachi_font.bmp") && !plat::exists("kyuhachi_font.bmp") && !plat::exists("res\\fonts\\pc98player_font.bmp") && !plat::exists("pc98player_font.bmp")) plat::set_cwd(exedir);   /* t52g: 새·옛 이름 모두 */
-    const bool ui_mode = id.empty() && !g_headless;   /* r012: 인자 없음 = 이 실행기의 UI 로 시작 */
+    const bool ui_mode = id.empty() && !gApp.headless;   /* r012: 인자 없음 = 이 실행기의 UI 로 시작 */
     gh_main_env(exedir);   /* S9c */
-    const bool outdir_auto = (g_outdir == ".");
+    const bool outdir_auto = (gApp.outdir == ".");
     gh_main_logsdl(exedir, ui_mode, id, outdir_auto);   /* S9c */
     { int rc = gh_main_audio_prof(id, ui_mode); if (rc >= 0) return rc; }   /* S9c */
     gh_main_input_init(id);   /* S9c */

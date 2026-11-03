@@ -1,35 +1,33 @@
 /* app/uitest.h -- S9b: menu shot, ui main loop, ui test. Moved unchanged from gensei_host.cpp lines 1514-1794 (as of t54t). Included in place; single translation unit. */
 /* ---- r012: 작품을 고르기 전 UI 루프. true = 게임 시작(out_id), false = 끝내기 */
-static int g_cli_lang = -1;   /* t52g 시험 전용(--lang N): 설정의 언어 대신 0 한국어 · 1 English · 2 にほんご */
-static bool g_menushot = false;   /* t52f 시험 전용(--menushot): 메뉴 창을 실제로 찍어 4:3 고정을 눈으로 본다 */
 static bool gh_shot_to(const std::string & path) {
-    snprintf(g_shot_path, sizeof g_shot_path, "%s", path.c_str()); g_shot_w = g_shot_h = 0; g_shot_crop = 0; g_shot_req = 1;
-    for (int t = 0; t < 600 && g_shot_req; t++) SDL_Delay(5);
-    bool done = !g_shot_req; g_shot_req = 0; gh_log("MENUSHOT %s %s %dx%d fit=%d", done ? "OK" : "FAIL", path.c_str(), g_shot_w, g_shot_h, (int)g_fit); return done;
+    snprintf(gApp.shot_path, sizeof gApp.shot_path, "%s", path.c_str()); gApp.shot_w = gApp.shot_h = 0; gApp.shot_crop = 0; gApp.shot_req = 1;
+    for (int t = 0; t < 600 && gApp.shot_req; t++) SDL_Delay(5);
+    bool done = !gApp.shot_req; gApp.shot_req = 0; gh_log("MENUSHOT %s %s %dx%d fit=%d", done ? "OK" : "FAIL", path.c_str(), gApp.shot_w, gApp.shot_h, (int)gApp.fit); return done;
 }
 static bool gh_menushot_tick(ui::Ui & U) {   /* true = 시험 끝(메뉴를 닫는다) */
     static unsigned t0 = 0; if (!t0) t0 = SDL_GetTicks(); unsigned t = SDL_GetTicks() - t0; static int st = 0;
-    std::string dir = g_outdir.empty() ? g_exedir : g_outdir;
-    if (st == 0 && t >= 2500) { st = 1; gh_log("T52F menu main scr=%d cur=%d game_ratio=%d fit=%d menu43=%d", (int)U.scr, U.cur, U.effective(U.cur).ratio, (int)g_fit, (int)g_menu43); gh_shot_to(dir + "\\menu_main.png"); }
+    std::string dir = gApp.outdir.empty() ? gApp.exedir : gApp.outdir;
+    if (st == 0 && t >= 2500) { st = 1; gh_log("T52F menu main scr=%d cur=%d game_ratio=%d fit=%d menu43=%d", (int)U.scr, U.cur, U.effective(U.cur).ratio, (int)gApp.fit, (int)gApp.menu43); gh_shot_to(dir + "\\menu_main.png"); }
     else if (st == 1 && t >= 3500) { st = 2; U.mainsel = 1; U.key(ui::UK_OK); }
-    else if (st == 2 && t >= 5000) { st = 3; gh_log("T52F menu list scr=%d cur=%d game_ratio=%d fit=%d menu43=%d", (int)U.scr, U.cur, U.effective(U.cur).ratio, (int)g_fit, (int)g_menu43); gh_shot_to(dir + "\\menu_list.png"); }
+    else if (st == 2 && t >= 5000) { st = 3; gh_log("T52F menu list scr=%d cur=%d game_ratio=%d fit=%d menu43=%d", (int)U.scr, U.cur, U.effective(U.cur).ratio, (int)gApp.fit, (int)gApp.menu43); gh_shot_to(dir + "\\menu_list.png"); }
     else if (st == 3 && t >= 6000) return true;
     return false;
 }
 static bool gh_ui_main_(std::string & out_id) {
-    ui::Ui & U = g_ui;
+    ui::Ui & U = gApp.ui_;
     for (size_t i = 0; i < U.games.size(); i++) gh_refresh_game_slots((int)i);
     U.in_game = false; U.scr = ui::S_MAIN; SDL_StartTextInput(); U.now_s = (long long)time(NULL);
     {   /* t39: 설치 실행 뒤 처음 열린 목록에서 「설치를 마쳤습니까?」 */
-        std::string pf = g_exedir + "\\install_pending.tsv"; FILE * f = fopen(pf.c_str(), "rb");
+        std::string pf = gApp.exedir + "\\install_pending.tsv"; FILE * f = fopen(pf.c_str(), "rb");
         if (f) { char ln[512]; std::string line; if (fgets(ln, sizeof ln, f)) line = ln; fclose(f); plat::remove_file(pf.c_str());
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back(); size_t tb = line.find('\t');
             if (tb != std::string::npos) { std::string gid = line.substr(0, tb), en = line.substr(tb + 1); for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { U.ask_install_done((int)i, en); break; } } }
     }
     if (U.cur < 0 || U.cur >= (int)U.games.size()) U.cur = 0;
-    U.pick = U.cur; g_cur_game = U.cur;
+    U.pick = U.cur; gApp.cur_game = U.cur;
     gh_apply_settings(U.effective(U.cur), false);
-    if (!g_noboot && U.g.boot == 0) { if (gh_boot_seq(true) && g_quit) return false; }
+    if (!gApp.noboot && U.g.boot == 0) { if (gh_boot_seq(true) && gApp.quit) return false; }
     static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 };
     gh_diag_enter(0);
     for (;;) {
@@ -43,15 +41,15 @@ static bool gh_ui_main_(std::string & out_id) {
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT && U.scr == ui::S_OSK && U.osk_hg) {   /* t48b: 마우스·터치(터치는 SDL 이 마우스로 바꿔 준다) */
                 int vx = 0, vy = 0; bool ok = gh_menu_win2virt(e.button.x, e.button.y, vx, vy); bool hit = ok && U.pointer(vx, vy); gh_log("HGPTR win=%d,%d virt=%d,%d hit=%d", e.button.x, e.button.y, vx, vy, hit ? 1 : 0); continue; }
             if ((e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) && e.cbutton.button == (kh_western ? SDL_CONTROLLER_BUTTON_A : SDL_CONTROLLER_BUTTON_B) && U.scr == ui::S_OSK && U.osk_hg) {   /* t48b (#629 2): ○ 는 뗄 때 입력, 0.5초 넘게 누르면 SHIFT(어깨 버튼이 없는 패드용) */
-                if (e.type == SDL_CONTROLLERBUTTONDOWN) { g_ob_held = true; g_ob_long = false; g_ob_t0 = SDL_GetTicks(); }
-                else { if (g_ob_held && !g_ob_long) U.key(ui::UK_OK); g_ob_held = false; }
+                if (e.type == SDL_CONTROLLERBUTTONDOWN) { gApp.ob_held = true; gApp.ob_long = false; gApp.ob_t0 = SDL_GetTicks(); }
+                else { if (gApp.ob_held && !gApp.ob_long) U.key(ui::UK_OK); gApp.ob_held = false; }
                 continue; }
             if (gh_wm_hotkey(e)) continue;
             ui::UKey k = gh_ev2uk(e, NULL); if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) gh_log("DIAG btn -> ev2uk=%d none=%d", (int)k, k == ui::UK_NONE ? 1 : 0); if (k == ui::UK_NONE) continue;
             ui::Act a = U.key(k);
             switch (a.t) {
-            case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; g_cur_game = a.game; g_resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
-            case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = g_cur_game = a.game; g_resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
+            case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; gApp.cur_game = a.game; gApp.resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
+            case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = gApp.cur_game = a.game; gApp.resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
             case ui::A_DELSLOT: gh_delete_slot(a.game, a.slot); break;
             case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); kh_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
@@ -63,58 +61,58 @@ static bool gh_ui_main_(std::string & out_id) {
             case ui::A_EXTRA:
                 if (a.arg == 1 && !gh_font_guard()) break;
                 if (a.arg == 1) gh_launch_note(U, a);
-                if (a.arg == 1) { g_noB = true; g_resume_slot = 0; U.cur = g_cur_game = a.game; out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true; }
+                if (a.arg == 1) { gApp.noB = true; gApp.resume_slot = 0; U.cur = gApp.cur_game = a.game; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true; }
                 if (a.arg == 2) { gh_boot_seq(true); }
-                if (a.arg == 6) { std::string rid = U.games[a.game].id; int nn = gh_reset_disks(rid); g_note = nn > 0 ? phr_("원본 디스크로 초기화했습니다 (사본 ") + std::to_string(nn) + phr_("개 삭제)") : phr_("초기화할 디스크 사본이 없습니다 (원본 그대로)"); g_note_until = SDL_GetTicks() + 3000u; }
+                if (a.arg == 6) { std::string rid = U.games[a.game].id; int nn = gh_reset_disks(rid); gApp.note = nn > 0 ? phr_("원본 디스크로 초기화했습니다 (사본 ") + std::to_string(nn) + phr_("개 삭제)") : phr_("초기화할 디스크 사본이 없습니다 (원본 그대로)"); gApp.note_until = SDL_GetTicks() + 3000u; }
                 break;
-            case ui::A_QUIT: if (a.arg) ui::settings_save(U, g_cfgpath); return false;
+            case ui::A_QUIT: if (a.arg) ui::settings_save(U, gApp.cfgpath); return false;
             default: break; }
         }
-        if (!(U.scr == ui::S_OSK && U.osk_hg)) g_ob_held = false;
-        if (g_ob_held && !g_ob_long && SDL_GetTicks() - g_ob_t0 >= 500) { g_ob_long = true; U.key(ui::UK_L); gh_log("HGSHIFT ○ 길게 → SHIFT"); }   /* t48b */
-        { static int prev_scr = -1; if (prev_scr == (int)ui::S_OSK && (int)U.scr != (int)ui::S_OSK) gh_log("KBSENT total=%u in_text=%u (이 메뉴 프로세스의 kbov 가 코어로 보낸 키 수 / 그중 텍스트 입력 중)", g_kbsent_total, g_kbsent_text); prev_scr = (int)U.scr; }
+        if (!(U.scr == ui::S_OSK && U.osk_hg)) gApp.ob_held = false;
+        if (gApp.ob_held && !gApp.ob_long && SDL_GetTicks() - gApp.ob_t0 >= 500) { gApp.ob_long = true; U.key(ui::UK_L); gh_log("HGSHIFT ○ 길게 → SHIFT"); }   /* t48b */
+        { static int prev_scr = -1; if (prev_scr == (int)ui::S_OSK && (int)U.scr != (int)ui::S_OSK) gh_log("KBSENT total=%u in_text=%u (이 메뉴 프로세스의 kbov 가 코어로 보낸 키 수 / 그중 텍스트 입력 중)", gApp.kbsent_total, gApp.kbsent_text); prev_scr = (int)U.scr; }
         gh_wm_poll();
         if (U.scr != ui::S_SCREEN) gh_apply_settings(U.effective(U.cur), false);
-        g_cur_game = U.cur;
+        gApp.cur_game = U.cur;
         if (U.lang_chg) { U.lang_chg = false; gh_reload_games(); gh_log("T52G 언어 바꿈 -> lang=%d, 목록 다시 만듦", U.lang); }   /* t52g (#133) */
-        if (g_menushot && !g_headless && g_win && gh_menushot_tick(U)) return false;   /* t52f 시험 */
-        U.fs_now = gh_fs_now(); U.ts_ms = (int)SDL_GetTicks(); U.now_s = (long long)time(NULL); U.draw(c); if (g_note_until && SDL_GetTicks() < g_note_until) ov::osd_draw(c, g_note, false, 336); gh_publish(buf, 640, 400); SDL_Delay(16);
+        if (gApp.menushot && !gApp.headless && gApp.win && gh_menushot_tick(U)) return false;   /* t52f 시험 */
+        U.fs_now = gh_fs_now(); U.ts_ms = (int)SDL_GetTicks(); U.now_s = (long long)time(NULL); U.draw(c); if (gApp.note_until && SDL_GetTicks() < gApp.note_until) ov::osd_draw(c, gApp.note, false, 336); gh_publish(buf, 640, 400); SDL_Delay(16);
     }
 }
 
 /* t52f (#132 2항): 시작 메뉴를 도는 동안은 작품별 화면비와 상관없이 4:3. 메뉴를 나가면(작품 시작) 고른 작품의 화면비를 적용한다 */
 static bool gh_ui_main(std::string & out_id) {
-    g_menu43 = true; gh_log("T52F menu43 on (시작 메뉴 화면비 4:3 고정)");
+    gApp.menu43 = true; gh_log("T52F menu43 on (시작 메뉴 화면비 4:3 고정)");
     bool r = gh_ui_main_(out_id);
-    g_menu43 = false; if (!g_headless) gh_apply_settings(g_ui.effective(g_cur_game), false);
-    gh_log("T52F menu43 off -> fit=%d (고른 작품 %s, 작품 화면비 %d)", (int)g_fit, out_id.c_str(), (g_cur_game >= 0 && g_cur_game < (int)g_ui.games.size()) ? g_ui.effective(g_cur_game).ratio : -1);
+    gApp.menu43 = false; if (!gApp.headless) gh_apply_settings(gApp.ui_.effective(gApp.cur_game), false);
+    gh_log("T52F menu43 off -> fit=%d (고른 작품 %s, 작품 화면비 %d)", (int)gApp.fit, out_id.c_str(), (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) ? gApp.ui_.effective(gApp.cur_game).ratio : -1);
     return r;
 }
 
 /* ---- r012: 창 없이 UI 를 호스트 코드 그대로 그려 PNG 로 (--uitest 폴더). 화면별 캡처 + 부팅 장면 + 설정 저장/읽기 왕복 */
 static void gh_uitest(void) {
-    ui::Ui & U = g_ui; static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; int n = 0;
-    plat::mkdir(g_uitest_dir.c_str());
+    ui::Ui & U = gApp.ui_; static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; int n = 0;
+    plat::mkdir(gApp.uitest_dir.c_str());
     for (size_t i = 0; i < U.games.size(); i++) gh_refresh_game_slots((int)i);
-    U.cur = U.pick = 2; g_cur_game = 2;
-    auto shot = [&](const char * nm) { U.draw(c); { std::string bw = gh_builtin_warn(); if (!bw.empty()) ov::osd_draw(c, bw, false, 336); } char p[700]; if (!g_uikeys_file.empty()) snprintf(p, sizeof p, "%s\\ui_%02d_%s_s%02dt%dc%d.png", g_uitest_dir.c_str(), ++n, nm, (int)U.scr, (int)U.tab, U.sel); else snprintf(p, sizeof p, "%s\\ui_%02d_%s.png", g_uitest_dir.c_str(), ++n, nm);   /* t39ui4: 스크립트 캡처 이름에 화면 번호·탭·선택 줄을 붙인다 */ gh_png(p, buf, 640, 400); };
+    U.cur = U.pick = 2; gApp.cur_game = 2;
+    auto shot = [&](const char * nm) { U.draw(c); { std::string bw = gh_builtin_warn(); if (!bw.empty()) ov::osd_draw(c, bw, false, 336); } char p[700]; if (!gApp.uikeys_file.empty()) snprintf(p, sizeof p, "%s\\ui_%02d_%s_s%02dt%dc%d.png", gApp.uitest_dir.c_str(), ++n, nm, (int)U.scr, (int)U.tab, U.sel); else snprintf(p, sizeof p, "%s\\ui_%02d_%s.png", gApp.uitest_dir.c_str(), ++n, nm);   /* t39ui4: 스크립트 캡처 이름에 화면 번호·탭·선택 줄을 붙인다 */ gh_png(p, buf, 640, 400); };
     auto boot = [&](const char * nm, int stage, bool cells) {
         c.rect(0, 0, 640, 400, ov::K);
         if (stage >= 1) ov::text(c, 40, 112, std::string(KH_FULLNAME), ov::WH, ov::K);
         if (stage >= 2) ov::text(c, 40, 144, std::string("Now Loading") + std::string((size_t)(stage - 1 > 3 ? 3 : stage - 1), '.'), ov::WH, ov::K);
         if (cells) ov::fncells_boot(c);   /* t52a (#49) */
-        char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_%s.png", g_uitest_dir.c_str(), ++n, nm); gh_png(p, buf, 640, 400);
+        char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_%s.png", gApp.uitest_dir.c_str(), ++n, nm); gh_png(p, buf, 640, 400);
     };
-    if (!g_uikeys_file.empty()) {   /* t39: 키 입력 스크립트 시험 — 공백 구분 토큰, # 줄은 주석. shot:이름 text:글자 go:작품id 키(U D L R O C T S E LB RB)*반복 */
-        std::string sc; { FILE * kf = fopen(g_uikeys_file.c_str(), "rb"); if (kf) { char ln[1024]; while (fgets(ln, sizeof ln, kf)) { if (ln[0] != '#') sc += ln; } fclose(kf); } else gh_log("uikeys: 파일을 열 수 없음 %s", g_uikeys_file.c_str()); }
+    if (!gApp.uikeys_file.empty()) {   /* t39: 키 입력 스크립트 시험 — 공백 구분 토큰, # 줄은 주석. shot:이름 text:글자 go:작품id 키(U D L R O C T S E LB RB)*반복 */
+        std::string sc; { FILE * kf = fopen(gApp.uikeys_file.c_str(), "rb"); if (kf) { char ln[1024]; while (fgets(ln, sizeof ln, kf)) { if (ln[0] != '#') sc += ln; } fclose(kf); } else gh_log("uikeys: 파일을 열 수 없음 %s", gApp.uikeys_file.c_str()); }
         static const std::map<std::string, ui::UKey> KM = { { "U", ui::UK_UP }, { "D", ui::UK_DOWN }, { "L", ui::UK_LEFT }, { "R", ui::UK_RIGHT }, { "O", ui::UK_OK }, { "C", ui::UK_CANCEL }, { "T", ui::UK_TRI }, { "S", ui::UK_SQ }, { "E", ui::UK_SELECT }, { "LB", ui::UK_L }, { "RB", ui::UK_R } };
-        U.in_game = false; U.scr = ui::S_MAIN; U.ts_ms = 0; U.now_s = (long long)time(NULL); if (U.cur < 0 || U.cur >= (int)U.games.size()) U.cur = 0; U.pick = U.cur; g_cur_game = U.cur;
+        U.in_game = false; U.scr = ui::S_MAIN; U.ts_ms = 0; U.now_s = (long long)time(NULL); if (U.cur < 0 || U.cur >= (int)U.games.size()) U.cur = 0; U.pick = U.cur; gApp.cur_game = U.cur;
         std::istringstream in(sc); std::string tk; int nact = 0;
         while (in >> tk) {
             if (tk.compare(0, 5, "shot:") == 0) { shot(tk.substr(5).c_str()); continue; }
             if (tk.compare(0, 5, "text:") == 0) { U.text_in(tk.substr(5)); continue; }
             if (tk.compare(0, 5, "vals:") == 0) {   /* t48a (#614 ③): 전 작품 적용값 표를 TSV 로 저장(시험 전용) */
-                std::string vp = g_uitest_dir + "\\" + tk.substr(5); FILE * vf = fopen(vp.c_str(), "wb"); int nr = 0;
+                std::string vp = gApp.uitest_dir + "\\" + tk.substr(5); FILE * vf = fopen(vp.c_str(), "wb"); int nr = 0;
                 if (vf) { for (size_t i = 0; i < U.games.size(); i++) { std::vector<ui::ValRow> rows; if (!U.env.values || !U.env.values((int)i, rows)) continue; for (auto & r : rows) { fprintf(vf, "%s\t%s\t%s\t%s\t%s\n", U.games[i].id.c_str(), r.key.c_str(), r.val.c_str(), r.src.c_str(), r.cov.c_str()); nr++; } } fclose(vf); }
                 gh_log("uikeys: 적용값 표 %d줄 저장 %s", nr, vp.c_str()); continue; }
             if (tk == "open_vals") { U.open_vals(); continue; }
@@ -125,10 +123,10 @@ static void gh_uitest(void) {
             if (tk == "hkdump") { gh_log("uikeys: HKDUMP buf='%s' cur='%s' han=%d shift=%d sel=%d,%d osk_hg=%d scr=%d", U.osk_buf.c_str(), hg::cur_text(U.hc.cur).c_str(), U.hc.han ? 1 : 0, U.osk_shift ? 1 : 0, U.osk_r, U.osk_c, U.osk_hg ? 1 : 0, (int)U.scr); continue; }
             if (tk.compare(0, 8, "newname:") == 0) { std::string gid = tk.substr(8); for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { ent::Kv kv; for (auto & ee : U.games[i].ents) if (!ee.pseudo && ee.vgi < 0) { kv = ee.kv; break; } U.cur = (int)i; U.entg = (int)i; U.begin_new_from_kv((int)i, kv, "새 방법"); break; } continue; }   /* t48b 시험 전용: 새 실행 방법 편집 화면으로 */
             if (tk.compare(0, 8, "entdump:") == 0) { std::string gid = tk.substr(8); for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { for (auto & ee : U.games[i].ents) { std::string hx; for (unsigned char ch2 : ee.name) { char b2[4]; snprintf(b2, sizeof b2, "%02X", ch2); hx += b2; } gh_log("uikeys: ENTS %s name='%s' pseudo=%d hex=%s", gid.c_str(), ee.name.c_str(), ee.pseudo ? 1 : 0, hx.c_str()); } } continue; }
-            if (tk == "kbsent") { gh_log("uikeys: KBSENT total=%u in_text=%u", g_kbsent_total, g_kbsent_text); continue; }
+            if (tk == "kbsent") { gh_log("uikeys: KBSENT total=%u in_text=%u", gApp.kbsent_total, gApp.kbsent_text); continue; }
             if (tk.compare(0, 11, "launchnote:") == 0) {   /* t48a 시험 전용: 실행 요청이 항목 이름(전역)을 남기는 것을 흉내 */
                 std::string r = tk.substr(11); size_t c2 = r.find(':'); std::string gid = r.substr(0, c2), en = c2 == std::string::npos ? std::string() : r.substr(c2 + 1);
-                prof::g_entry_req = en; for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { U.cur = (int)i; g_cur_game = (int)i; }
+                prof::g_entry_req = en; for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) { U.cur = (int)i; gApp.cur_game = (int)i; }
                 gh_log("uikeys: 실행 요청 흉내 id=%s entry=%s", gid.c_str(), en.c_str()); continue; }
             if (tk == "reload") { gh_reload_games(); gh_log("uikeys: 목록 다시 만듦 (entry_req='%s')", prof::g_entry_req.c_str()); continue; }
             if (tk == "blkdump") { if (U.pick >= 0 && U.pick < (int)U.vis.size()) { int gi = U.vis[U.pick]; gh_log("uikeys: BLKDUMP row=%s row_old_games_gi_block='%s' row_by_id_block='%s' cur=%s cur_by_id_block='%s' cur_games_cur_block='%s' sel_entry='%s' scr=%d", U.games[gi].id.c_str(), U.games[gi].block.c_str(), U.blk_row(gi).c_str(), U.game() ? U.game()->id.c_str() : "", U.blk_cur().c_str(), U.game() ? U.game()->block.c_str() : "", U.sel_entry.c_str(), (int)U.scr); } continue; }
@@ -136,7 +134,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "home") { U.in_game = false; U.scr = ui::S_MAIN; U.mainsel = 0; U.sel = 0; continue; }   /* t52i 시험 전용: 메인메뉴로 돌아가 맨 위 */
             if (tk == "startpick") { U.start_ret = ui::S_PICK; U.startsel = 1; U.scr = ui::S_START; U.sel = 1; continue; }   /* t52i 시험 전용: 작품 목록에서 연 시작 팝업 */
             if (tk == "valdump") { gh_log("uikeys: T52I VALDUMP bgm=%d se=%d bmult=%d bmode=%d dirty=%d scr=%d", U.g.bgm, U.g.se, U.g.bmult, U.g.bmode, U.dirty ? 1 : 0, (int)U.scr); continue; }   /* t52i 시험 전용: 동작 환경 값 기록 */
-            if (tk == "save") { std::string sp = g_uitest_dir + "\\settings_uikeys.ini"; ui::settings_save(U, sp); gh_log("uikeys: 설정 저장 %s (bleed=%d)", sp.c_str(), U.g.bleed); continue; }   /* t42: 저장 시험 */
+            if (tk == "save") { std::string sp = gApp.uitest_dir + "\\settings_uikeys.ini"; ui::settings_save(U, sp); gh_log("uikeys: 설정 저장 %s (bleed=%d)", sp.c_str(), U.g.bleed); continue; }   /* t42: 저장 시험 */
             if (tk == "ingame") { U.in_game = true; U.scr = ui::S_GAME; U.sel = 0; continue; }   /* t39ui4: 게임 중 메뉴로 진입 */
             if (tk.compare(0, 4, "tab:") == 0) { std::string t = tk.substr(4); int want = t == "ko" ? 0 : t == "jp" ? 1 : 2; for (int gg = 0; gg < 4 && (int)U.tab != want; gg++) U.key(ui::UK_R); continue; }   /* t39ui4: 탭 맞추기 */
             if (tk.compare(0, 3, "go:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(3)) { int b = U.base_of((int)i); if (!U.row_in_tab(b)) U.tab = ui::Ui::TAB_ALL; U.rebuild_vis((int)i); } continue; }
@@ -144,7 +142,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "entlang") { U.sel = (int)std::max<size_t>(U.vents(U.entg).size(), 1) + 1; continue; }   /* t44c: S_ENT 의 「언어」 행 */
             if (tk.compare(0, 7, "addnew:") == 0) { U.add_new.push_back(tk.substr(7)); U.add_new_why.push_back("시험: 자동 판정 근거 줄"); continue; }   /* t44c: 방금 추가한 작품 목록 */
             if (tk == "addscr") { U.scr = ui::S_ADD; U.sel = 0; continue; }
-            if (tk.compare(0, 4, "cur:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(4)) { U.cur = (int)i; U.entg = (int)i; g_cur_game = (int)i; } continue; }   /* t48e2 시험 전용: 현재 작품 지정 */
+            if (tk.compare(0, 4, "cur:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(4)) { U.cur = (int)i; U.entg = (int)i; gApp.cur_game = (int)i; } continue; }   /* t48e2 시험 전용: 현재 작품 지정 */
             if (tk == "padscr") { U.scr = ui::S_PAD; U.sel = 0; continue; }   /* t48e 시험 전용: 조작 설정 화면으로 */
             if (tk.compare(0, 4, "scr:") == 0) { U.scr = (ui::Scr)atoi(tk.c_str() + 4); U.sel = 0; continue; }   /* t50a 시험 전용 (#877): 화면 번호로 직접 이동 — 안 닿던 화면의 도움말 폭 실측용 */
             if (tk == "lang") { std::vector<std::string> ids, why; for (auto & gg : U.games) ids.push_back(gg.id); U.open_lang(ids, why, ui::S_MAIN); continue; }   /* t50a 시험 전용: 언어 화면 */
@@ -176,7 +174,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
     }
     auto shotg = [&](const char * nm) { ov::sample_picture(c, 0, 0, 640, 400); shot(nm); };
     shot("main"); U.mainsel = 0; U.key(ui::UK_OK); shot("start"); U.key(ui::UK_CANCEL);
-    U.mainsel = 1; U.key(ui::UK_OK); shot("pick"); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("main_after_pick"); U.cur = U.pick = 2; g_cur_game = 2;
+    U.mainsel = 1; U.key(ui::UK_OK); shot("pick"); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("main_after_pick"); U.cur = U.pick = 2; gApp.cur_game = 2;
     U.mainsel = 2; U.key(ui::UK_OK); shot("screen_sharp"); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt"); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt_curve"); U.key(ui::UK_CANCEL);
     U.mainsel = 3; U.key(ui::UK_OK); U.key(ui::UK_DOWN); U.key(ui::UK_LEFT); shot("conf"); for (int i = 0; i < 7; i++) U.key(ui::UK_DOWN); shot("conf_bosd"); U.key(ui::UK_OK);
     U.mainsel = 4; U.key(ui::UK_OK); shot("save"); U.key(ui::UK_CANCEL);
@@ -201,11 +199,11 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
           U.scr = ui::S_CONF; U.sel = 13; int l0 = U.lang; U.key(ui::UK_RIGHT); if (U.lang != (l0 + 1) % 3) { bad++; gh_log("T52G 언어 행 → 키: lang %d -> %d FAIL", l0, U.lang); }
       }
       bool flag_ok = U.lang_chg; U.lang_chg = false;
-      std::string ip = g_uitest_dir + "\\settings_t52g.ini"; U.lang = 2; ui::settings_save(U, ip); ui::Ui B; B.games = U.games; ui::settings_load(B, ip); bool rt = B.lang == 2;
+      std::string ip = gApp.uitest_dir + "\\settings_t52g.ini"; U.lang = 2; ui::settings_save(U, ip); ui::Ui B; B.games = U.games; ui::settings_load(B, ip); bool rt = B.lang == 2;
       U.lang = 0; phr_set_lang(0);
       gh_log("T52G lang cycle bad=%d flag=%d roundtrip=%d (phrases ko=%d) -> %s", bad, (int)flag_ok, (int)rt, phr_loaded_count, (bad == 0 && flag_ok && rt) ? "PASS" : "FAIL"); }
     /* t52e (#131): 확인창 3종 + 동작 환경 설정 × 복원 검사 */
-    if (U.games.size() >= 3) { U.cur = U.pick = 2; g_cur_game = 2; } for (auto & gg0 : U.games) { gg0.slot[0].used = true; gg0.slot[0].stamp = "2026-11-02 07:00"; gg0.lastslot = 0; }
+    if (U.games.size() >= 3) { U.cur = U.pick = 2; gApp.cur_game = 2; } for (auto & gg0 : U.games) { gg0.slot[0].used = true; gg0.slot[0].stamp = "2026-11-02 07:00"; gg0.lastslot = 0; }
     U.in_game = true; U.scr = ui::S_GAME; U.sel = 11; U.key(ui::UK_OK); shotg("yn_mainmenu"); U.key(ui::UK_CANCEL); gh_log("T52E yn_mainmenu back scr=%d (S_GAME=%d)", (int)U.scr, (int)ui::S_GAME);
     U.in_game = false; U.scr = ui::S_SAVE; U.slotsel = 0; gh_log("T52E delslot pre cur=%d used=%d", U.cur, U.game() ? (int)U.game()->slot[0].used : -1); U.key(ui::UK_TRI); gh_log("T52E delslot after TRI scr=%d (S_YN=%d)", (int)U.scr, (int)ui::S_YN); shotg("yn_delslot"); U.key(ui::UK_CANCEL); gh_log("T52E yn_delslot back scr=%d (S_SAVE=%d)", (int)U.scr, (int)ui::S_SAVE);
     U.scr = ui::S_EXTRA; U.sel = 6; U.key(ui::UK_OK); shotg("yn_diskreset"); U.key(ui::UK_CANCEL); gh_log("T52E yn_diskreset back scr=%d (S_EXTRA=%d)", (int)U.scr, (int)ui::S_EXTRA);
@@ -252,7 +250,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
         gh_log("UITEST userresize: ours-ignored %s, drag %s, maximized-ignored %s, after-expect-window %s, tiny-ignored %s, fullscreen-ignored %s", u1 ? "OK" : "FAIL", u2 ? "OK" : "FAIL", u3 ? "OK" : "FAIL", u4 ? "OK" : "FAIL", u5 ? "OK" : "FAIL", u6 ? "OK" : "FAIL");
         /* 설정 왕복(창 배율·사용자 지정·게임 폴더·배속 소리) */
         ui::Ui A2; A2.games = U.games; A2.wmult = 0; A2.winw = 1000; A2.winh = 700; A2.gamefolder = "D:\\한글 폴더"; A2.g.bsound = 1; A2.g.bgm = 4;
-        std::string ip2 = g_uitest_dir + "\\settings_r17.ini"; ui::settings_save(A2, ip2); ui::Ui B2; B2.games = U.games; ui::settings_load(B2, ip2);
+        std::string ip2 = gApp.uitest_dir + "\\settings_r17.ini"; ui::settings_save(A2, ip2); ui::Ui B2; B2.games = U.games; ui::settings_load(B2, ip2);
         bool r1 = B2.wmult == 0 && B2.winw == 1000 && B2.winh == 700 && B2.gamefolder == "D:\\한글 폴더" && B2.g.bsound == 1 && B2.g.bgm == 4;
         A2.wmult = 3; ui::settings_save(A2, ip2); ui::Ui B3; B3.games = U.games; ui::settings_load(B3, ip2);
         gh_log("UITEST r017 settings roundtrip: custom %s, mult3 %s (wmult=%d)", r1 ? "OK" : "FAIL", B3.wmult == 3 ? "OK" : "FAIL", B3.wmult);
@@ -268,15 +266,15 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
         ui::Settings dflt; gh_log("UITEST default bsound=%d (2 = 음높이 유지) %s", dflt.bsound, dflt.bsound == 2 ? "OK" : "FAIL");
     }
     { /* 배속 OSD: 게임 화면 + 오른쪽 위 ▶▶ x3 (+ 다른 안내가 겹칠 때) */
-        ov::sample_picture(c, 0, 0, 640, 400); g_boost_on = true; g_bosd_on = true; g_boost_xv = 3; gh_boost_osd_draw(c, "화면 정수배", true);
-        char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boost_osd.png", g_uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); g_boost_on = false; }
-    { gh_logo_draw(c); char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boot_logo.png", g_uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); }   /* t52d (#129) */
+        ov::sample_picture(c, 0, 0, 640, 400); gApp.boost_on = true; gApp.bosd_on = true; gApp.boost_xv = 3; gh_boost_osd_draw(c, "화면 정수배", true);
+        char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boost_osd.png", gApp.uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); gApp.boost_on = false; }
+    { gh_logo_draw(c); char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boot_logo.png", gApp.uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); }   /* t52d (#129) */
     /* 설정 왕복: 전역 + 작품별 */
     ui::Ui A; A.games = U.games; A.g.shader = 2; A.g.curve = 7; A.g.bgm = 3; A.g.bmult = 2; A.has_t[2] = true; A.t[2] = A.g; A.t[2].se = 5; A.t[2].scan = 9; A.cur = 2;
-    std::string ip = g_uitest_dir + "\\settings_test.ini"; ui::settings_save(A, ip);
+    std::string ip = gApp.uitest_dir + "\\settings_test.ini"; ui::settings_save(A, ip);
     ui::Ui B; B.games = U.games; ui::settings_load(B, ip);
     bool ok = B.g.shader == 2 && B.g.curve == 7 && B.g.bgm == 3 && B.g.bmult == 2 && B.has_t[2] && B.t[2].se == 5 && B.t[2].scan == 9 && !B.has_t[0] && B.effective(2).se == 5 && B.effective(0).se == 8 && B.cur == 2;
     gh_log("UITEST settings roundtrip %s (effective(2).se=%d effective(0).se=%d)", ok ? "OK" : "FAIL", B.effective(2).se, B.effective(0).se);
-    gh_log("UITEST done: %d images in %s", n, g_uitest_dir.c_str());
+    gh_log("UITEST done: %d images in %s", n, gApp.uitest_dir.c_str());
 }
 

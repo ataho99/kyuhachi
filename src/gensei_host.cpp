@@ -48,14 +48,14 @@
 #include "gensei_input12.h"
 #include "gensei_padnames_t48e.h"   /* t48e (#646): 키 이름 표 확장 */
 #include "gensei_ui.h"
-#include "gensei_prof.h"
+#include "settings/gensei_prof.h"
 #include "pc98_savestate.h"
 #include "pc98_gdc.h"
 #include "imagedisk_d88.h"
 #include "imagedisk_nfd.h"
 #include "gensei_boostaud.h"
-#include "gensei_nkdb.h"
-#include "gensei_addwork.h"
+#include "settings/gensei_nkdb.h"
+#include "settings/gensei_addwork.h"
 #include "platform/plat.h" /* S3: platform layer */
 #include "gensei_uilist.h"
 #include "gensei_embed.h"   /* r019: 글꼴·셰이더 내장본 (빌드 스크립트가 생성) */

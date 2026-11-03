@@ -366,48 +366,8 @@ struct Ui {
     void d_pick(Canvas & c);
     void d_sort(Canvas & c);
     std::string ent_line(const UiGame & g, int ei, int w) { const UiEnt & e = g.ents[ei]; std::string t = e.label; if (!e.tag.empty()) t += "  [" + e.tag + "]"; return fit(t, w); }
-    void d_ent(Canvas & c) {
-        titlebar(c, ""); const UiGame & g = games[entg];
-        rbox(c, 16, 24, 288, 224, WH, ttl_suf(g, phr_("실행 방법"), 256).c_str());
-        std::vector<int> v = vents(entg); std::vector<std::string> r; std::vector<uint32_t> col; int di = def_ent(entg);
-        if (v.empty()) { r.push_back(phr_("기본 (자동 판정)")); col.push_back(0); }
-        for (int i : v) { const UiEnt & e = g.ents[i]; std::string mk = (i == di) ? "★ " : "  "; r.push_back(mk + fit(e.label + (e.tag.empty() ? std::string() : "  [" + e.tag + "]"), 200) + (ent_warn(entg, i) ? " ※" : "")); col.push_back(ent_warn(entg, i) ? OR : 0); }
-        r.push_back(phr_("+ 새 실행 방법")); col.push_back(YL);
-        r.push_back(phr_("언어: ") + lang_label(g)); col.push_back(CY);   /* t44a (#494) */
-        r.push_back(phr_("표시 제목: ") + fit(g.title, 150)); col.push_back(CY);   /* t49a (#809) */
-        rowlist(c, 40, 48, 256, 7, r, sel, 24, &col);
-        rbox(c, 320, 24, 304, 224, WH, phr_("상세"));
-        int ni = (int)v.size(); const UiEnt * e = (sel < ni) ? &g.ents[v[sel]] : NULL;
-        bool onlang = sel == (int)std::max<size_t>(v.size(), 1) + 1;
-        bool ontitle = sel == (int)std::max<size_t>(v.size(), 1) + 2;   /* t49a (#809) */
-        if (ontitle) {   /* t49a (#809): 현재 표시 제목 전체(줄임 없이 줄 나눔) · DB 제목 */
-            text(c, 340, 44, phr_("표시 제목"), CY, K); { std::string rest = g.title; int yy = 68; for (int ln = 0; ln < 3 && !rest.empty(); ln++) { size_t n = 0, last = 0; while (n < rest.size()) { size_t m = n + 1; while (m < rest.size() && ((unsigned char)rest[m] & 0xC0) == 0x80) m++; if (tw(rest.substr(0, m)) > 270) break; n = m; } if (n == 0) n = rest.size(); (void)last; text(c, 340, yy, rest.substr(0, n), YL, K); rest = rest.substr(n); yy += 20; } }
-            text(c, 340, 132, phr_("DB 제목"), CY, K); text(c, 340 + 76, 132, fit(g.title_db.empty() ? g.title : g.title_db, 190), WH, K);
-            text(c, 340, 168, dkey(phr_("{○}:고치기")), CY, K); text(c, 340, 188, dkey(phr_("{□}:DB 제목으로 되돌림")), CY, K);
-        } else if (onlang) {
-            text(c, 340, 44, phr_("이 작품의 언어"), CY, K); text(c, 340, 68, fit(lang_label(g), 270), YL, K);
-            text(c, 340, 96, phr_("한글판: 한글 글꼴을 붙입니다."), WH, K); text(c, 340, 116, phr_("원판 일본어: 일본어 글꼴을 씁니다."), WH, K); text(c, 340, 136, phr_("자동: 제목·패치 표기로 판정합니다."), WH, K);
-            text(c, 340, 168, dkey(phr_("{○}:언어 고르기")), CY, K);
-        } else if (e && !e->pseudo) {
-            int yy = 44; auto ln = [&](const char * lab, const std::string & val, uint32_t col2 = WH) { text(c, 340, yy, lab, CY, K); text(c, 340 + 76, yy, fit(val, 304 - 24 - 76 - 8), col2, K); yy += 20; };
-            ln(phr_("출처"), e->vgi >= 0 ? std::string(phr_("변형 폴더")) : e->tag);
-            const char * dn[] = { "A", "B", "C", "D" }; const char * dk[] = { "disk_a", "disk_b", "disk_c", "disk_d" };
-            for (int q = 0; q < 4; q++) { auto it = e->kv.find(dk[q]); if (it != e->kv.end() && it->second != "-" && !it->second.empty()) ln((std::string(phr_("디스크")) + dn[q]).c_str(), disk_label(it->second)); }
-            { auto it = e->kv.find("cd"); if (it != e->kv.end() && !it->second.empty() && it->second != "-") ln("CD", disk_label(it->second)); }
-            { auto it = e->kv.find("boot"); std::string b = it == e->kv.end() ? std::string("자동") : it->second; auto ft = e->kv.find("font"); auto fk = e->kv.find("font_kind"); ln(phr_("부팅"), b + phr_("   글꼴 ") + (ft != e->kv.end() ? ft->second : fk != e->kv.end() ? (fk->second == "jp" ? std::string(phr_("일본어")) : std::string(phr_("한글"))) : std::string(phr_("목록 기본")))); }
-            { auto it = e->kv.find("bootkeys"); auto sk = e->kv.find("swap"); int bn = it != e->kv.end() ? (int)ent::parse_steps(it->second).size() : 0, sn = 0; if (sk != e->kv.end()) { std::string s = sk->second; if (!s.empty()) { sn = 1; for (char ch : s) if (ch == ',') sn++; } } ln(phr_("자동입력"), std::to_string(bn) + phr_("단계   교체 ") + std::to_string(sn) + phr_("장")); }
-            if (ent_warn(entg, v[sel])) ln(phr_("경고"), e->warn_msg, OR);
-        } else if (e) { text(c, 340, 44, phr_("항목 정의가 없는 작품입니다."), WH, K); text(c, 340, 64, phr_("자동 판정한 배치로 실행합니다."), WH, K); text(c, 340, 96, dkey(phr_("{□}:이 배치를 복사해 편집")), CY, K); }
-        else { text(c, 340, 44, phr_("새 실행 방법을 만듭니다."), WH, K); text(c, 340, 64, phr_("템플릿 8종 또는 현재 항목 복제."), WH, K); }
-        desc(c, 264, 64, { fit(msg.empty() ? std::string(phr_("실행 방법: 이 작품을 실행하는 디스크 구성입니다. 원본 이미지는 바뀌지 않습니다.")) : msg, 560), fit(std::string(phr_("DB·game.ini 항목을 고치면 user.ini 에 덮어쓰기가 저장되고 원본은 그대로입니다.")), 560) });
-        helpline(c, phr_("↑↓:선택, ○:이걸로 정함, □:편집, △:메뉴, ×:뒤로"));
-    }
-    void d_entmenu(Canvas & c) {
-        d_ent(c); int bx, by; confirm_box(c, 340, 272, phr_("실행 방법 메뉴"), bx, by);
-        std::vector<std::string> a = { phr_("기본으로 지정"), phr_("복제"), phr_("삭제 (숨김)"), phr_("DB 기본값으로 되돌리기"), phr_("위로"), phr_("아래로"), fit(phr_("다음 단계: ") + next_label(entg, menu_ent), 270), fit(phr_("단계 메뉴 이름: ") + next_menu_name(entg, menu_ent), 270) };   /* t49a (#845·#847) */
-        std::vector<bool> dm = menu_dim(); items(c, bx + 30, by + 24, 290, a, menusel, 28, &dm);
-        helpline(c, phr_("↑↓:선택, ○:결정, ×:닫기"));
-    }
+    void d_ent(Canvas & c);
+    void d_entmenu(Canvas & c);
     /* t49a (#845): 실행 순서 = 항목의 next= 사슬. 후보: 없음 → (정의 없는 작품이면 기본 실행) → 같은 폴더의 다른 항목들 */
     std::vector<std::string> next_cands(int gi, int ei) const {
         std::vector<std::string> r; r.push_back("none"); if (gi < 0 || gi >= (int)games.size()) return r; const UiGame & g = games[gi];
@@ -432,81 +392,16 @@ struct Ui {
         return dm;
     }
     int menu_ent = 0;
-    void d_tpl(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 288, 296, WH, phr_("새 실행 방법"));
-        std::vector<std::string> r; for (int i = 0; i < 8; i++) r.push_back(std::to_string(i + 1) + " " + ent::TPLS[i].label); r.push_back(phr_("- 지금 배치 복제"));
-        items(c, 40, 46, 256, r, sel, 28);
-        rbox(c, 320, 24, 304, 296, WH, phr_("설명"));
-        static const char * dd[9][4] = {
-            { phr_("하드디스크 한 장으로 부팅합니다."), phr_("예: 동급생2, 열락의 학원"), "", "" }, { phr_("하드디스크로 부팅하고 FD 를 붙입니다."), phr_("부팅 뒤 자동 입력도 쓸 수 있습니다."), phr_("예: 나디아"), "" },
-            { phr_("FD 한 장(또는 두 장)으로 부팅합니다."), phr_("예: 대마도95, 키키모라, 바요엔"), "", "" }, { phr_("FD 여러 장을 도중에 갈아 끼웁니다."), phr_("교체 목록을 따로 편집합니다."), phr_("예: 마도물어 A.R.S"), "" },
-            { phr_("CD 이미지를 붙이고 내장 DOS 로 시작합니다."), phr_("자동 실행(autoexec)을 채워야 합니다."), phr_("예: 마도물어 456"), "" }, { phr_("데모(오프닝) 디스크를 먼저 실행합니다."), phr_("예: 환세희담"), "", "" },
-            { phr_("원판 일본어 같은 변형을 만듭니다."), phr_("글꼴을 일본어로 정해 둡니다."), "", "" }, { phr_("하드디스크에 설치해야 하는 게임입니다."), phr_("빈 HDD 를 새 이름으로 만듭니다."), phr_("원본 이미지는 쓰기 대상에서 제외됩니다."), "" },
-            { phr_("지금 실제로 쓰는 배치를 그대로 복사해"), phr_("새 항목으로 편집합니다."), "", "" } };
-        for (int i = 0; i < 4; i++) if (dd[sel < 9 ? sel : 0][i][0]) text(c, 344, 48 + i * 22, dd[sel < 9 ? sel : 0][i], i == 0 ? YL : WH, K);
-        text(c, 344, 160, phr_("이미지가 하나뿐이면 알맞은 칸에"), CY, K); text(c, 344, 180, phr_("자동으로 채웁니다."), CY, K);
-        helpline(c, phr_("↑↓:선택, ○:만들기, ×:뒤로"));
-    }
+    void d_tpl(Canvas & c);
     static const char * mouse_label(const std::string & m) { if (m == "none") return phr_("없음"); if (m == "optional") return phr_("선택 사항"); if (m == "pointer") return phr_("포인터"); if (m == "required") return phr_("필수"); return phr_("기본"); }
     std::string font_label(const std::string & f, const std::string & fk) const { if (!f.empty()) return f; if (fk == "jp") return phr_("일본어 (목록 기본)"); if (fk == "kr") return phr_("한글 (목록 기본)"); return phr_("자동 (목록 기본)"); }
-    void d_edit(Canvas & c) {
-        titlebar(c, ""); const UiGame & g = games[eg];
-        rbox(c, 16, 24, 608, 296, WH, ttl_suf(g, phr_("편집"), 560).c_str());
-        const char * lab[] = { phr_("이름"), phr_("디스크 A"), phr_("디스크 B"), phr_("디스크 C"), phr_("디스크 D"), "CD", phr_("부팅 대상"), phr_("자동 입력"), phr_("교체 목록"), phr_("글꼴"), phr_("마우스"), phr_("설치") };
-        std::vector<std::string> v(12);
-        v[0] = ed_name; const char * dk[] = { "disk_a", "disk_b", "disk_c", "disk_d", "cd" }; for (int i = 0; i < 5; i++) v[1 + i] = disk_label(kv_get(dk[i]));
-        { std::string b = kv_get("boot"); v[6] = b.empty() ? "자동" : b; }
-        { std::string s = kv_get("bootkeys"); v[7] = s.empty() ? std::string(phr_("없음")) : std::to_string((int)ent::parse_steps(s).size()) + phr_("단계"); }
-        { std::string s = kv_get("swap"); int n = 0; if (!s.empty()) { n = 1; for (char ch : s) if (ch == ',') n++; } v[8] = std::to_string(n) + phr_("장"); }
-        v[9] = font_label(kv_get("font"), kv_get("font_kind")); v[10] = mouse_label(kv_get("mouse"));
-        v[11] = kv_get("install") == "hdd_new" ? phr_("HDD 새로 만들기 (") + (kv_get("hdd_mb").empty() ? std::string("40") : kv_get("hdd_mb")) + "MB)" : phr_("아님");
-        for (int i = 0; i < 12; i++) {
-            int yy = 46 + i * 22; bool sl = i == sel; if (sl) c.rect(30, yy - 3, 580, 22, WH);
-            text(c, 40, yy, lab[i], sl ? K : CY, sl ? WH : K); c.clip(160, yy - 3, 440, 22);
-            bool valarr = (i == 6 || i == 10 || i == 11); text(c, 160, yy, std::string(valarr && sl ? "← " : "") + fit(v[i], 380) + (valarr && sl ? " →" : ""), sl ? K : WH, sl ? WH : K); c.unclip();
-        }
-        std::vector<ent::Issue> is = ed_issues(); std::vector<std::string> d;
-        if (!msg.empty()) d.push_back(fit(msg, 560)); else d.push_back(is.empty() ? std::string(phr_("경고 없음")) : fit(std::string(is[0].err ? phr_("오류: ") : phr_("경고: ")) + is[0].msg, 560));
-        d.push_back(fit(dkey(std::string(ed_setdef ? phr_("저장하면 기본 실행 방법으로 지정합니다.") : phr_("기본 지정은 {SEL}{로} 켜고 끕니다.")) + (ed_dirty() ? phr_("  (바꾼 값 있음)") : "")), 560));
-        static const char * H_EDIT = phr_("↑↓:선택, ←→:값, ○:고르기, □:저장, △:시험, SEL:기본 지정, ×:나가기");   /* t50a 안 B: 「시험 실행」→「시험」 (한 줄에 들어감) */
-        desc(c, 324, 58, d, (!msg.empty() || (!is.empty() && is[0].err)) ? 0 : -1, H_EDIT);
-        helpline(c, H_EDIT);
-    }
+    void d_edit(Canvas & c);
     int fl_filter() const { if (fl_key == "disk_c" || fl_key == "disk_d") return 2; if (fl_key == "cd") return 3; return 1; }
     static std::string size_str(long long b) { char s[32]; if (b >= 1048576) snprintf(s, sizeof s, "%d.%dMB", (int)(b >> 20), (int)(((b * 10) >> 20) % 10)); else snprintf(s, sizeof s, "%dKB", (int)(b >> 10)); return s; }
-    void d_file(Canvas & c) {
-        titlebar(c, ""); static const char * kn[] = { "", "FD", "HDD", "CD" };
-        std::string ttl = fl_key == "swap_add" ? phr_("교체 목록에 넣을 디스크") : fl_key == "swap_set" ? phr_("교체 디스크 바꾸기") : (fl_key == "cd" ? std::string("CD") : std::string(phr_("디스크 ")) + (char)toupper(fl_key.back())) + phr_(" 고르기");
-        rbox(c, 16, 24, 608, 296, WH, ttl.c_str());
-        { int x = 36; for (size_t t = 0; t < fl_roots.size() && t < 5; t++) { std::string nm = fit(fl_roots[t].first, 120); int w = tw(nm) + 12; if ((int)t == fl_ri) { c.rect(x - 4, 42, w, 21, WH); text(c, x + 2, 45, nm, K, WH); } else text(c, x + 2, 45, nm, CY, K); x += w + 6; } }
-        text(c, 36, 68, fit(fl_dir, 570), YL, K);
-        std::vector<std::string> r; std::vector<uint32_t> col;
-        for (auto & f : fl_items) { if (f.dir) { r.push_back((f.name == ".." ? std::string(phr_(".. (위로)")) : "[" + f.name + "]")); col.push_back(YL); } else { std::string e = ent::ext_of(f.name); for (auto & ch : e) ch = (char)toupper((unsigned char)ch); r.push_back(fit(f.name, 400) + "   " + e + " " + size_str(f.size)); col.push_back(0); } }
-        if (r.empty()) { r.push_back(phr_("(해당하는 파일이 없습니다)")); col.push_back(GY); }
-        rowlist(c, 40, 94, 560, 9, r, sel, 24, &col);
-        std::vector<std::string> d; d.push_back(fit(std::string(phr_("고를 것: ")) + kn[fl_filter()] + phr_(" 이미지.  이 게임 폴더 안이면 파일 이름만, 밖이면 전체 경로를 저장합니다."), 560)); d.push_back(fit(std::string(phr_("정렬: ")) + (fl_sort_kind ? phr_("종류순") : phr_("이름순")), 560));
-        { const char * H = phr_("↑↓:선택, ○:고르기/열기, L R:위치, □:비우기, △:정렬, ×:취소"); desc(c, 324, 58, d, -1, H); helpline(c, H); }
-    }
-    void d_keyseq(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 608, 296, WH, phr_("부팅 후 자동 입력"));
-        std::vector<std::string> r; for (size_t i = 0; i < ks.size(); i++) r.push_back(std::to_string(i + 1) + "  " + ent::step_text(ks[i])); r.push_back(phr_("+ 단계 추가"));
-        rowlist(c, 40, 48, 560, 9, r, sel, 24);
-        { const char * H = phr_("↑↓:선택, ○:편집, □:삭제, △:위로, SEL:아래로, ×:완료"); desc(c, 324, 58, { phr_("부팅한 뒤 정한 시간에 키를 누르거나 글자를 입력합니다."), phr_("게임 디스크가 잠깐 멈추는 안내 화면 넘기기 등에 씁니다.") }, -1, H); helpline(c, H); }
-    }
-    void d_step(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 608, 200, WH, phr_("자동 입력 단계"));
-        const ent::Step & st = ks[stepi]; std::string w; { char b[32]; snprintf(b, sizeof b, "%d.%d초", st.ms / 1000, (st.ms / 100) % 10); w = b; }
-        const char * lab[] = { phr_("종류"), phr_("대기"), st.type ? phr_("입력할 글자") : phr_("누를 키") }; std::string val[3] = { st.type ? phr_("글자 입력") : phr_("키 누르기"), w + phr_(" 뒤"), ent::show_val(st.val) };
-        for (int i = 0; i < 3; i++) { int yy = 52 + i * 30; bool sl = i == sel; if (sl) c.rect(30, yy - 3, 580, 22, WH); text(c, 40, yy, lab[i], sl ? K : CY, sl ? WH : K); text(c, 200, yy, std::string(sl && (i < 2 || !st.type) ? "← " : "") + val[i] + (sl && (i < 2 || !st.type) ? " →" : ""), sl ? K : WH, sl ? WH : K); }
-        desc(c, 240, 64, { st.type ? dkey(phr_("글자 입력: {○} 로 화면 키보드, ←→ 로 자주 쓰는 명령(dir 등).")) : phr_("키 누르기: ←→ 로 키를 고릅니다."), phr_("대기는 0.5초 단위입니다. ~ 는 Enter 입니다.") });
-        helpline(c, phr_("↑↓:선택, ←→:값, ○:입력, ×:돌아가기"));
-    }
-    void d_swaped(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 608, 296, WH, phr_("교체 목록 (게임 중 메뉴와 같은 순서)"));
-        std::vector<std::string> r; for (size_t i = 0; i < sw.size(); i++) r.push_back(std::to_string(i + 1) + "  " + fit(sw[i], 520)); r.push_back(phr_("+ 디스크 추가 (이미지 고르기)"));
-        rowlist(c, 40, 48, 560, 9, r, sel, 24);
-        { const char * H = phr_("↑↓:선택, ○:바꾸기, □:삭제, △:위로, SEL:아래로, ×:완료"); desc(c, 324, 58, { phr_("게임 중 메뉴의 「디스크 교체」에 나오는 디스크와 순서입니다."), phr_("시작부터 교체가 필요한 작품은 처음 3초에 안내가 뜹니다.") }, -1, H); helpline(c, H); }
-    }
+    void d_file(Canvas & c);
+    void d_keyseq(Canvas & c);
+    void d_step(Canvas & c);
+    void d_swaped(Canvas & c);
     void d_font(Canvas & c);
     std::string fnt_default_name() const { if (fnt_mode == 1) return font_jp.empty() ? "jp_default" : font_jp; return font_kr.empty() ? "kyuhachi_font" : font_kr; }   /* t52g: 임시 이름 pc98player_font → kyuhachi_font */
     void jp_refresh() { const ov::BmpFont * bf = fnt_font(font_jp.empty() ? std::string("jp_default") : font_jp); ov::jp_set(lang == 2, bf); }   /* t52h (#134): 일본어 글꼴 BMP · 언어를 글자 그리기에 알림 */
@@ -577,26 +472,9 @@ struct Ui {
     }
     void d_hosk(Canvas & c);
     void d_osk(Canvas & c);
-    void d_name(Canvas & c) {
-        titlebar(c, ""); rbox(c, 16, 24, 288, 296, WH, phr_("이름 고르기"));
-        std::vector<std::string> r = name_presets(); r.push_back(phr_("직접 입력 (한글 키보드)")); r.push_back(phr_("직접 입력 (영문 글자표)")); items(c, 40, 44, 256, r, sel, 24);   /* t48b: 11줄이라 간격 24 */
-        rbox(c, 320, 24, 304, 296, WH, phr_("설명")); text(c, 344, 48, phr_("목록에서 이름을 고르면 같은 이름이"), WH, K); text(c, 344, 68, phr_("이미 있을 때 번호를 붙입니다."), WH, K); text(c, 344, 104, phr_("현재 이름"), CY, K); text(c, 344, 124, fit(ed_name, 250), YL, K);
-        helpline(c, phr_("↑↓:선택, ○:정함, ×:취소"));
-    }
-    void d_yn(Canvas & c, Scr under) {
-        switch (under) { case S_EDIT: d_edit(c); break; case S_ENT: d_ent(c); break; case S_MAIN: d_main(c, 0); break; case S_ENTMENU: d_ent(c); break; case S_GAME: d_game(c); break; case S_SAVE: d_save(c); break; case S_EXTRA: d_extra(c); break; default: break; }   /* t52e (#131): 게임 메뉴·슬롯·부가 위에도 확인창 */
-        int bw = 420, bx, by; confirm_box(c, bw, 150, phr_("확인"), bx, by);
-        for (int i = 0; i < 3; i++) if (!yn_msg[i].empty()) text(c, bx + 24, by + 22 + i * 22, fit(yn_msg[i], bw - 48), WH, K);
-        const char * q[] = { phr_("예"), phr_("아니오") }; int cw = choices_w(q, 2); choices(c, bx + ((bw - cw) >> 1) + 4, by + 100, q, 2, ynsel, WH, false);
-        helpline(c, phr_("←→:선택, ○:결정, ×:아니오"));
-    }
-    void d_hddask(Canvas & c) {
-        titlebar(c, ""); int bx, by; confirm_box(c, 460, 180, phr_("설치가 필요한 게임"), bx, by);
-        text(c, bx + 24, by + 22, phr_("이 게임은 하드디스크에 설치해야 합니다."), WH, K);
-        text(c, bx + 24, by + 44, fit(phr_("하드디스크를 만들까요? (") + (kv_get("hdd_mb").empty() ? std::string("40") : kv_get("hdd_mb")) + phr_("MB, 원본은 그대로)"), 412), WH, K);
-        std::vector<std::string> a = { phr_("예, 새로 만듭니다"), phr_("이미 있는 HDD 를 씁니다"), phr_("취소") }; items(c, bx + 40, by + 84, 380, a, hddsel, 28);
-        helpline(c, phr_("↑↓:선택, ○:결정, ×:취소"));
-    }
+    void d_name(Canvas & c);
+    void d_yn(Canvas & c, Scr under);
+    void d_hddask(Canvas & c);
     void d_add(Canvas & c);
     void d_screen(Canvas & c);
     void d_screen_t48b2_old(Canvas & c) {
@@ -783,135 +661,23 @@ struct Ui {
         auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
         switch (scr) {
         case S_SORT: k_sort(k, a); break;
-        case S_ENT: {
-            std::vector<int> v = vents(entg); int rows = (int)std::max<size_t>(v.size(), 1) + 3; mv(sel, rows);   /* t49a (#809): 마지막 행 = 표시 제목, 그 앞 = 언어, 그 앞 = 새 실행 방법 */   /* t44a (#494): 마지막 행 = 언어, 그 앞 = 새 실행 방법 */
-            if (k == UK_OK || k == UK_SQ) {
-                if (sel == rows - 1) { if (entg >= 0 && entg < (int)games.size()) { if (k == UK_OK) osk_open(2, games[entg].title, S_ENT, true); else if (!games[entg].title_user.empty()) yn_open(S_ENT, YN_TITLE, phr_("표시 제목을 DB 제목으로 되돌립니까?"), phr_("목록·정렬·창 제목이 원래 제목으로 돌아옵니다."), std::string()); } }
-                else if (sel == rows - 2) { if (entg >= 0 && entg < (int)games.size()) open_lang({ games[entg].id }, { std::string() }, S_ENT); }
-                else if (sel == rows - 3) { sel = 0; scr = S_TPL; }
-                else if (k == UK_SQ) begin_edit_ent(entg, sel);
-                else { if (!v.empty()) { if ((int)rent.size() <= entg) rent.resize(games.size(), -1); rent[entg] = v[sel]; } sync_cur(); scr = S_PICK; }
-            }
-            else if (k == UK_TRI) { if (sel < rows - 3 && !v.empty()) { menu_ent = sel; menusel = 0; scr = S_ENTMENU; } }
-            else if (k == UK_CANCEL) { msg.clear(); scr = S_PICK; }
-            break; }
-        case S_ENTMENU: {
-            mv(menusel, 8); std::vector<bool> dm = menu_dim(); std::vector<int> v = vents(entg); int ei = (menu_ent >= 0 && menu_ent < (int)v.size()) ? v[menu_ent] : -1;
-            if (k == UK_CANCEL) { scr = S_ENT; break; }
-            if (k != UK_OK || dm[menusel] || ei < 0) break; const UiEnt & e = games[entg].ents[ei];
-            if (menusel == 0) { if (env.setkey) env.setkey(entg, "entry", e.name); if (env.reload) env.reload(entg); dirty = true; msg = phr_("기본 실행 방법으로 지정했습니다."); scr = S_ENT; }
-            else if (menusel == 1) { ent::Kv kv = e.kv; begin_new_from_kv(entg, kv, e.label + phr_(" 복사")); }
-            else if (menusel == 2) yn_open(S_ENT, YN_DELETE, "「" + fit(e.label, 300) + phr_("」 을(를) 목록에서 지웁니까?"), e.tag == "내 것" ? phr_("내가 만든 항목이라 완전히 지워집니다.") : phr_("원본(DB·game.ini)은 그대로이고 숨김 처리만 합니다."), std::string(), menu_ent);
-            else if (menusel == 3) yn_open(S_ENT, YN_RESET, "「" + fit(e.label, 300) + phr_("」 의 내 수정을 버리고"), phr_("DB·game.ini 의 기본값으로 되돌립니까?"), std::string(), menu_ent);
-            else if (menusel == 7) { nl_name = e.name; osk_open(3, next_menu_name(entg, menu_ent), S_ENT, true); }   /* t49a (#847): 속성 「다음 단계로」 의 메뉴 이름 바꾸기 */
-            else if (menusel == 6) {   /* t49a (#845): 다음 단계 돌려 고르기 — user.ini [entry:<이름>] next= (기존 저장 경로) */
-                std::vector<std::string> cs = next_cands(entg, v[menu_ent]); auto it = e.kv.find("next"); std::string cur_n = it == e.kv.end() || it->second.empty() ? std::string("none") : it->second; size_t ci = 0; for (size_t i = 0; i < cs.size(); i++) if (cs[i] == cur_n) ci = i;
-                std::string nv = cs[(ci + 1) % cs.size()]; ent::Kv kv = e.kv; kv["next"] = nv; std::string nm = e.name;
-                bool ok = env.save && env.save(entg, nm, kv, std::string()); if (ok && env.reload) env.reload(entg); dirty = true; msg = ok ? phr_("다음 단계를 바꿨습니다.") : phr_("저장하지 못했습니다.");
-            }
-            else {
-                std::vector<std::string> names; for (size_t i = 0; i < games[entg].ents.size(); i++) if (!games[entg].ents[i].pseudo && games[entg].ents[i].vgi < 0) names.push_back(games[entg].ents[i].name);
-                int a0 = -1; for (size_t i = 0; i < names.size(); i++) if (names[i] == e.name) a0 = (int)i;
-                int b0 = menusel == 4 ? menu_ent - 1 : menu_ent + 1; std::vector<int> vn; for (int i : v) if (games[entg].ents[i].vgi < 0) vn.push_back(i);
-                if (a0 >= 0 && b0 >= 0 && b0 < (int)v.size() && games[entg].ents[v[b0]].vgi < 0) {
-                    std::string other = games[entg].ents[v[b0]].name; int o0 = -1; for (size_t i = 0; i < names.size(); i++) if (names[i] == other) o0 = (int)i;
-                    if (o0 >= 0) { std::swap(names[a0], names[o0]); if (env.setkey) env.setkey(entg, "entry_order", join_commas(names)); if (env.reload) env.reload(entg); dirty = true; sel = b0; menu_ent = b0; }
-                }
-            }
-            break; }
-        case S_TPL:
-            mv(sel, 9);
-            if (k == UK_OK) begin_new_tpl(sel); else if (k == UK_CANCEL) { sel = 0; scr = S_ENT; }
-            break;
-        case S_EDIT: {
-            mv(sel, 12); if (k == UK_UP || k == UK_DOWN) { msg.clear(); break; }
-            if (k == UK_LEFT || k == UK_RIGHT) {
-                int d = k == UK_RIGHT ? 1 : -1; msg.clear();
-                if (sel == 6) { static const char * bs[] = { "", "A", "B", "C", "D" }; int cu = 0; std::string b = kv_get("boot"); for (int i = 0; i < 5; i++) if (b == bs[i]) cu = i; cu = (cu + d + 5) % 5; kv_set("boot", bs[cu]); }
-                else if (sel == 10) { static const char * ms[] = { "", "none", "optional", "pointer", "required" }; int cu = 0; std::string m = kv_get("mouse"); for (int i = 0; i < 5; i++) if (m == ms[i]) cu = i; cu = (cu + d + 5) % 5; kv_set("mouse", ms[cu]); }
-                else if (sel == 11) { if (kv_get("install") == "hdd_new") { ed.erase("install"); ed.erase("hdd_mb"); } else { ed["install"] = "hdd_new"; if (!ed.count("hdd_mb")) ed["hdd_mb"] = "40"; } }
-                break;
-            }
-            if (k == UK_OK) {
-                static const char * dk[] = { "", "disk_a", "disk_b", "disk_c", "disk_d", "cd" }; msg.clear();
-                if (sel == 0) { sel = 0; scr = S_NAME; }
-                else if (sel >= 1 && sel <= 5) fl_open(dk[sel]);
-                else if (sel == 7) { ks = ent::parse_steps(kv_get("bootkeys")); sel = 0; scr = S_KEYSEQ; }
-                else if (sel == 8) { sw = split_commas(kv_get("swap")); sel = 0; scr = S_SWAPED; }
-                else if (sel == 9) open_font(2, S_EDIT);
-                else if (sel == 11) { if (kv_get("install") == "hdd_new") { if (kv_get("disk_c").empty()) { hddsel = 0; install_start = false; scr = S_HDDASK; } } else { ed["install"] = "hdd_new"; if (!ed.count("hdd_mb")) ed["hdd_mb"] = "40"; } }
-            }
-            else if (k == UK_SQ) { if (save_ed()) leave_edit_to_ent(); }
-            else if (k == UK_TRI) { std::vector<ent::Issue> is = ed_issues(); if (ent::has_error(is)) { msg = phr_("오류가 있어 시험할 수 없습니다: ") + is[0].msg; } else yn_open(S_EDIT, YN_TEST, phr_("저장하지 않은 값으로 ") + std::to_string(test_secs()) + phr_("초 실행해 봅니다."), phr_("세이브는 임시 폴더에 쓰고 끝나면 지웁니다."), phr_("실행할까요?")); }
-            else if (k == UK_SELECT) ed_setdef = !ed_setdef;
-            else if (k == UK_CANCEL) { if (ed_dirty()) yn_open(S_EDIT, YN_DISCARD, phr_("바꾼 내용을 저장하지 않고 나갑니까?")); else leave_edit_to_ent(); }
-            break; }
-        case S_FILE: {
-            int cnt = (int)fl_items.size(); mv(sel, cnt);
-            if (k == UK_L || k == UK_R) { int n = (int)fl_roots.size(); if (n > 0) { fl_ri = (fl_ri + (k == UK_R ? 1 : n - 1)) % n; fl_goto(fl_roots[fl_ri].second); } }
-            else if (k == UK_OK && cnt > 0) {
-                const FileItem f = fl_items[sel];
-                if (f.dir) { if (f.name == "..") fl_goto(parent_of(fl_dir)); else fl_goto(fl_dir + std::string(1, env.sep) + f.name); }
-                else fl_apply(fl_value(f.name));
-            }
-            else if (k == UK_SQ) fl_apply(std::string());
-            else if (k == UK_TRI) { fl_sort_kind = !fl_sort_kind; fl_goto(fl_dir); }
-            else if (k == UK_CANCEL) { scr = fl_ret; sel = fl_prev_sel; }
-            break; }
-        case S_KEYSEQ: {
-            int rows = (int)ks.size() + 1; mv(sel, rows);
-            if (k == UK_OK) { if (sel == (int)ks.size()) { ent::Step s; s.ms = ks.empty() ? 3000 : ks.back().ms + 3000; ks.push_back(s); } stepi = sel; sel = 0; scr = S_STEP; }
-            else if (k == UK_SQ && sel < (int)ks.size()) { ks.erase(ks.begin() + sel); if (sel >= (int)ks.size() + 1) sel = (int)ks.size(); }
-            else if (k == UK_TRI && sel > 0 && sel < (int)ks.size()) { std::swap(ks[sel], ks[sel - 1]); sel--; }
-            else if (k == UK_SELECT && sel + 1 < (int)ks.size()) { std::swap(ks[sel], ks[sel + 1]); sel++; }
-            else if (k == UK_CANCEL) { kv_set("bootkeys", ent::join_steps(ks)); sel = 7; scr = S_EDIT; }
-            break; }
-        case S_STEP: {
-            mv(sel, 3); ent::Step & st = ks[stepi];
-            if (k == UK_LEFT || k == UK_RIGHT) {
-                int d = k == UK_RIGHT ? 1 : -1;
-                if (sel == 0) { st.type = !st.type; st.val = st.type ? "dir~" : "enter"; }
-                else if (sel == 1) { st.ms += d * 500; if (st.ms < 0) st.ms = 0; if (st.ms > 600000) st.ms = 600000; }
-                else { const std::vector<std::string> & L = st.type ? type_presets() : key_names(); int cu = -1; for (size_t i = 0; i < L.size(); i++) if (L[i] == st.val) cu = (int)i; cu = (cu < 0 ? (d > 0 ? 0 : (int)L.size() - 1) : (cu + d + (int)L.size()) % (int)L.size()); st.val = L[cu]; }
-            }
-            else if (k == UK_OK && sel == 2 && st.type) osk_open(1, st.val, S_STEP);
-            else if (k == UK_CANCEL) { sel = stepi; scr = S_KEYSEQ; }
-            break; }
-        case S_SWAPED: {
-            int rows = (int)sw.size() + 1; mv(sel, rows);
-            if (k == UK_OK) { if (sel == (int)sw.size()) fl_open("swap_add"); else fl_open("swap_set", sel); }
-            else if (k == UK_SQ && sel < (int)sw.size()) { sw.erase(sw.begin() + sel); if (sel >= (int)sw.size() + 1) sel = (int)sw.size(); }
-            else if (k == UK_TRI && sel > 0 && sel < (int)sw.size()) { std::swap(sw[sel], sw[sel - 1]); sel--; }
-            else if (k == UK_SELECT && sel + 1 < (int)sw.size()) { std::swap(sw[sel], sw[sel + 1]); sel++; }
-            else if (k == UK_CANCEL) { kv_set("swap", join_commas(sw)); sel = 8; scr = S_EDIT; }
-            break; }
+        case S_ENT: k_ent(k, a); break;
+        case S_ENTMENU: k_entmenu(k, a); break;
+        case S_TPL: k_tpl(k, a); break;
+        case S_EDIT: k_edit(k, a); break;
+        case S_FILE: k_file(k, a); break;
+        case S_KEYSEQ: k_keyseq(k, a); break;
+        case S_STEP: k_step(k, a); break;
+        case S_SWAPED: k_swaped(k, a); break;
         case S_VALS: k_vals(k, a); break;   /* t48a (#614 ③) */
         case S_FONT: k_font(k, a); break;
         case S_PAD: k_pad(k, a); break;   /* t48e (#646): 조작 설정 */
         case S_PADKEY: k_padkey(k, a); break;
         case S_OSK: k_osk(k, a); break;
-        case S_NAME: {
-            int cnt = (int)name_presets().size() + 2; mv(sel, cnt);   /* t48b: 끝에 「한글 키보드」 「영문 글자표」 두 줄 */
-            if (k == UK_OK) { if (sel < cnt - 2) { ed_name = ent::unique_name(name_presets()[sel], ents_used(eg, en_orig)); sel = 0; scr = S_EDIT; } else osk_open(0, ed_name, S_EDIT, sel == cnt - 2); }
-            else if (k == UK_CANCEL) { sel = 0; scr = S_EDIT; }
-            break; }
-        case S_YN:
-            if (k == UK_LEFT) ynsel = 0; else if (k == UK_RIGHT) ynsel = 1;
-            else if (k == UK_OK) { if (ynsel == 0) a = yn_do(); else scr = yn_ret; }
-            else if (k == UK_CANCEL) scr = yn_ret;
-            break;
+        case S_NAME: k_name(k, a); break;
+        case S_YN: k_yn(k, a); break;
         case S_LANG: k_lang(k, a); break;
-        case S_HDDASK:
-            mv(hddsel, 3);
-            if (k == UK_OK) {
-                if (hddsel == 0) {
-                    std::string nm; int mb = atoi(kv_get("hdd_mb").empty() ? "40" : kv_get("hdd_mb").c_str());
-                    if (env.hdd_make && env.hdd_make(eg, mb, nm)) { ed["disk_c"] = nm; ed["install"] = "hdd_new"; msg = phr_("HDD 를 만들었습니다: ") + nm; if (install_start) finish_install_start(a); else scr = S_EDIT; }
-                    else { msg = phr_("HDD 를 만들지 못했습니다."); if (install_start) { install_start = false; scr = S_MAIN; } else scr = S_EDIT; }
-                } else if (hddsel == 1) { if (install_start) { install_start = false; scr = S_MAIN; } else fl_open("disk_c"); }
-                else { if (install_start) { install_start = false; scr = S_MAIN; } else scr = S_EDIT; }
-            } else if (k == UK_CANCEL) { if (install_start) { install_start = false; scr = S_MAIN; } else scr = S_EDIT; }
-            break;
+        case S_HDDASK: k_hddask(k, a); break;
         default: break;
         }
         return a;
@@ -949,6 +715,17 @@ struct Ui {
     void k_game(UKey k, Act & a);
     void k_keys(UKey k, Act & a);
     void k_help(UKey k, Act & a);
+    void k_ent(UKey k, Act & a);
+    void k_entmenu(UKey k, Act & a);
+    void k_tpl(UKey k, Act & a);
+    void k_edit(UKey k, Act & a);
+    void k_file(UKey k, Act & a);
+    void k_keyseq(UKey k, Act & a);
+    void k_step(UKey k, Act & a);
+    void k_swaped(UKey k, Act & a);
+    void k_name(UKey k, Act & a);
+    void k_yn(UKey k, Act & a);
+    void k_hddask(UKey k, Act & a);
     Act key(UKey k);
 };
 #include "ui/screen_table.h"   /* S8a: draw/key dispatch and the home-flow screens */

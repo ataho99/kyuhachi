@@ -1841,6 +1841,7 @@ static void gh_ui_env_setup(void) {
         return true; };
     E.font_group = [](const std::string & nm) { for (auto & f : g_ui.fonts) if (f.name == nm) return f.group; return std::string(); };
 }
+static void gh_delete_slot(int gi, int slot) { plat::remove_file(gh_slot_n(gi, slot).c_str()); gh_refresh_game_slots(gi); }   /* S3 retro-test token */
 static void gh_spawn_test(const std::string & id, const std::string & entry, int secs) {
     std::string exe = plat::exe_path(); std::string td = g_exedir + "\\logs\\_test";
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --entry \"" + aw::u8_to_acp(entry) + "\" --userini \"" + td + "\\user.ini\" --sec " + std::to_string(secs > 0 ? secs : 20) + " --bkosd 1 --savedir \"" + td + "\\saves\" --windowed --noboot --out \"" + td + "\"";
@@ -2334,7 +2335,7 @@ static void gh_menu_run(void) {
                 bool ok = gh_do_save(gh_slot_n(g_cur_game, a.slot), false); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 에 저장했습니다") : std::string(phr_("저장에 실패했습니다")), 2000); done = true; break; }
             case ui::A_LOAD: { if (!U.games[g_cur_game].slot[a.slot].used) { gh_osd(phr_("비어 있는 슬롯입니다"), 1500); break; }
                 bool ok = gh_do_load(gh_slot_n(g_cur_game, a.slot)); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 을 불러왔습니다") : std::string(phr_("불러오기에 실패했습니다")), 2000); done = true; break; }
-            case ui::A_DELSLOT: plat::remove_file(gh_slot_n(g_cur_game, a.slot).c_str()); gh_refresh_game_slots(g_cur_game); break;
+            case ui::A_DELSLOT: gh_delete_slot(g_cur_game, a.slot); break;
             case ui::A_APPLY: gh_apply_settings(U.eff(), true); gensei_western = U.eff().pad == 1; gh_apply_profile_input(g_prof, true); break;   /* t48e (#646): 조작 설정 변경을 바로 입력 층에 */
             case ui::A_SHOT: g_scr_req = true; break;   /* t41: 메뉴가 닫힌 뒤 다음 프레임에서 찍는다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
@@ -2419,7 +2420,7 @@ static bool gh_ui_main_(std::string & out_id) {
             switch (a.t) {
             case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; g_cur_game = a.game; g_resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
             case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = g_cur_game = a.game; g_resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, g_cfgpath); return true;
-            case ui::A_DELSLOT: plat::remove_file(gh_slot_n(a.game, a.slot).c_str()); gh_refresh_game_slots(a.game); break;
+            case ui::A_DELSLOT: gh_delete_slot(a.game, a.slot); break;
             case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); gensei_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
             case ui::A_FULLSCR: gh_fs_toggle(); break;
@@ -2523,6 +2524,13 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
                 gh_log("uikeys: PADSTATE scr=%d sel=%d scope=%d g.pad=%d eff.pad=%d global[%s] work[%s]", (int)U.scr, U.sel, U.scope, U.g.pad, U.eff().pad, gp.c_str(), wp.c_str());
                 if (U.cur >= 0 && U.cur < (int)U.games.size()) { for (int pi = 0; pi < 7; pi++) { bool fw = false, df = false; std::string v = U.pad_val(pi, &fw, &df); gh_log("uikeys: PADROW %d %s -> %s%s", pi, U.pad_row_name(pi).c_str(), v.c_str(), fw ? " (작품)" : df ? " (기본)" : " (전역)"); } }
                 continue; }
+            if (tk.compare(0, 8, "delslot:") == 0) {   /* S3 retro-test token */
+                std::string r = tk.substr(8); size_t cp = r.find(':'); std::string gid = r.substr(0, cp); int sl = cp == std::string::npos ? 0 : atoi(r.c_str() + cp + 1); int gi = -1;
+                for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == gid) gi = (int)i;
+                if (gi < 0 || sl < 0 || sl > 7) { gh_log("uikeys: DELSLOT bad arg %s", r.c_str()); continue; }
+                bool before = plat::exists(gh_slot_n(gi, sl)); gh_delete_slot(gi, sl); gh_log("uikeys: DELSLOT %s slot%02d before=%d after=%d listed_used=%d", gid.c_str(), sl + 1, before ? 1 : 0, plat::exists(gh_slot_n(gi, sl)) ? 1 : 0, U.games[gi].slot[sl].used ? 1 : 0); continue; }
+            if (tk.compare(0, 11, "resetdisks:") == 0) { std::string gid = tk.substr(11); int nn = gh_reset_disks(gid); gh_log("uikeys: RESETDISKS %s deleted=%d", gid.c_str(), nn); continue; }   /* S3 retro-test token */
+            if (tk.compare(0, 10, "spawntest:") == 0) { gh_spawn_test(tk.substr(10), "", 4); continue; }   /* S3 retro-test token */
             int rep = 1; size_t st = tk.find('*'); if (st != std::string::npos) { rep = atoi(tk.c_str() + st + 1); tk = tk.substr(0, st); }
             auto it = KM.find(tk); if (it == KM.end()) { gh_log("uikeys: 알 수 없는 토큰 %s", tk.c_str()); continue; }
             for (int i = 0; i < rep; i++) { ui::Act a = U.key(it->second); if (a.t != ui::A_NONE) { nact++; gh_log("uikeys: act=%d game=%d arg=%d entry=%s", (int)a.t, a.game, a.arg, a.entry.c_str()); if (a.t == ui::A_SETLANG) gh_setlang(a.game, a.arg); if (a.t == ui::A_SETTITLE) gh_settitle(a.game, a.entry); } }   /* t44c: A_SETLANG 는 호스트 처리기를 그대로 실행 */

@@ -1,0 +1,55 @@
+== 시작 2026-11-03T09:39:38+09:00 | 새 zip 72307e2987d5cc08 | 기준 zip 0c1a391e4760b922 | 사본 = /mnt/h/RETRO_SET/PC98_PLAYER/백업_saves_20261103-081759
+exe sha16: 새=dd0465d0f7a135a5 기준=0492561362375ec5
+== T12 세이브 호환 (사본 3개 × 별도 프로세스 3회, --sec 10, 불러온 뒤 5초 이상 진행)
+사본 daimadou95 sha16 40315c8afcccaf85
+T12 daimadou95 load@3.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=22806B -> PASS
+   5487 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_daimadou95.g98s <- OK 
+T12 daimadou95 load@4.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=22757B -> PASS
+   5006 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_daimadou95.g98s <- OK 
+T12 daimadou95 load@5.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=22795B -> PASS
+   6020 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_daimadou95.g98s <- OK 
+사본 doukyuusei2 sha16 f0fc2aa01e94238a
+T12 doukyuusei2 load@3.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=53984B -> PASS
+   4353 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_doukyuusei2.g98s <- OK 
+T12 doukyuusei2 load@4.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=53984B -> PASS
+   5164 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_doukyuusei2.g98s <- OK 
+T12 doukyuusei2 load@5.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=53984B -> PASS
+   6281 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_doukyuusei2.g98s <- OK 
+사본 kitan sha16 d0f64468444ba02d
+T12 kitan load@3.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=3329B -> PASS
+   4042 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_kitan.g98s <- OK 
+T12 kitan load@4.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=3329B -> PASS
+   5030 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_kitan.g98s <- OK 
+T12 kitan load@5.0 rc=0 LOAD_OK=1 BAD=0 png=5 max=3329B -> PASS
+   6091 HOST LOAD 시험_h12_t53a2_093938\N\Kyuhachi\L_kitan.g98s <- OK 
+== T13 설정·DB 호환 (라이브 settings.ini·gamedb.ini·game.ini×N·user.ini×N 사본을 새 빌드와 기준 빌드가 읽고 저장)
+읽기 전 파일 수: 26  (새·기준 동일: 예)
+N lang=0 rc=0
+I lang=0 rc=0
+N lang=1 rc=0
+I lang=1 rc=0
+N lang=2 rc=0
+I lang=2 rc=0
+T13 VALDUMP lang=0 줄수=3 새=기준 동일 -> PASS
+uikeys: T52I VALDUMP bgm=1 se=2 bmult=0 bmode=2 dirty=0 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=0
+T13 저장 ini 의미 동일(키=값 정렬 비교) lang=0 -> PASS (줄수 새=154 기준=154)
+  (순서·바이트는 다름 — T7 대상)
+T13 VALDUMP lang=1 줄수=3 새=기준 동일 -> PASS
+uikeys: T52I VALDUMP bgm=1 se=2 bmult=0 bmode=2 dirty=0 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=0
+T13 저장 ini 의미 동일(키=값 정렬 비교) lang=1 -> PASS (줄수 새=154 기준=154)
+  (순서·바이트는 다름 — T7 대상)
+T13 VALDUMP lang=2 줄수=3 새=기준 동일 -> PASS
+uikeys: T52I VALDUMP bgm=1 se=2 bmult=0 bmode=2 dirty=0 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=3
+uikeys: T52I VALDUMP bgm=0 se=2 bmult=0 bmode=2 dirty=1 scr=0
+T13 저장 ini 의미 동일(키=값 정렬 비교) lang=2 -> PASS (줄수 새=154 기준=154)
+  (순서·바이트는 다름 — T7 대상)
+T13 새 빌드가 읽기만 한 파일(game/user/gamedb/settings) 불변 -> PASS
+  (기준 t52i 도 불변)
+== 라이브 불변: daimadou95 40315c8a/40315c8a doukyuusei2 f0fc2aa0/f0fc2aa0 kitan d0f64468/d0f64468 
+T=/mnt/h/RETRO_SET/PC98_PLAYER/시험_h12_t53a2_093938
+== 종합: 합격 | 2026-11-03T09:41:46+09:00

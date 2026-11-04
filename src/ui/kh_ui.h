@@ -234,9 +234,11 @@ struct Ui {
         (void)name; text(c, 40, 0, KH_FULLNAME, WH, K);   /* 맨 윗줄은 제품명만 (화면 이름은 창 제목에) */
         std::string b = build; int w = tw(b); text(c, 640 - w - 24, 0, b, WH, K);
     }
+    struct Hit { int x, y, w, h, i, sel; };   /* t55a: touch hit-test rows (rect, index, selection at draw time) */
+    std::vector<Hit> hits;
     void items(Canvas & c, int x, int y, int w, const std::vector<std::string> & a, int sel, int pitch, const std::vector<bool> * dim = NULL) {
         for (size_t i = 0; i < a.size(); i++) {
-            int yy = y + (int)i * pitch; bool d = dim && (*dim)[i];
+            int yy = y + (int)i * pitch; bool d = dim && (*dim)[i]; { Hit ht = { x - 6, yy - 3, w, 22, (int)i, sel }; hits.push_back(ht); }
             if ((int)i == sel) c.rect(x - 6, yy - 3, w, 22, d ? GY : WH);
             c.clip(x, yy - 3, w - 12, 22);   /* r018: 글자가 막대·상자 밖으로 나가지 않게 */
             if ((int)i == sel) text(c, x, yy, a[i], K, d ? GY : WH); else text(c, x, yy, a[i], d ? GY : CY, K);

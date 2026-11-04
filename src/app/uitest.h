@@ -45,6 +45,9 @@ static bool gh_ui_main_(std::string & out_id) {
                 else { if (gApp.ob_held && !gApp.ob_long) U.key(ui::UK_OK); gApp.ob_held = false; }
                 continue; }
             if (gh_wm_hotkey(e)) continue;
+#if defined(__ANDROID__)
+            if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERMOTION || e.type == SDL_FINGERUP) { gh_touch_feed(e); continue; }   /* t55a: menu touch */
+#endif
             ui::UKey k = gh_ev2uk(e, NULL); if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) gh_log("DIAG btn -> ev2uk=%d none=%d", (int)k, k == ui::UK_NONE ? 1 : 0); if (k == ui::UK_NONE) continue;
             ui::Act a = U.key(k);
             switch (a.t) {

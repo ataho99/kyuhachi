@@ -12,6 +12,7 @@ inline void Ui::d_pick(Canvas & c) {
         int i = top + k, yy = Y0 + k * PT; bool add = i >= nv; int gi = add ? -1 : vis[i];
         bool d = !add && !blk_row(gi).empty(), fv = !add && games[gi].fav; int wn = add ? 0 : row_warn(gi);
         int s0 = fv ? 16 : 0, ww = wn ? 16 : 0, av = AVAIL - s0 - ww; std::string full = add ? std::string(phr_("+ 작품 추가")) : games[gi].title; bool sl = i == pick;
+        { Hit ht = { LX - 8, yy - 3, LWD + 2, 22, i, pick }; hits.push_back(ht); }   /* t55a */
         if (sl) c.rect(LX - 8, yy - 3, LWD + 2, 22, d ? GY : WH);
         if (fv) text(c, LX, yy, "★", sl ? K : YL, sl ? (d ? GY : WH) : K);
         if (wn) text(c, LX + AVAIL - 16, yy, "※", sl ? K : OR, sl ? (d ? GY : WH) : K);

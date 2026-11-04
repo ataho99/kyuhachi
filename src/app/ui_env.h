@@ -418,6 +418,42 @@ static void gh_help_init(void) {   /* 같은 표에서 helpline 번역표를 만
     for (auto & r : GH_KEYTAB) { if (r.uk == ui::UK_UP || r.uk == ui::UK_DOWN || r.uk == ui::UK_LEFT || r.uk == ui::UK_RIGHT) continue; if (r.uk == ui::UK_L) { ln = r.name; continue; } if (r.uk == ui::UK_R) { rn = r.name; continue; } ov::HelpKey hk; hk.sym = r.sym; hk.name = r.name; ov::g_helpkeys.push_back(hk); if (r.uk == ui::UK_SELECT) { ov::HelpKey h2; h2.sym = "SELECT"; h2.name = r.name; ov::g_helpkeys.push_back(h2); } }
     ov::HelpKey a; a.sym = "L R"; a.name = ln + " " + rn; ov::g_helpkeys.push_back(a); ov::HelpKey b; b.sym = "L/R"; b.name = ln + "/" + rn; ov::g_helpkeys.push_back(b);
 }
+#if defined(__ANDROID__)
+/* t55a: 메뉴 터치 최소판. SDL 손가락 이벤트를 키 이벤트로 바꿔 밀어 넣어 기존 메뉴 루프(게임 중·시작 메뉴 둘 다)가 그대로 처리하게 한다.
+ * 탭 = 그 줄로 이동 + 결정(Enter) · 4:3 틀 바깥 탭 = 취소(Esc) · 세로 끌기 = 위/아래 한 칸씩. 좌표는 gh_publish 의 소프트웨어 경로(논리 640x480 레터박스; 16:10 이면 400줄 가운데, 4:3 이면 세로 늘림)와 같은 식. */
+static void gh_touch_key(SDL_Keycode k) { SDL_Event ke; SDL_zero(ke); ke.type = SDL_KEYDOWN; ke.key.keysym.sym = k; ke.key.state = SDL_PRESSED; SDL_PushEvent(&ke); ke.type = SDL_KEYUP; ke.key.state = SDL_RELEASED; SDL_PushEvent(&ke); }
+static int gh_touch_fl(double v) { int i = (int)v; return (v < (double)i) ? i - 1 : i; }
+static bool gh_touch_pos(float fx, float fy, int & vx, int & vy) {   /* finger (window 0..1) to menu canvas (640x400); outside the frame gives out-of-range values */
+    int ow = 0, oh = 0; if (!gApp.ren || SDL_GetRendererOutputSize(gApp.ren, &ow, &oh) != 0 || ow <= 0 || oh <= 0) return false;
+    double sx = ow / 640.0, sy = oh / 480.0, sc = sx < sy ? sx : sy, ox = (ow - 640.0 * sc) / 2.0, oy = (oh - 480.0 * sc) / 2.0;
+    double lx = ((double)fx * ow - ox) / sc, ly = ((double)fy * oh - oy) / sc;
+    vx = gh_touch_fl(lx); vy = (gApp.fit == FIT_1610) ? gh_touch_fl(ly - 40.0) : gh_touch_fl(ly * 400.0 / 480.0); return true;
+}
+static void gh_touch_feed(const SDL_Event & e) {
+    static bool dn = false, mv = false; static SDL_FingerID fid = 0; static float x0 = 0, y0 = 0; static int ay = 0;
+    const int STEP = 22, SLOP = 14;
+    if (e.type == SDL_FINGERDOWN) { if (dn) return; int vx, vy; if (!gh_touch_pos(e.tfinger.x, e.tfinger.y, vx, vy)) return; dn = true; mv = false; fid = e.tfinger.fingerId; x0 = e.tfinger.x; y0 = e.tfinger.y; ay = vy; return; }
+    if (!dn || e.tfinger.fingerId != fid) return;
+    int vx, vy; if (!gh_touch_pos(e.tfinger.x, e.tfinger.y, vx, vy)) { if (e.type == SDL_FINGERUP) dn = false; return; }
+    if (e.type == SDL_FINGERMOTION) {
+        if (!mv) { int sx, sy; gh_touch_pos(x0, y0, sx, sy); if (abs(vy - sy) < SLOP && abs(vx - sx) < SLOP) return; mv = true; ay = sy; }
+        while (vy - ay >= STEP) { gh_touch_key(SDLK_UP); ay += STEP; }
+        while (ay - vy >= STEP) { gh_touch_key(SDLK_DOWN); ay -= STEP; }
+        return; }
+    if (e.type == SDL_FINGERUP) {
+        dn = false; if (mv) { gh_log("TOUCH swipe end v=(%d,%d)", vx, vy); return; }
+        if (vx < 0 || vx >= 640 || vy < 0 || vy >= 400) { gh_log("TOUCH tap v=(%d,%d) outside -> cancel", vx, vy); gh_touch_key(SDLK_ESCAPE); return; }
+        ui::Ui & U = gApp.ui_;
+        for (int h = (int)U.hits.size() - 1; h >= 0; h--) {   /* rows drawn later (on top) first */
+            const ui::Ui::Hit & t = U.hits[h];
+            if (vx >= t.x && vx < t.x + t.w && vy >= t.y && vy < t.y + t.h) {
+                int d = t.i - t.sel; gh_log("TOUCH tap v=(%d,%d) row %d (sel %d, move %d) -> ok", vx, vy, t.i, t.sel, d);
+                for (; d > 0; d--) gh_touch_key(SDLK_DOWN); for (; d < 0; d++) gh_touch_key(SDLK_UP);
+                gh_touch_key(SDLK_RETURN); return; } }
+        gh_log("TOUCH tap v=(%d,%d) no row (ignored)", vx, vy);
+    }
+}
+#endif
 static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
     using namespace ui;
     if (anykey) *anykey = (e.type == SDL_KEYDOWN && !e.key.repeat) || e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_MOUSEBUTTONDOWN;

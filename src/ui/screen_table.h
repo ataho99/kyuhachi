@@ -35,6 +35,7 @@
 #include "ui/screens/osk.h"
 
 inline void Ui::draw(Canvas & c) {
+    hits.clear();
     jp_refresh();   /* t52h (#134) */
     if (scr != S_GAME && scr != S_KEYS && !(in_game && (scr == S_QUIT || scr == S_SWAP || scr == S_SWAPI))) c.rect(0, 0, c.w, c.h, K);
     switch (scr) {

@@ -343,6 +343,7 @@ static int gh_scan_gamefolder(const char * why) {
 }
 #if defined(__ANDROID__)
 static const char * fpt(int i);
+static void gh_android_savedir(void);
 #endif
 static void gh_add_action(int arg) {
     ui::Ui & U = gApp.ui_;
@@ -350,6 +351,7 @@ static void gh_add_action(int arg) {
     else if (arg == 1) { std::string d; if (!gh_pick_folder(phr_("추가할 작품 폴더를 고르세요"), d)) return; std::vector<aw::Work> ws; aw::collect(d, 3, ws); aw::Summary S = gh_add_works(ws, phr_("폴더 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
     else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, gApp.cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정"));
 #if defined(__ANDROID__)
+    gh_android_savedir();
     if (U.games.size() == 1 && U.games[0].id.empty()) { U.add_log = { fpt(14), fpt(15) }; U.scr = ui::S_ADD; }   /* t55e: empty folder notice */
 #endif
     }

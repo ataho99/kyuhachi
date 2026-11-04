@@ -1,4 +1,14 @@
 /* app/main_setup.h -- S9c: main() steps E-I: hooks+input, tests, window, game select, game prep. Bodies moved unchanged from gensei_host.cpp main (as of t54u). Included in place before main; single translation unit. */
+#if defined(__ANDROID__)
+/* t56a: Android save dir = <chosen game folder>\saves (same sub-layout as <exe>\saves on Windows) */
+static void gh_android_savedir(void) {
+    if (gApp.ui_.gamefolder.empty()) return;
+    std::string sd = gApp.ui_.gamefolder + "\\saves"; plat::mkdir(sd);
+    bool ok = plat::exists(sd);
+    gh_log("SAVEDIR folder=%s -> %s (%s)", gApp.ui_.gamefolder.c_str(), sd.c_str(), ok ? "ok" : "mkdir failed, keep app dir");
+    if (ok) gApp.savedir = sd;
+}
+#endif
 static void gh_main_input_init(std::string & id) {
     gh_crash_install();
     kh_db_dir = gApp.exedir;   /* t48e (#651 2): <exe>\res\gamecontrollerdb.txt */
@@ -8,6 +18,9 @@ static void gh_main_input_init(std::string & id) {
     gensei_lock = true;
     gh_ui_init_games();
     ui::settings_load(gApp.ui_, gApp.cfgpath);
+#if defined(__ANDROID__)
+    gh_android_savedir();
+#endif
     if (gApp.cli_lang >= 0 && gApp.cli_lang <= 2) gApp.ui_.lang = gApp.cli_lang;   /* t52g 시험: --lang N */
     phr_set_lang(gApp.ui_.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", gApp.ui_.lang, phr_loaded_count, phr_("게임 시작"));
     kh_western = gApp.ui_.g.pad == 1;   /* t48e: 시작 메뉴용(게임 시작 때 작품별 값으로 다시 정함) */

@@ -1,7 +1,7 @@
 #!/bin/bash
-# T11 구조 검사 묶음. 사용: tools/t11.sh [--write-baseline]   (strings 위치: 환경변수 KH_STRINGS_DIR, 기본 PC98_PLAYER\build\r020\out_t53a\Kyuhachi)
+# T11 구조 검사 묶음. 사용: tools/t11.sh [--write-baseline]   (strings 위치: 환경변수 KH_STRINGS_DIR, 기본 kyuhachi\res\strings)
 # 합격 = check_keys(개수 일치·0) · check_deps 위반 0 · limits 미등록 0 · literals 가 기준선보다 늘지 않음(S4 에서 줄이기 시작).
-R=$(cd "$(dirname "$0")/.." && pwd); S=${KH_STRINGS_DIR:-/mnt/h/RETRO_SET/PC98_PLAYER/build/r020/out_t53a/Kyuhachi}; BL=$R/tests/t11_baseline.txt; rc=0
+R=$(cd "$(dirname "$0")/.." && pwd); S=${KH_STRINGS_DIR:-$R/res/strings}; BL=$R/tests/t11_baseline.txt; rc=0
 k=$(perl $R/tools/check_keys.pl $S/strings_ko.txt $S/strings_en.txt $S/strings_ja.txt $R/src); krc=$?; echo "$k"; [ $krc = 0 ] || rc=1
 d=$(bash $R/tools/check_deps.sh); drc=$?; echo "$d"; [ $drc = 0 ] || rc=1
 l=$(bash $R/tools/check_limits.sh); lrc=$?; echo "$l"; [ $lrc = 0 ] || rc=1

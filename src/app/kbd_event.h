@@ -1,4 +1,9 @@
 /* app/kbd_event.h -- S9b: keyboard overlay glue, key/game events. Moved unchanged from gensei_host.cpp lines 672-840 (as of t54t). Included in place; single translation unit. */
+#if defined(__ANDROID__)
+/* t85: min key-hold table (key id < 256); gh_kbhold_tick() is called every frame from gfx_events.h */
+static unsigned gh_kbhold_down[256]; static bool gh_kbhold_pend[256]; static unsigned gh_kbhold_due[256];
+static void gh_kbhold_tick(void) { unsigned now = SDL_GetTicks(); for (int i = 0; i < 256; i++) if (gh_kbhold_pend[i] && (int)(now - gh_kbhold_due[i]) >= 0) { gh_kbhold_pend[i] = false; gh_kbhold_down[i] = 0; KEYBOARD_AddKey((KBD_KEYS)i, false); } }
+#endif
 /* ---- 키보드 → PC-98 */
 static KBD_KEYS gh_sdlkey(SDL_Keycode k) {
     static const KBD_KEYS L[26] = { KBD_a, KBD_b, KBD_c, KBD_d, KBD_e, KBD_f, KBD_g, KBD_h, KBD_i, KBD_j, KBD_k, KBD_l, KBD_m, KBD_n, KBD_o, KBD_p, KBD_q, KBD_r, KBD_s, KBD_t, KBD_u, KBD_v, KBD_w, KBD_x, KBD_y, KBD_z };
@@ -128,7 +133,6 @@ static bool gh_game_event(const SDL_Event & e) {
     switch (e.type) {
     case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: {
         bool d = e.type == SDL_CONTROLLERBUTTONDOWN;
-        { static bool back_h = false; if (e.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) back_h = d; if (e.cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER && back_h) { if (d) gh_fps_toggle(); return true; } }   /* SELECT+R1 = FPS / speed display */
         if (e.cbutton.button == SDL_CONTROLLER_BUTTON_Y) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
         if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) { if (d) { gApp.boost_tog = !gApp.boost_tog; GPLOG("L3 boost toggle -> %d", (int)gApp.boost_tog); gh_boost_update(); } return true; }
         return false; }
@@ -150,7 +154,19 @@ static bool gh_game_event(const SDL_Event & e) {
         if (k == SDLK_SCROLLLOCK) { if (d) { gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); } return true; }
         if (k == SDLK_F10) return true;
         KBD_KEYS kk = gh_sdlkey(k);
-        if (kk != KBD_NONE && gApp.boot_tick && !((int)kk < 256 && kh_never[(int)kk])) KEYBOARD_AddKey(kk, d);
+        if (kk != KBD_NONE && gApp.boot_tick && !((int)kk < 256 && kh_never[(int)kk])) {
+#if defined(__ANDROID__)
+            /* t85 (#453-1): adb/touch send KEYDOWN->KEYUP within 3 ms and the game never saw the key (keytrace). Android keeps every key down for at least 100 ms */
+            if ((int)kk < 256) {
+                unsigned now = SDL_GetTicks();
+                if (d) { gh_kbhold_down[(int)kk] = now; gh_kbhold_pend[(int)kk] = false; KEYBOARD_AddKey(kk, true); }
+                else if (gh_kbhold_down[(int)kk] != 0 && now - gh_kbhold_down[(int)kk] < 100u) { gh_kbhold_pend[(int)kk] = true; gh_kbhold_due[(int)kk] = gh_kbhold_down[(int)kk] + 100u; }
+                else { gh_kbhold_down[(int)kk] = 0; KEYBOARD_AddKey(kk, false); }
+                return true;
+            }
+#endif
+            KEYBOARD_AddKey(kk, d);
+        }
         return true; }
     case SDL_MOUSEMOTION: {   /* r020 (#249-2): 호스트 마우스 → 코어 PC-98 버스마우스. 창 픽셀 이동량을 640 폭 기준으로 환산 */
         if (!(gApp.mouse_game && gApp.boot_tick && !gApp.menu_open)) { static int sk = 0; if (e.type == SDL_MOUSEMOTION && (sk++ % 200) == 0) gh_log("HOST MOUSEFWD skip mouse_game=%d boot=%d menu=%d x=%d y=%d", (int)gApp.mouse_game, (int)(gApp.boot_tick != 0), (int)gApp.menu_open, e.motion.x, e.motion.y); return false; }   /* t48c (#639 ③) */

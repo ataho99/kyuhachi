@@ -60,6 +60,10 @@ static void gh_main_window(const std::string & exedir) {
             if (gApp.ui_.wmult == 0 && gApp.ui_.winw < 160) { gApp.ui_.winw = gApp.winw; gApp.ui_.winh = gApp.winh; }
         }
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+#if defined(__ANDROID__)
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);   /* t57a: GLES2 context */
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2); SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1); SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
         Uint32 wf = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (gApp.windowed ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP) | (gApp.hidewin ? SDL_WINDOW_HIDDEN : 0);
         gApp.win = SDL_CreateWindow(KH_FULLNAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, gApp.winw, gApp.winh, wf);

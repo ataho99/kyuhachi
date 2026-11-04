@@ -44,6 +44,7 @@ static void gh_drawline(const void * src) {
 #ifndef GL_CLAMP_TO_EDGE
 # define GL_CLAMP_TO_EDGE 0x812F
 #endif
+#include "app/gl_es.h"
 typedef unsigned int (APIENTRY * pf_CreateShader)(unsigned int);
 typedef void (APIENTRY * pf_ShaderSource)(unsigned int, int, const char * const *, const int *);
 typedef void (APIENTRY * pf_CompileShader)(unsigned int);
@@ -175,11 +176,11 @@ static const char * g_nearest_src =
     "#ifdef FRAGMENT\nuniform sampler2D uTex;\nvoid main(){ gl_FragColor = vec4(texture2D(uTex, vUV).rgb, 1.0); }\n#endif\n";
 static bool gl_build(const std::string & src, GProg & g, bool linear, const char * name) {
     g = GProg(); g.linear = linear;
-    unsigned int sh[2] = { 0, 0 };
+    unsigned int sh[2] = { 0, 0 }; std::string gs = gh_es_src(src);
     for (int i = 0; i < 2; i++) {
         sh[i] = F.CreateShader(i == 0 ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER);
-        const char * parts[3] = { "#version 120\n", i == 0 ? "#define VERTEX\n" : "#define FRAGMENT\n", src.c_str() };
-        F.ShaderSource(sh[i], 3, parts, NULL); F.CompileShader(sh[i]);
+        const char * parts[4] = { GH_GLSL_VER, i == 0 ? "#define VERTEX\n" : "#define FRAGMENT\n", i == 0 ? "" : GH_FRAG_PREC, gs.c_str() };
+        F.ShaderSource(sh[i], 4, parts, NULL); F.CompileShader(sh[i]);
         int ok = 0; F.GetShaderiv(sh[i], GL_COMPILE_STATUS, &ok);
         if (!ok) { char lg[1024]; int n = 0; F.GetShaderInfoLog(sh[i], 1023, &n, lg); lg[n < 0 ? 0 : n] = 0; gh_log("GL: shader %s %s compile FAIL: %s", name, i == 0 ? "vertex" : "fragment", lg); return false; }
     }
@@ -208,6 +209,9 @@ static void gl_patch_crt(std::string & src) {
     }
 }
 static bool gl_init_all(void) {   /* 메인 스레드, 컨텍스트 current 상태에서 */
+#if defined(GH_GLES)
+    if (!gh_gles_load()) return false;
+#endif
     if (!gl_load()) return false;
     gh_log("GL: vendor='%s' renderer='%s' version='%s'", (const char *)glGetString(GL_VENDOR), (const char *)glGetString(GL_RENDERER), (const char *)glGetString(GL_VERSION));
     gl_build(g_nearest_src, gApp.prog[SH_NEAREST], false, "builtin-nearest");
@@ -242,7 +246,7 @@ static void gl_rect(int dw, int dh, int w, int h, int fit, int & x, int & y, int
 }
 static int SDLCALL gl_thread(void *) {
     SDL_GL_MakeCurrent(gApp.win, gApp.glctx);
-    int tw = 0, th = 0, cw = 0, ch = 0; int ovw = 0, ovh = 0, otw = 0, oth = 0; bool ov_has = false, ov_dirty = false;
+    int tw = 0, th = 0, cw = 0, ch = 0; int ovw = 0, ovh = 0, otw = 0, oth = 0; bool ov_has = false, ov_dirty = false; std::vector<uint32_t> sw;
     while (!gApp.gl_stop) {
         int dw = 0, dh = 0; SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
         bool nf = false;
@@ -255,8 +259,8 @@ static int SDLCALL gl_thread(void *) {
         int sx = 0, sy = 0, srw = 0, srh = 0;
         if (cw > 0 && ch > 0 && gApp.rbuf.size() >= (size_t)cw * ch) {
             glBindTexture(GL_TEXTURE_2D, gApp.tex_gl);
-            if (cw != tw || ch != th) { glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, cw, ch, 0, GL_BGRA, GL_UNSIGNED_BYTE, gApp.rbuf.data()); tw = cw; th = ch; }
-            else if (nf) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cw, ch, GL_BGRA, GL_UNSIGNED_BYTE, gApp.rbuf.data());
+            if (cw != tw || ch != th) { glTexImage2D(GL_TEXTURE_2D, 0, GH_INTFMT, cw, ch, 0, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.rbuf, (size_t)cw * ch, sw)); tw = cw; th = ch; }
+            else if (nf) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cw, ch, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.rbuf, (size_t)cw * ch, sw));
             int fit = gApp.fit, sh = gApp.shader;
             if (fit == FIT_INT) sh = SH_NEAREST;
             const GProg & P = gApp.prog[sh];
@@ -291,7 +295,7 @@ static int SDLCALL gl_thread(void *) {
         if (ov_has && !gApp.kbshader && !gApp.shot_req && srw > 0 && srh > 0 && ovw > 0 && ovh > 0 && gApp.ovl_gl.size() >= (size_t)ovw * ovh && gApp.prog_ov.ok) {   /* t46z: 셰이더 사각형과 같은 뷰포트에 평면 알파 합성(premultiplied) */
             if (gApp.ov_tex == 0) { glGenTextures(1, &gApp.ov_tex); glBindTexture(GL_TEXTURE_2D, gApp.ov_tex); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); otw = 0; oth = 0; ov_dirty = true; }
             glBindTexture(GL_TEXTURE_2D, gApp.ov_tex);
-            if (ov_dirty) { if (ovw != otw || ovh != oth) { glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ovw, ovh, 0, GL_BGRA, GL_UNSIGNED_BYTE, gApp.ovl_gl.data()); otw = ovw; oth = ovh; } else glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ovw, ovh, GL_BGRA, GL_UNSIGNED_BYTE, gApp.ovl_gl.data()); ov_dirty = false; }
+            if (ov_dirty) { if (ovw != otw || ovh != oth) { glTexImage2D(GL_TEXTURE_2D, 0, GH_INTFMT, ovw, ovh, 0, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.ovl_gl, (size_t)ovw * ovh, sw)); otw = ovw; oth = ovh; } else glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, ovw, ovh, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.ovl_gl, (size_t)ovw * ovh, sw)); ov_dirty = false; }
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glViewport(sx, sy, srw, srh);
             glEnable(GL_BLEND); glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -306,7 +310,7 @@ static int SDLCALL gl_thread(void *) {
 
             if (gApp.shot_crop && srw > 0 && srh > 0 && sx >= 0 && sy >= 0 && sx + srw <= dw && sy + srh <= dh) { r0x = sx; r0y = sy; rwd = srw; rht = srh; }
             std::vector<uint32_t> px((size_t)rwd * rht), fl((size_t)rwd * rht);
-            glReadPixels(r0x, r0y, rwd, rht, GL_BGRA, GL_UNSIGNED_BYTE, px.data());
+            glReadPixels(r0x, r0y, rwd, rht, GH_PIXFMT, GL_UNSIGNED_BYTE, px.data()); gh_swz(px);
             for (int yy = 0; yy < rht; yy++) memcpy(&fl[(size_t)yy * rwd], &px[(size_t)(rht - 1 - yy) * rwd], (size_t)rwd * 4);
             gh_png(gApp.shot_path, fl.data(), rwd, rht);
             gApp.shot_w = rwd; gApp.shot_h = rht;

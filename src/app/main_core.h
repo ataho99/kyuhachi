@@ -142,8 +142,9 @@ static void gh_main_devinit() {
                 auto qp = [&](const std::string & n) { return std::string("\"") + gh_workpath(n) + "\""; };   /* t43h: 내장 DOS 의 FD 장착도 작업 사본 */
                 std::string d0 = gApp.prof_.disk[0] ? gApp.prof_.disk[0] : gApp.prof_.disk[1], d1 = (gApp.prof_.disk[0] && gApp.prof_.disk[1]) ? gApp.prof_.disk[1] : std::string();
                 bool hddf = gApp.prof_.kv.count("doshdd") && gApp.prof_.kv["doshdd"] == "1"; const char L1 = hddf ? 'b' : 'a', L2 = hddf ? 'c' : 'b';   /* t43d: 설치 흐름 = HDD 가 A:, FD 는 B:·C: */
-                std::string a = std::string("imgmount ") + L1 + " " + qp(d0); for (auto & sw : gApp.prof_.swap) if (sw != d0 && sw != d1) a += " " + qp(sw); ae += a + " -t floppy\n";
-                if (!d1.empty()) ae += std::string("imgmount ") + L2 + " " + qp(d1) + " -t floppy\n";
+                std::vector<std::string> p1; p1.push_back(gh_workpath(d0)); for (auto & sw : gApp.prof_.swap) if (sw != d0 && sw != d1) p1.push_back(gh_workpath(sw));   /* #451 step 2: internal mount instead of autoexec imgmount text */
+                { std::string why; bool mok = gh_mount_floppy(L1, p1, why); if (mok && !d1.empty()) mok = gh_mount_floppy(L2, std::vector<std::string>(1, gh_workpath(d1)), why);
+                  if (!mok) { gh_human(std::string(T("디스크를 열 수 없습니다: ")) + why); gh_finish(2); } }
                 std::string dv = gApp.prof_.kv.count("dosdrv") ? gApp.prof_.kv["dosdrv"] : std::string("a"); if (dv != "a" && dv != "b") dv = "a";
                 if (hddf) {   /* t43c: C: = 작품별 호스트 폴더 (savedir\<id>\hdd). 비어 있으면 설치기 실행, 채워졌으면 실행 파일 탐지 */
                     std::string sd1 = gApp.savedir, sd2 = gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x"), hd = sd2 + "\\hdd";

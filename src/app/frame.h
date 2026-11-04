@@ -138,7 +138,9 @@ void RENDER_EndUpdate(bool abort) {
 
         SDL_UnlockMutex(gApp.fb_mtx);
     } else if (!gApp.headless && gApp.ren && gApp.tex && !gApp.fb.empty()) {
-        if (gApp.loading && !gApp.noload) { static std::vector<uint32_t> lv; lv.assign(gApp.fb.size(), 0); gh_loading_draw(lv.data(), gApp.fbw, gApp.fbh); SDL_UpdateTexture(gApp.tex, NULL, lv.data(), gApp.fbw * 4); } else SDL_UpdateTexture(gApp.tex, NULL, gApp.fb.data(), gApp.fbw * 4);
+        if (gApp.loading && !gApp.noload) { static std::vector<uint32_t> lv; lv.assign(gApp.fb.size(), 0); gh_loading_draw(lv.data(), gApp.fbw, gApp.fbh); SDL_UpdateTexture(gApp.tex, NULL, lv.data(), gApp.fbw * 4); } else { const uint32_t * sp = gApp.fb.data(); static std::vector<uint32_t> ob; bool osd_on = gApp.osd_until && SDL_GetTicks() < gApp.osd_until;
+            if (!gApp.menu_open && (kbov::active() || gApp.fps_on || osd_on || (gApp.boost_on && gApp.bosd_on) || !gApp.bk_osd.empty())) { ob = gApp.fb; ov::Canvas oc = { ob.data(), gApp.fbw, gApp.fbh }; kbov::draw(ob.data(), gApp.fbw, gApp.fbh); gh_boost_osd_draw(oc, gApp.osd, osd_on); sp = ob.data(); }
+            SDL_UpdateTexture(gApp.tex, NULL, sp, gApp.fbw * 4); }
         SDL_RenderClear(gApp.ren);
 
 #if defined(__ANDROID__)

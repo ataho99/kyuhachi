@@ -683,7 +683,7 @@ struct Ui {
     }
     /* ---- 입력 */
     int nitems() const {
-        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return 10; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 8; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return 11; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 8; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; }

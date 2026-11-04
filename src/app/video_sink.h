@@ -149,7 +149,7 @@ static const char * g_overlay_src =
 static void gh_ovl_draw_all(uint32_t * px, int fw, int fh) { ov::Canvas oc = { px, fw, fh }; kbov::draw(px, fw, fh); gh_boost_osd_draw(oc, gApp.osd, gApp.osd_until && SDL_GetTicks() < gApp.osd_until); }
 static bool gh_ovl_build(int fw, int fh) {   /* g_fb_mtx 를 잡은 채로 호출 */
     bool osd_on = gApp.osd_until && SDL_GetTicks() < gApp.osd_until;
-    if (fw <= 0 || fh <= 0 || !(kbov::active() || osd_on || (gApp.boost_on && gApp.bosd_on) || !gApp.bk_osd.empty())) return false;
+    if (fw <= 0 || fh <= 0 || !(kbov::active() || osd_on || (gApp.boost_on && gApp.bosd_on) || !gApp.bk_osd.empty() || gApp.fps_on)) return false;
     size_t n = (size_t)fw * fh; gApp.ovt_b.assign(n, 0xFF000000u); gApp.ovt_w.assign(n, 0xFFFFFFFFu);
     gh_ovl_draw_all(gApp.ovt_b.data(), fw, fh); gh_ovl_draw_all(gApp.ovt_w.data(), fw, fh);
     gApp.ovl.resize(n); bool any = false;

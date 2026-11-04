@@ -71,6 +71,9 @@ static void gh_main_window(const std::string & exedir) {
             }
         }
         if (!gApp.win || (!gApp.use_gl && !gApp.ren)) { gh_log("ERROR: no window/renderer: %s", SDL_GetError()); gh_msgbox(phr_("화면(창)을 만들 수 없습니다.\n그래픽 드라이버를 확인해 주세요. (로그: logs 폴더)")); gh_finish(5); }
+#if defined(__ANDROID__)
+        SDL_StopTextInput();   /* SDL2 starts text input by default, which raises the Android IME */
+#endif
         if (gApp.win) { SDL_AddEventWatch(gh_ev_watch, NULL); gApp.wm_ew = gApp.winw; gApp.wm_eh = gApp.winh; gApp.wm_expect_until = SDL_GetTicks() + 2000u; gh_wm_refresh(); SDL_EventState(SDL_SYSWMEVENT, SDL_ENABLE); gh_titlebar_apply("create", true); }
         gh_log("window=%p gl=%d vsync=%d renderer=%p fullscreen=%d size=%dx%d fit=%d shader=%d curve=%.3f shaderdir=%s", (void *)gApp.win, (int)gApp.use_gl, (int)gApp.vsync, (void *)gApp.ren, gApp.windowed ? 0 : 1, gApp.winw, gApp.winh, (int)gApp.fit, (int)gApp.shader, (double)gApp.curve, gApp.shaderdir.c_str());
     }

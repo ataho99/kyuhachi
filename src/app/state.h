@@ -167,6 +167,7 @@ struct AppState {
     bool builtin_res_font = false;
     bool boost_on = false;
     bool bosd_on = true;
+    bool fps_on = false;   /* FPS / speed display (settings fpsdisp) */
     int boost_xv = 2;   /* 배속 상태 · 「배속 표시」 설정 · 표시 배율 */
     unsigned play_ms = 0;
     unsigned play_last = 0;   /* 플레이 시간(메뉴 시간 제외) */

@@ -128,6 +128,7 @@ static bool gh_game_event(const SDL_Event & e) {
     switch (e.type) {
     case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: {
         bool d = e.type == SDL_CONTROLLERBUTTONDOWN;
+        { static bool back_h = false; if (e.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) back_h = d; if (e.cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER && back_h) { if (d) gh_fps_toggle(); return true; } }   /* SELECT+R1 = FPS / speed display */
         if (e.cbutton.button == SDL_CONTROLLER_BUTTON_Y) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
         if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) { if (d) { gApp.boost_tog = !gApp.boost_tog; GPLOG("L3 boost toggle -> %d", (int)gApp.boost_tog); gh_boost_update(); } return true; }
         return false; }

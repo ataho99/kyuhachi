@@ -4,11 +4,11 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     titlebar(c, phr_("화면 설정"));
     Settings & s = eff();
     rbox(c, 16, 24, 288, 212, WH, phr_("화면 설정"));
-    std::vector<std::string> n = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면") };
-    items(c, 40, 44, 256, n, sel, 18);
+    std::vector<std::string> n = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면"), "FPS / Speed" };
+    items(c, 40, 44, 256, n, sel, 17);
     rbox(c, 320, 24, 304, 212, WH, phr_("선택지"));
     auto row = [&](int i) { return sel == i; };
-    const int PY = 18;
+    const int PY = 17;
     const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, 44, sc, 2, scope, WH, row(0));
     const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, 44 + PY, rt, 3, s.ratio, WH, row(1));
     const char * sh[] = { "sharp", "nearest" }; choices(c, 344, 44 + 2 * PY, sh, 2, s.shader == 2 ? 1 : 0, WH, row(2));
@@ -18,6 +18,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     { const char * wm[] = { "x1", "x2", "x3", "x4", "x5", phr_("사용자 지정") }; unsigned dmk = 0; for (int i = 0; i < WMN; i++) if (i + 1 > wmax) dmk |= 1u << i;
       choicesd(c, 344, 44 + 8 * PY, wm, 6, wmult ? wmult - 1 : 5, WH, dmk); }
     { const char * fsc[] = { phr_("창 모드"), phr_("전체화면") }; choices(c, 344, 44 + 9 * PY, fsc, 2, fs_now ? 1 : 0, WH, row(9)); }   /* t52i (B3) */
+    { const char * fp[] = { "OFF", "ON" }; choices(c, 344, 44 + 10 * PY, fp, 2, s.fpsd ? 1 : 0, WH, row(10)); }
     rbox(c, 16, 240, 608, 82, WH, phr_("미리보기"));
     thumb(c, game(), 40, 258, 96, 60);
     const UiGame * gm = game();
@@ -27,7 +28,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
     static std::string wd; wd = wb;
     static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("화면 비율: 4:3 은 원래 비율, 정수배는 또렷한 배율."), phr_("필터: sharp 는 또렷하게, nearest 는 원본 그대로. 효과는 어느 필터에나 얹습니다."), phr_("주사선: 가로줄 무늬의 진하기 (끔 ~ 100%)."), phr_("마스크: 화소 배열 무늬의 진하기 (끔 ~ 100%)."), phr_("RGB 번짐: 색 어긋남과 가로 번짐 (가장자리일수록 큼, 끔 ~ 100%)."), phr_("빛 번짐: 밝은 곳 주변으로 빛이 퍼짐 (끔 ~ 100%)."), phr_("곡면: 화면 가장자리를 둥글게 보이게 합니다.") };
-    desc(c, 324, 44, { fit(sel < 8 ? std::string(dd[sel]) : sel == 9 ? std::string(phr_("전체화면: 창과 전체화면을 오갑니다. Alt+Enter 로도 됩니다.")) : wd, 560) });
+    desc(c, 324, 44, { fit(sel < 8 ? std::string(dd[sel]) : sel == 10 ? std::string("FPS / Speed: show frame rate and speed. Alt+F or pad SELECT+R1 in game.") : sel == 9 ? std::string(phr_("전체화면: 창과 전체화면을 오갑니다. Alt+Enter 로도 됩니다.")) : wd, 560) });
     helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
 }
 inline Act Ui::k_screen_conf(UKey k, Act & a) {
@@ -35,8 +36,9 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
         if (scr == S_CONF && sel == 13 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT)) { int dl = (k == UK_LEFT) ? -1 : 1; lang = (lang + dl + 3) % 3; phr_set_lang(lang); lang_chg = true; dirty = true; break; }   /* t52g (#133): 언어 — 문구 칸이 제자리에서 바뀌어 바로 보인다 */
         if (scr == S_CONF && sel >= 11 && sel <= 12 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT || k == UK_TRI)) { if (k == UK_OK) open_font(sel - 11, S_CONF); break; }   /* t52f: 글꼴 행이 11·12 로 한 칸씩 내려감 */
         if (scr == S_CONF && sel == 4 && (k == UK_OK || k == UK_LEFT || k == UK_RIGHT)) { if (k == UK_OK) go(S_PAD, 0); break; }   /* t48e (#646) */
-        bool scr_s = scr == S_SCREEN; int nrow = scr_s ? 10 : 14;
+        bool scr_s = scr == S_SCREEN; int nrow = scr_s ? 11 : 14;
         if (scr_s && sel == 9 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { a.t = A_FULLSCR; return a; }   /* t52i (B3): 전체화면 줄 — 좌우·○ 로 바로 오간다 */
+        if (scr_s && sel == 10 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { Settings & fs = edit(); fs.fpsd = fs.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }
         Settings & s = (sel == 0) ? eff() : edit();
         if (k == UK_LEFT || k == UK_RIGHT) {
             int d = (k == UK_RIGHT) ? 1 : -1;
@@ -60,7 +62,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
                 a.t = A_APPLY;
             }
             dirty = true; (void)nrow;
-        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; e.ovbtn = def.ovbtn; } dirty = true; a.t = A_APPLY; }
+        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; e.fpsd = def.fpsd; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; e.ovbtn = def.ovbtn; } dirty = true; a.t = A_APPLY; }
         else if (k == UK_CANCEL) { if (!scr_s) { cb_has = false; a.t = A_APPLY; dirty = true; }   /* t52i: × = 뒤로. 값은 바뀐 순간부터 저장 대상 */ if (scr_s && backup_has) { eff() = backup; backup_has = false; a.t = A_APPLY; if (wmult != bk_wmult || winw != bk_winw || winh != bk_winh) { wmult = bk_wmult; winw = bk_winw; winh = bk_winh; a.t = A_WINMULT; a.arg = wmult; } } go(in_game ? S_GAME : S_MAIN, in_game ? (scr == S_SCREEN ? 4 : 5) : 0); if (!in_game) sel = 0; }
         else if (k == UK_OK) { backup_has = false; cb_has = false; dirty = true; a.t = A_APPLY; go(in_game ? S_GAME : S_MAIN, in_game ? (scr == S_SCREEN ? 4 : 5) : 0); }
         break; }

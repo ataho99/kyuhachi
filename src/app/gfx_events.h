@@ -23,6 +23,7 @@ void GFX_Events(void) {
                 else if (k == SDLK_F9) { if (gApp.boot_tick) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("HOTKEY load slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); } }
                 else if (k == SDLK_k) { if (!gApp.headless && gApp.use_gl && gApp.boot_tick) gh_kb_toggle(); }   /* t46x: Alt+K = 화면 키보드 켜고 끄기 */
                 else if (k == SDLK_p) { if (gApp.boot_tick) gh_bk_pause_set(!gApp.bk_paused, "Alt+P"); }   /* t47a: Alt+P = 자동 입력 일시정지/재개 */
+                else if (k == SDLK_f) gh_fps_toggle();   /* Alt+F = FPS / speed display */
                 else if (k == SDLK_LEFTBRACKET || k == SDLK_RIGHTBRACKET) gh_wm_hotkey(e);
                 else hit = false;
                 if (hit) continue;

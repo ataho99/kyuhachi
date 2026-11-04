@@ -28,9 +28,20 @@ static bool gh_font_init(const std::string & exedir) {
     ov::font_load_mem(emb_font_sb, emb_font_sb_n, emb_font_db, emb_font_db_n); gApp.builtin_res_font = true;
     gh_osd(phr_("글꼴 파일이 없어 내장 글꼴로 실행합니다 (run\\res\\fonts · run\\res\\shaders 폴더를 확인하세요)"), 12000); return ov::g_font_ok;
 }
+static void gh_fps_draw(ov::Canvas & oc) {   /* FPS / speed display: frames per second of the host + emulated-time / wall-time ratio, refreshed once a second */
+    static Uint32 t0 = 0; static unsigned long long f0 = 0; static unsigned p0 = 0; static char buf[48] = "FPS --";
+    Uint32 now = SDL_GetTicks(); unsigned long long f = (unsigned long long)gApp.frames; unsigned p = (unsigned)PIC_Ticks;
+    if (t0 == 0 || now - t0 >= 1000u) { if (t0 != 0) { double dt = (double)(now - t0); snprintf(buf, sizeof buf, "FPS %.1f | SPEED %d%%", (double)(f - f0) * 1000.0 / dt, (int)((double)(p - p0) * 100.0 / dt + 0.5)); } t0 = now; f0 = f; p0 = p; }
+    ov::osd_draw(oc, buf, false, 8);
+}
+static void gh_fps_toggle(void) {
+    int v = gApp.fps_on ? 0 : 1; gApp.fps_on = v != 0; gApp.ui_.g.fpsd = v;
+    if (gApp.cur_game >= 0 && gApp.cur_game < (int)ui::Ui::MAXG && gApp.ui_.has_t[gApp.cur_game]) gApp.ui_.t[gApp.cur_game].fpsd = v;
+    gApp.ui_.dirty = true; gh_osd(v ? "FPS ON" : "FPS OFF");
+}
 static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bool other_on) {   /* 오른쪽 위: 배속 중 계속 표시 + 그 밑에 다른 안내 */
     int y = 8; if (gApp.boost_on && gApp.bosd_on) { ov::osd_draw(oc, "▶▶ x" + std::to_string(gApp.boost_xv), true, 8); y = 38; }
-    if (other_on) { ov::osd_draw(oc, other_osd, true, y); y += 30; } if (!gApp.bk_osd.empty()) ov::osd_draw(oc, gApp.bk_osd, true, y);   /* t47a: 자동 입력 단계 줄 */
+    if (other_on) { ov::osd_draw(oc, other_osd, true, y); y += 30; } if (!gApp.bk_osd.empty()) ov::osd_draw(oc, gApp.bk_osd, true, y); if (gApp.fps_on) gh_fps_draw(oc);   /* t47a: 자동 입력 단계 줄 */
 }
 /* ---- t46x: 화면 키보드 오버레이 (경로 B) — 키 표(플랫폼 무관) + 상태·그리기. SDL 입력층은 gh_kbd_event 한 함수(아래 글루). */
 #include "input/kh_kbtable.h"

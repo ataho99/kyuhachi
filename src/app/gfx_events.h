@@ -144,7 +144,7 @@ void GFX_Events(void) {
             static unsigned int next_shot = 0;
             if (next_shot < gApp.shots_ms.size() && since >= gApp.shots_ms[next_shot]) { gh_dump_shot(gApp.shots_ms[next_shot]); next_shot++; }
             { static bool n88 = false; if (!n88 && (unsigned)SegValue(cs) == 0xE800u && (reg_eip & 0xffffu) < 0x10u) { n88 = true;   /* t43k (#334 A2): N88-BASIC ROM 진입 = PC 판 미지원 — 안내 후 정상 종료 */
-                gh_log("N88: E800:%04x 도달 (t=%u) — 이 작품은 N88-BASIC 필요: PC 판 미지원(노바 np2kai 경로 예정)", (unsigned)(reg_eip & 0xffffu), since); if (!gApp.headless) { plat::msgbox_utf8(phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), 0, 256); } GH_QUITSET(); } }
+                gh_log("N88: reached E800:%04x (t=%u) - this title needs N88-BASIC: not supported on PC (Nova np2kai path planned)", (unsigned)(reg_eip & 0xffffu), since); if (!gApp.headless) { plat::msgbox_utf8(phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), 0, 256); } GH_QUITSET(); } }
             static unsigned int last_stat = 0;
             if (gApp.dumpcode && since / 2000 != last_stat && since > 12000) {
                 PhysPt base = SegPhys(cs) + (reg_eip & (cpu.code.big ? 0xffffffffu : 0xffffu)); char hx[256]; int n = 0;

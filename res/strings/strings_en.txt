@@ -669,3 +669,7 @@ res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요=Put anex86-format fo
 파일이 없습니다=file not found
 열 권한이 없습니다=no permission to open
 열지 못했습니다=could not open
+작품·따름=Game·Follow
+작품·전용=Game·Own
+소리 버퍼 (다음 시작부터)=Sound buffer (from next start)
+games 폴더 안에 게임 폴더(.fdi .hdi .d88 등)를 넣고 앱에서 「다시 검색」을 누르세요.\nfonts 폴더에는 글꼴 BMP 를 넣으세요.\n=Put game folders (.fdi .hdi .d88 etc.) inside the games folder, then press "Rescan" in the app.\nPut font BMP files in the fonts folder.\n

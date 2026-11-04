@@ -150,7 +150,7 @@ static HelpLogFn g_help_logfn = NULL;
 static std::string help_rep(std::string s, const std::string & from, const std::string & to) { size_t p = 0; while ((p = s.find(from, p)) != std::string::npos) { s.replace(p, from.size(), to); p += to.size(); } return s; }
 #if defined(__ANDROID__)
 #define KH_SCR_ROWS 9
-#define KH_SNDLABEL "소리 버퍼 (다음 시작부터)"
+#define KH_SNDLABEL phr_("소리 버퍼 (다음 시작부터)")
 static int g_lblcfg = 0;   /* t137: 패드 라벨 방식 0 자동 1 retro 2 xbox */
 static int g_sndbuf = 1;   /* t137: 소리 버퍼 단계 0..3 */
 static void (*g_kha_save)(void) = 0;

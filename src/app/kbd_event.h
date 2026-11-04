@@ -104,7 +104,7 @@ static bool gh_kbd_event(const SDL_Event & e) {
     int btn = (e.type == SDL_MOUSEMOTION || fin) ? SDL_BUTTON_LEFT : e.button.button;
     if (btn != SDL_BUTTON_LEFT) { bool in = kbov::in_ui(vx, vy); if (in && ph != 2) { gApp.kb_cons++; return true; } return false; }
     bool c = kbov::pointer(0, ph, vx, vy);
-    if (fin) { if (ph == 0) fown = c; static int fl = 0; if (ph == 0 && fl < 40) { fl++; gh_log("KHA ov 손가락 x=%d y=%d v=(%d,%d) relmouse=%d → %s (%d/40)", mx, my, vx, vy, (int)gApp.relmouse, c ? "오버레이" : "통과", fl); } if (ph == 1) fown = fown && c; }
+    if (fin) { if (ph == 0) fown = c; static int fl = 0; if (ph == 0 && fl < 40) { fl++; gh_log("KHA ov finger x=%d y=%d v=(%d,%d) relmouse=%d -> %s (%d/40)", mx, my, vx, vy, (int)gApp.relmouse, c ? "overlay" : "passthrough", fl); } if (ph == 1) fown = fown && c; }
     if (ph != 2) { if (c) gApp.kb_cons++; else gApp.kb_pass++; }
     return c;
 }

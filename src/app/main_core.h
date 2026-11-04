@@ -47,7 +47,7 @@ static void gh_main_conf() {
             if (snd.find("rhythm") != std::string::npos || snd.find("2608") != std::string::npos || snd.find("86") != std::string::npos) {
                 std::string rd = gApp.exedir + "\\res\\rhythm"; int n = 0; static const char * const rn[6] = { "bd", "sd", "top", "hh", "tom", "rim" };
                 for (int i = 0; i < 6; i++) if (plat::exists((rd + "\\2608_" + rn[i] + ".wav").c_str())) n++;
-                if (n > 0) { SetCurrentDirectoryA(rd.c_str()); gh_log("리듬 WAV %d/6 개: %s (현재 폴더로 지정)%s", n, rd.c_str(), n < 6 ? " — 일부 없음" : ""); }
+                if (n > 0) { plat::set_cwd(rd); gh_log("리듬 WAV %d/6 개: %s (현재 폴더로 지정)%s", n, rd.c_str(), n < 6 ? " — 일부 없음" : ""); }
                 else { gh_log("리듬음 파일 없음 — 넣는 곳: %s (sound=%s)", rd.c_str(), snd.c_str()); if (gApp.osd.empty()) { gApp.osd = phr_("리듬음 파일 없음 — 넣는 곳: run\\res\\rhythm\\"); gApp.osd_until = SDL_GetTicks() + 10000; } }
             }
         }

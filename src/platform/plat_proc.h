@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -24,6 +26,15 @@ inline bool spawn(const std::string & exe, const std::string & cmdline, const st
     if (CreateProcessA(exe.c_str(), cb.data(), NULL, NULL, FALSE, 0, NULL, workdir.c_str(), &si, &pi)) { CloseHandle(pi.hProcess); CloseHandle(pi.hThread); return true; }
     if (err) *err = (unsigned long)GetLastError(); return false;
 }
+/* S9e-N 5: process helpers moved out of app code (same calls, same results) */
+inline void putenv_a(const char * s) { _putenv(s); }
+inline unsigned long long working_set_bytes() {   /* K32GetProcessMemoryInfo looked up at run time, no psapi link */
+    struct PMC { DWORD cb, PageFaultCount; SIZE_T PeakWorkingSetSize, WorkingSetSize, QuotaPeakPagedPoolUsage, QuotaPagedPoolUsage, QuotaPeakNonPagedPoolUsage, QuotaNonPagedPoolUsage, PagefileUsage, PeakPagefileUsage; };
+    typedef BOOL (WINAPI * Fn)(HANDLE, PMC *, DWORD); static Fn fn = (Fn)GetProcAddress(GetModuleHandleA("kernel32.dll"), "K32GetProcessMemoryInfo");
+    PMC m; memset(&m, 0, sizeof m); m.cb = sizeof m; if (fn && fn(GetCurrentProcess(), &m, sizeof m)) return (unsigned long long)m.WorkingSetSize; return 0ull;
+}
+inline unsigned long process_id() { return (unsigned long)GetCurrentProcessId(); }
+inline unsigned long handle_count() { DWORD hc = 0; GetProcessHandleCount(GetCurrentProcess(), &hc); return (unsigned long)hc; }
 }
 #else
 #include <unistd.h>
@@ -36,5 +47,13 @@ inline bool beside_exe_u8(const wchar_t * name, std::string & out) {
     out = p; return true;
 }
 inline bool spawn(const std::string &, const std::string &, const std::string &, unsigned long * err) { if (err) *err = 38; return false; }   /* ENOSYS: no second process on this platform */
+/* S9e-N 5: POSIX bodies of the process helpers */
+inline void putenv_a(const char * s) { putenv(strdup(s)); }
+inline unsigned long long working_set_bytes() {
+    FILE * f = fopen("/proc/self/statm", "r"); if (!f) return 0ull;
+    unsigned long long a = 0, r = 0; int n = fscanf(f, "%llu %llu", &a, &r); fclose(f); return n == 2 ? r * 4096ull : 0ull;
+}
+inline unsigned long process_id() { return (unsigned long)getpid(); }
+inline unsigned long handle_count() { return 0ul; }
 }
 #endif

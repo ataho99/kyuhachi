@@ -126,13 +126,11 @@ static bool gh_prof_isdos(const GProfile & p) {
     return dosfd || (p.disk[0] == NULL && p.disk[1] == NULL && p.disk[2] == NULL && p.disk[3] == NULL && !p.cd.empty());
 }
 static unsigned long long gh_mem_ws(void) {   /* 작업 집합(바이트). psapi 링크 없이 kernel32 의 K32GetProcessMemoryInfo 를 찾아 쓴다 */
-    struct PMC { DWORD cb, PageFaultCount; SIZE_T PeakWorkingSetSize, WorkingSetSize, QuotaPeakPagedPoolUsage, QuotaPagedPoolUsage, QuotaPeakNonPagedPoolUsage, QuotaNonPagedPoolUsage, PagefileUsage, PeakPagefileUsage; };
-    typedef BOOL (WINAPI * Fn)(HANDLE, PMC *, DWORD); static Fn fn = (Fn)GetProcAddress(GetModuleHandleA("kernel32.dll"), "K32GetProcessMemoryInfo");
-    PMC m; memset(&m, 0, sizeof m); m.cb = sizeof m; if (fn && fn(GetCurrentProcess(), &m, sizeof m)) return (unsigned long long)m.WorkingSetSize; return 0ull;
+    return plat::working_set_bytes();
 }
 static void gh_inwin_stat(const char * tag) {   /* 시험 판정용: 프로세스 ID · 창 핸들 · 핸들 수 · 메모리 · 창 크기/전체화면/맞춤/셰이더/배속/패드 */
-    DWORD hc = 0; GetProcessHandleCount(GetCurrentProcess(), &hc); int ww = 0, wh = 0; unsigned fl = 0; if (gApp.win) { SDL_GetWindowSize(gApp.win, &ww, &wh); fl = SDL_GetWindowFlags(gApp.win); }
-    gh_log("INWIN %s pid=%lu win=%p glctx=%p handles=%lu ws=%lluKB boot_n=%d inwin_n=%d size=%dx%d fs=%d fit=%d shader=%d boost=%d joys=%d fb=%dx%d", tag, (unsigned long)GetCurrentProcessId(), (void *)gApp.win, (void *)gApp.glctx, (unsigned long)hc, gh_mem_ws() / 1024ull, gApp.boot_n, gApp.inwin_n, ww, wh, (fl & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP ? 1 : 0, (int)gApp.fit, (int)gApp.shader, (int)gApp.boost_on, SDL_NumJoysticks(), gApp.fbw, gApp.fbh);
+    unsigned long hc = plat::handle_count(); int ww = 0, wh = 0; unsigned fl = 0; if (gApp.win) { SDL_GetWindowSize(gApp.win, &ww, &wh); fl = SDL_GetWindowFlags(gApp.win); }
+    gh_log("INWIN %s pid=%lu win=%p glctx=%p handles=%lu ws=%lluKB boot_n=%d inwin_n=%d size=%dx%d fs=%d fit=%d shader=%d boost=%d joys=%d fb=%dx%d", tag, (unsigned long)plat::process_id(), (void *)gApp.win, (void *)gApp.glctx, (unsigned long)hc, gh_mem_ws() / 1024ull, gApp.boot_n, gApp.inwin_n, ww, wh, (fl & SDL_WINDOW_FULLSCREEN_DESKTOP) == SDL_WINDOW_FULLSCREEN_DESKTOP ? 1 : 0, (int)gApp.fit, (int)gApp.shader, (int)gApp.boost_on, SDL_NumJoysticks(), gApp.fbw, gApp.fbh);
 }
 static bool gh_inwin_loading(unsigned ms) {   /* 검은 화면 + 「불러오는 중」 한 줄. true = 도중에 창 닫기 요청 */
     if (gApp.headless || !gApp.use_gl) return false;

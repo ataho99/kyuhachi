@@ -100,6 +100,7 @@ struct Reader {
 };
 
 /* t53a/F5 도우미. Win32 는 헤더 충돌을 피하려고 직접 선언(kernel32). 좁은 문자열 API 는 fopen 과 같은 규약이라 경로 해석이 일치한다. */
+#if defined(_WIN32)
 extern "C" {
 __declspec(dllimport) int __stdcall CopyFileA(const char *, const char *, int);
 __declspec(dllimport) int __stdcall MoveFileExA(const char *, const char *, unsigned long);
@@ -107,6 +108,7 @@ __declspec(dllimport) int __stdcall DeleteFileA(const char *);
 int __cdecl _commit(int);
 int __cdecl _fileno(FILE *);
 }
+#endif
 
 bool ReadWhole(const char *path, std::vector<uint8_t> &img) {
     FILE *f = fopen(path, "rb");
@@ -271,6 +273,12 @@ bool PC98_SaveState_FromMemory(const std::vector<uint8_t> &in, const std::vector
 bool PC98_SaveState_ToFile(const char *path, const std::vector<Pc98StateDisk> &disks, std::string &err, const std::vector<uint8_t> *thumb) {
     std::vector<uint8_t> img;
     if (!BuildImage(img, disks, thumb)) { err = "build failed"; return false; }
+#if !defined(_WIN32)
+    /* Non-Windows build (Android): plain write; the host keeps its own backup logic. */
+    { FILE *pf = fopen(path, "wb"); if (!pf) { err = std::string("cannot open for write: ") + path; return false; }
+      size_t pn = fwrite(&img[0], 1, img.size(), pf); fclose(pf);
+      if (pn != img.size()) { err = "short write"; return false; } return true; }
+#else
     /* t53a/F5: 임시 파일에 쓰고 검증한 뒤 교체. 기존 파일은 지우지 않고 .bak(읽을 수 있던 것) / .unreadable(못 읽던 것)로 보존. */
     const std::string spath(path), tmp = spath + ".tmp";
     const char *stop = getenv("GENSEI_SS_TEST_STOP");   /* 시험 전용: "tmp"=임시 파일 검증 뒤, "bak"=백업 뒤 정지(강제 종료 흉내). 기본 미설정 */
@@ -303,6 +311,7 @@ bool PC98_SaveState_ToFile(const char *path, const std::vector<Pc98StateDisk> &d
     if (!MoveFileExA(tmp.c_str(), spath.c_str(), 1 /*REPLACE_EXISTING*/ | 8 /*WRITE_THROUGH*/)) { DeleteFileA(tmp.c_str()); err = "cannot replace save file"; return false; }
     LOG_MSG("PC98_SaveState: wrote %u bytes to %s", (unsigned)img.size(), path);
     return true;
+#endif
 }
 
 bool PC98_SaveState_FromFile(const char *path, const std::vector<Pc98StateDisk> &disks, std::string &err) {

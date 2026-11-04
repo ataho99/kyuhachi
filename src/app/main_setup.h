@@ -9,6 +9,14 @@ static void gh_android_savedir(void) {
     if (ok) gApp.savedir = sd;
 }
 #endif
+#if defined(__ANDROID__)
+/* t58a: diag - can the app list <exedir>\res\fonts ? (font guard uses a directory listing) */
+static void gh_android_fontdiag(void) {
+    std::string fd = gApp.exedir + "\\res\\fonts"; DIR * d = opendir(fd.c_str()); int en = errno; int n = 0;
+    if (d) { while (readdir(d)) n++; closedir(d); }
+    gh_log("FONTDIR opendir=%s errno=%d entries=%d", d ? "ok" : "fail", d ? 0 : en, n);
+}
+#endif
 static void gh_main_input_init(std::string & id) {
     gh_crash_install();
     kh_db_dir = gApp.exedir;   /* t48e (#651 2): <exe>\res\gamecontrollerdb.txt */
@@ -20,6 +28,7 @@ static void gh_main_input_init(std::string & id) {
     ui::settings_load(gApp.ui_, gApp.cfgpath);
 #if defined(__ANDROID__)
     gh_android_savedir();
+    gh_android_fontdiag();
 #endif
     if (gApp.cli_lang >= 0 && gApp.cli_lang <= 2) gApp.ui_.lang = gApp.cli_lang;   /* t52g 시험: --lang N */
     phr_set_lang(gApp.ui_.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", gApp.ui_.lang, phr_loaded_count, phr_("게임 시작"));

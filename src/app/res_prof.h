@@ -60,12 +60,12 @@ static bool gh_any_font_bmp(std::string * which) {
     std::string dir = gApp.exedir + "\\res\\fonts\\"; bool found = false;
     plat::find_a(dir + "*.bmp", [&](const plat::DirEnt & e) { if (!e.is_dir && e.size_hi == 0 && e.size_lo == 524350u) { if (which) *which = dir + e.name; found = true; return false; } return true; });
     if (found) return true;
-    { static const char * const nm[2] = { "\\kyuhachi_font.bmp", "\\pc98player_font.bmp" };   /* t52g: 새 이름 먼저, 옛 이름도 읽는다 */
-      for (int q = 0; q < 2; q++) { std::string b = gApp.exedir + nm[q]; if (gh_font_bmp_ok(b)) { if (which) *which = b; return true; } } }
+    { static const char * const nm[4] = { "\\res\\fonts\\kyuhachi_font.bmp", "\\res\\fonts\\pc98player_font.bmp", "\\kyuhachi_font.bmp", "\\pc98player_font.bmp" };   /* t52g: 새 이름 먼저, 옛 이름도 읽는다 · t79: 폴더 목록이 막힌 곳(안드로이드 errno=13)에서도 이름으로 직접 확인 */
+      for (int q = 0; q < 4; q++) { std::string b = gApp.exedir + nm[q]; if (gh_font_bmp_ok(b)) { if (which) *which = b; return true; } } }
     return false;
 }
 static std::string gh_default_font_path(void) { std::string p = gh_res_font_path("kyuhachi_font"); if (gh_font_bmp_ok(p)) return p; std::string p0 = gh_res_font_path("pc98player_font"); if (gh_font_bmp_ok(p0)) return p0; std::string f; if (gh_any_font_bmp(&f)) return f; return p; }   /* t52g: 새 이름 → 옛 이름 → 아무 글꼴 */
-static bool gh_font_guard(void) { if (gh_any_font_bmp(NULL)) return true; gApp.note = phr_("res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요"); gApp.note_until = SDL_GetTicks() + 5000u; return false; }
+static bool gh_font_guard(void) { if (gh_any_font_bmp(NULL)) return true; gh_log("ERROR: 글꼴 BMP 없음 -> 시작 막음 (%s\\res\\fonts)", gApp.exedir.c_str()); gApp.note = phr_("res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요"); gApp.note_until = SDL_GetTicks() + 8000u; gh_osd(phr_("글꼴 BMP(kyuhachi_font.bmp)가 없어 시작할 수 없습니다 — res/fonts 에 넣어 주세요"), 8000); return false; }
 static std::string gh_sha1_buf(const std::vector<uint8_t> & b) { prof::Sha1 s; if (!b.empty()) s.add(&b[0], b.size()); return s.hex(); }
 static bool gh_read_all(const std::string & p, std::vector<uint8_t> & out) {
     FILE * f = fopen(p.c_str(), "rb"); if (!f) return false; fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET); if (n < 0) { fclose(f); return false; }
@@ -204,7 +204,7 @@ static bool gh_profile(const std::string & id, GProfile & p, bool quick = false)
     std::vector<std::string> files, subs; gh_list_dir(dir, files, &subs);
     prof::Ini gi; bool have_ini = prof::ini_load(dir + "\\game.ini", gi) && gi.count("game");
     std::string imgdir = dir;
-    if (have_ini && gi["game"].count("imgdir")) { std::string r = aw::sys_from_ini(gi["game"]["imgdir"]); imgdir =(r.size() > 1 && r[1] == ':') ? r : gApp.exedir + "\\" + r; files.clear(); gh_list_dir(imgdir, files, NULL); }
+    if (have_ini && gi["game"].count("imgdir")) { std::string r = aw::sys_from_ini(gi["game"]["imgdir"]); imgdir =(r.size() > 1 && (r[1] == ':' || r[0] == '/')) ? r : gApp.exedir + "\\" + r; files.clear(); gh_list_dir(imgdir, files, NULL); }
     if (!have_ini && files.empty()) { gh_log("profile '%s': 폴더 없음/비어 있음 (%s)", id.c_str(), dir.c_str()); return false; }
     std::vector<prof::ImgInfo> imgs;
     for (auto & f : files) {

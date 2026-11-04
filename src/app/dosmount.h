@@ -12,6 +12,7 @@ static std::string gh_base_u8(const std::string & p) {
 
 /* paths = host files (first = drive image, the rest = swap list). On failure nothing stays mounted; why = file name for the user. */
 static bool gh_mount_floppy(char drive, const std::vector<std::string> & paths, std::string & why) {
+    drive = (char)toupper((unsigned char)drive);   /* callers pass autoexec-style lower case */
     if (paths.empty()) { why = "no image"; return false; }
     if (drive < 'A' || drive > 'Z') { why = "bad drive letter"; return false; }
     if (Drives[drive - 'A']) { why = std::string("drive already mounted: ") + drive; gh_log("ERROR: %s", why.c_str()); return false; }

@@ -159,7 +159,6 @@ void MAPPER_AddHandler(MAPPER_Handler *, MapKeys, Bitu, char const * const event
 }
 
 #include "app/boot.h"   /* S9a */
-#include "app/dosmount.h"   /* #451 step 2 */
 #include "app/state_io.h"   /* S9a */
 #include "app/kbd_event.h"   /* S9b */
 #include "app/ui_env.h"   /* S9b */

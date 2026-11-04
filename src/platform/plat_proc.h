@@ -25,4 +25,16 @@ inline bool spawn(const std::string & exe, const std::string & cmdline, const st
     if (err) *err = (unsigned long)GetLastError(); return false;
 }
 }
+#else
+#include <unistd.h>
+namespace plat {
+/* S9e-N 4: POSIX bodies. On Android /proc/self/exe is the zygote helper; the Android main sets the app folder itself. */
+inline std::string exe_path() { char b[4096]; ssize_t n = readlink("/proc/self/exe", b, sizeof b - 1); if (n <= 0) return std::string(); return std::string(b, (size_t)n); }
+inline bool beside_exe_u8(const wchar_t * name, std::string & out) {
+    std::string p = exe_path(); if (p.empty()) return false; size_t sl = p.find_last_of('/'); p = (sl == std::string::npos) ? std::string() : p.substr(0, sl + 1);
+    for (const wchar_t * w = name; *w; ++w) { if (*w >= 0x80) return false; p.push_back((char)*w); }
+    out = p; return true;
+}
+inline bool spawn(const std::string &, const std::string &, const std::string &, unsigned long * err) { if (err) *err = 38; return false; }   /* ENOSYS: no second process on this platform */
+}
 #endif

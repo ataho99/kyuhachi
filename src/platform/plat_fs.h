@@ -10,6 +10,7 @@
 #if !defined(_WIN32)
 #include <dirent.h>
 #include <unistd.h>
+#include <fnmatch.h>
 #endif
 #if defined(_WIN32) && defined(PLAT_NARROW)
 /* PLAT_NARROW: windows.h 를 끌어오지 않는 번역 단위(pc98_savestate.cpp, DOSBox 헤더와 충돌 회피)용 — kernel32 를 직접 선언. 좁은 문자열 API 라 fopen 과 경로 규약이 같다. */
@@ -100,6 +101,44 @@ inline void list_dir_acp(const std::string & dir, std::vector<std::string> & fil
     DIR * d = opendir(dir.c_str()); if (!d) return; struct dirent * e;
     while ((e = readdir(d))) { std::string n = e->d_name; if (n == "." || n == "..") continue; struct stat st; if (stat((dir + "/" + n).c_str(), &st) != 0) continue; if (S_ISDIR(st.st_mode)) { if (subs) subs->push_back(n); } else files.push_back(n); }
     closedir(d);
+}
+/* S9e-N 4: POSIX bodies of the calls the app layer makes. Same names, same results as the Windows bodies above. */
+inline bool exists(const std::string & p) { struct stat st; return stat(p.c_str(), &st) == 0; }
+inline bool exists(const char * p) { struct stat st; return stat(p, &st) == 0; }
+inline void mkdir(const std::string & p) { ::mkdir(p.c_str(), 0755); }
+inline bool remove_file(const std::string & p) { return unlink(p.c_str()) == 0; }
+inline bool remove_dir(const std::string & p) { return rmdir(p.c_str()) == 0; }
+inline bool move_file(const std::string & a, const std::string & b) { return rename(a.c_str(), b.c_str()) == 0; }
+inline bool replace_file(const std::string & tmp, const std::string & dst) { return rename(tmp.c_str(), dst.c_str()) == 0; }
+inline bool set_cwd(const std::string & p) { return chdir(p.c_str()) == 0; }
+inline bool copy_file(const std::string & a, const std::string & b, bool fail_if_exists) {
+    if (fail_if_exists && exists(b)) return false;
+    FILE * in = fopen(a.c_str(), "rb"); if (!in) return false; FILE * out = fopen(b.c_str(), "wb"); if (!out) { fclose(in); return false; }
+    char buf[65536]; size_t n; bool ok = true; while ((n = fread(buf, 1, sizeof buf, in)) > 0) if (fwrite(buf, 1, n, out) != n) { ok = false; break; }
+    fclose(in); if (fclose(out) != 0) ok = false; return ok;
+}
+inline bool stat_file(const std::string & p, FileInfo & fi) {
+    struct stat st; if (stat(p.c_str(), &st) != 0) return false;
+    fi.size_hi = (uint32_t)((uint64_t)st.st_size >> 32); fi.size_lo = (uint32_t)((uint64_t)st.st_size & 0xFFFFFFFFu); fi.is_dir = S_ISDIR(st.st_mode) != 0;
+    fi.mtime_ft = ((uint64_t)st.st_mtime + 11644473600ULL) * 10000000ULL; return true;
+}
+/* pattern = "dir/*" , "dir/*.ext" or one file (Windows FindFirstFile rules; "*.*" matches every name) */
+inline bool find_a(const std::string & pattern, const std::function<bool(const DirEnt &)> & cb) {
+    size_t sl = pattern.find_last_of("\\/"); std::string dir = (sl == std::string::npos) ? std::string(".") : pattern.substr(0, sl); std::string pat = (sl == std::string::npos) ? pattern : pattern.substr(sl + 1);
+    if (dir.empty()) dir = "/";
+    if (pat == "*.*") pat = "*";
+    if (pat.find_first_of("*?") == std::string::npos) {
+        struct stat st; if (stat(pattern.c_str(), &st) != 0) return false;
+        DirEnt e; e.name = pat; e.is_dir = S_ISDIR(st.st_mode) != 0; e.size_hi = (uint32_t)((uint64_t)st.st_size >> 32); e.size_lo = (uint32_t)((uint64_t)st.st_size & 0xFFFFFFFFu); cb(e); return true;
+    }
+    DIR * d = opendir(dir.c_str()); if (!d) return false; struct dirent * de;
+    while ((de = readdir(d))) {
+        if (fnmatch(pat.c_str(), de->d_name, 0) != 0) continue;
+        struct stat st; if (stat((dir + "/" + de->d_name).c_str(), &st) != 0) continue;
+        DirEnt e; e.name = de->d_name; e.is_dir = S_ISDIR(st.st_mode) != 0; e.size_hi = (uint32_t)((uint64_t)st.st_size >> 32); e.size_lo = (uint32_t)((uint64_t)st.st_size & 0xFFFFFFFFu);
+        if (!cb(e)) break;
+    }
+    closedir(d); return true;
 }
 #endif
 #if defined(_WIN32)

@@ -4,6 +4,9 @@
 #include <vector>
 #include <stdint.h>
 #include <stdio.h>
+#if !defined(_WIN32)
+#include <iconv.h>
+#endif
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -63,5 +66,34 @@ inline void msgbox_utf8(const char * text, int icon, int cap) {
 #else
 inline std::string acp_to_u8(const std::string & s) { return s; }
 inline std::string u8_to_acp(const std::string & s) { return s; }
+/* S9e-N 4: POSIX bodies (text is UTF-8 here, so the system string equals UTF-8) */
+inline bool utf8_to_wide(const std::string & u, std::wstring & w) {
+    w.clear(); size_t i = 0;
+    while (i < u.size()) {
+        unsigned c = (uint8_t)u[i]; int n = c < 0x80 ? 1 : (c >> 5) == 6 ? 2 : (c >> 4) == 14 ? 3 : (c >> 3) == 30 ? 4 : 0;
+        if (!n || i + (size_t)n > u.size()) return false;
+        uint32_t cp = n == 1 ? c : (c & (0xFFu >> (n + 1))); for (int k = 1; k < n; k++) cp = (cp << 6) | ((uint8_t)u[i + k] & 0x3Fu);
+        w.push_back((wchar_t)cp); i += (size_t)n;
+    }
+    return true;
+}
+inline bool acp_bytes_to_u8(const char * s, int n, std::string & out) { if (n <= 0) return false; out.assign(s, (size_t)n); return true; }
+inline bool wide_to_utf8(const wchar_t * w, std::string & u) {
+    u.clear(); for (; *w; ++w) { uint32_t c = (uint32_t)*w;
+        if (c < 0x80) u.push_back((char)c); else if (c < 0x800) { u.push_back((char)(0xC0 | (c >> 6))); u.push_back((char)(0x80 | (c & 0x3F))); }
+        else if (c < 0x10000) { u.push_back((char)(0xE0 | (c >> 12))); u.push_back((char)(0x80 | ((c >> 6) & 0x3F))); u.push_back((char)(0x80 | (c & 0x3F))); }
+        else { u.push_back((char)(0xF0 | (c >> 18))); u.push_back((char)(0x80 | ((c >> 12) & 0x3F))); u.push_back((char)(0x80 | ((c >> 6) & 0x3F))); u.push_back((char)(0x80 | (c & 0x3F))); } }
+    return true;
+}
+inline FILE * fopen_u8_rb(const std::string & utf8path) { return fopen(utf8path.c_str(), "rb"); }
+/* one character -> bytes of code page 932 / 949 via iconv (same contract as the Windows body: returns byte count, bad = replacement used) */
+inline int wchar_to_cp(unsigned codepage, wchar_t wc, char * mb, int cap, bool * bad) {
+    if (bad) *bad = true; const char * cs = codepage == 932 ? "CP932" : codepage == 949 ? "CP949" : NULL; if (!cs) return 0;
+    iconv_t ic = iconv_open(cs, "UTF-32LE"); if (ic == (iconv_t)-1) return 0;
+    uint32_t u = (uint32_t)wc; char * ip = (char *)&u; char * op = mb; size_t il = 4, ol = (size_t)cap;
+    size_t r = iconv(ic, &ip, &il, &op, &ol); iconv_close(ic); if (r == (size_t)-1 || il) return 0;
+    if (bad) *bad = false; return cap - (int)ol;
+}
+inline void msgbox_utf8(const char * text, int icon, int) { fprintf(stderr, "[%s] %s\n", icon ? "error" : "info", text); }
 #endif
 }

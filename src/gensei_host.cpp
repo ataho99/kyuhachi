@@ -165,6 +165,9 @@ void MAPPER_AddHandler(MAPPER_Handler *, MapKeys, Bitu, char const * const event
 #include "app/menu_boot.h"   /* S9b */
 #include "app/uitest.h"   /* S9b */
 #include "app/gfx_events.h"   /* S9b */
+#if defined(__ANDROID__)
+#include "app/folder_pick.h"   /* t55b */
+#endif
 #include "app/crash_inwin.h"   /* S9b */
 #include "app/main_front.h"   /* S9c */
 #include "app/main_setup.h"   /* S9c */

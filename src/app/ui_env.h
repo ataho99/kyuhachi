@@ -303,9 +303,16 @@ static bool gh_pick_files(std::vector<std::string> & out) {   /* 시스템(ANSI)
     if (parts.size() == 1) out.push_back(parts[0]); else { for (size_t i = 1; i < parts.size(); i++) out.push_back(aw::join(parts[0], parts[i])); }
     return !out.empty();
 }
+#if defined(__ANDROID__)
+static bool gh_folder_explorer(const char * title_u8, std::string & out);   /* app/folder_pick.h */
+#endif
 static bool gh_pick_folder(const char * title_u8, std::string & out) {
+#if defined(__ANDROID__)
+    return gh_folder_explorer(title_u8, out);
+#else
     std::string t = aw::u8_to_acp(title_u8);
     return plat::pick_folder_a(gh_hwnd(), t, out);
+#endif
 }
 static aw::Ctx gh_aw_ctx(void) {
     gh_db_load_once(); gh_nk_load_once(); aw::Ctx c; c.games_dir = gApp.exedir + "\\games"; c.on_dir = gh_res_on_work; c.db = &gApp.db; c.nk = gApp.nk_.loaded ? &gApp.nk_ : NULL; c.cache = &gApp.shacache; { std::vector<std::string> ml; int mv = aw::merge_dups(c, &ml); for (auto & l : ml) gh_log("%s", l.c_str()); if (mv) gh_log("중복 합침 %d건", mv); } aw::index_registered(c); return c;
@@ -334,11 +341,18 @@ static int gh_scan_gamefolder(const char * why) {
     gh_log("GAMEFOLDER %s: %d 후보, 추가 %d", why, (int)ws.size(), S.added);
     if (S.added > 0) gh_reload_games(); return S.added;
 }
+#if defined(__ANDROID__)
+static const char * fpt(int i);
+#endif
 static void gh_add_action(int arg) {
     ui::Ui & U = gApp.ui_;
     if (arg == 0) { std::vector<std::string> fs; if (!gh_pick_files(fs)) return; std::vector<aw::Work> ws; aw::from_files(fs, ws); aw::Summary S = gh_add_works(ws, phr_("파일 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
     else if (arg == 1) { std::string d; if (!gh_pick_folder(phr_("추가할 작품 폴더를 고르세요"), d)) return; std::vector<aw::Work> ws; aw::collect(d, 3, ws); aw::Summary S = gh_add_works(ws, phr_("폴더 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
-    else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, gApp.cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정")); }
+    else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, gApp.cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정"));
+#if defined(__ANDROID__)
+    if (U.games.size() == 1 && U.games[0].id.empty()) { U.add_log = { fpt(14), fpt(15) }; U.scr = ui::S_ADD; }   /* t55e: empty folder notice */
+#endif
+    }
     else if (arg == 3) { gh_scan_gamefolder(phr_("다시 검색")); if (!U.add_log.empty() && U.gamefolder.empty()) U.add_log.clear(); }
     else if (arg == 4) { U.gamefolder.clear(); ui::settings_save(U, gApp.cfgpath); U.add_log.clear(); U.add_log.push_back(phr_("게임 폴더를 해제했습니다 (등록된 작품은 그대로입니다)")); }
 }

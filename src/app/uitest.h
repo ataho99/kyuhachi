@@ -29,6 +29,10 @@ static bool gh_ui_main_(std::string & out_id) {
     gh_apply_settings(U.effective(U.cur), false);
     if (!gApp.noboot && U.g.boot == 0) { if (gh_boot_seq(true) && gApp.quit) return false; }
     static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 };
+#if defined(__ANDROID__)
+    gh_log("FIRSTRUN check games=%d gamefolder_empty=%d headless=%d", (int)U.games.size(), U.gamefolder.empty() ? 1 : 0, gApp.headless ? 1 : 0);
+    if ((U.games.empty() || (U.games.size() == 1 && U.games[0].id.empty())) && U.gamefolder.empty() && !gApp.headless) gh_add_action(2);   /* t55b: first run, no works registered -> pick the game folder */
+#endif
     gh_diag_enter(0);
     for (;;) {
         gh_inj_poll_menu();   /* t49a: 하니스 inject 를 메뉴 루프에서도 */

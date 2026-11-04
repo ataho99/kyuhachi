@@ -9,7 +9,7 @@ inline void Ui::d_pad(Canvas & c) {
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
     auto row = [&](int i) { return sel == i; };
     auto ry = [](int i) { return 44 + 24 * i; };
-    const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, ry(0), sc, 2, scope, WH, row(0));
+    const char * sc[] = { phr_("전역"), phr_("작품·따름"), phr_("작품·전용") }; choices(c, 344, ry(0), sc, 3, scope3(), WH, row(0));
     const char * ly[] = { phr_("일본식(동쪽)"), phr_("서양식(남쪽)") }; choices(c, 344, ry(1), ly, 2, s.pad == 1 ? 1 : 0, WH, row(1));
     for (int i = 0; i < 7; i++) {
         bool fw = false, df = false; std::string v = pad_val(i, &fw, &df); std::string t = pad_show(v);
@@ -27,7 +27,7 @@ inline void Ui::k_pad(UKey k, Act & a) {
             mv(sel, 9);
             if (k == UK_LEFT || k == UK_RIGHT) {
                 int d = (k == UK_RIGHT) ? 1 : -1;
-                if (sel == 0) { scope = clampi(scope + d, 0, 1); if (scope == 1 && !has_t[cur]) { t[cur] = effective(cur); has_t[cur] = true; } }
+                if (sel == 0) { scope_step(d); }
                 else if (sel == 1) { Settings & s = edit(); int nv = clampi(s.pad + d, 0, 1); if (nv != s.pad) { s.pad = nv; dirty = true; a.t = A_APPLY; } }
             } else if (k == UK_OK) {
                 if (sel >= 2) open_padkey(sel - 2);

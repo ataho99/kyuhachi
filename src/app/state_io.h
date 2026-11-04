@@ -71,6 +71,7 @@ static bool gh_do_load(const std::string & path) {
     gh_state_diag("after-load");
     gApp.next_key = (unsigned)gApp.prof_.keys.size();   /* 자동 키 중단: 저장 시점 이후는 상태 그대로 */
     gApp.pic0 = PIC_Ticks;
+    kha_ld_diag("load");
     return ok;
 }
 static std::string gh_slot_path(void) {

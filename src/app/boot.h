@@ -103,11 +103,11 @@ static bool gh_boot_dos_kernel() {
     DispatchVMEvent(VM_EVENT_DOS_INIT_AUTOEXEC_BAT_DONE);
     DispatchVMEvent(VM_EVENT_DOS_INIT_AT_PROMPT);
     gApp.boot_tick = SDL_GetTicks(); if (!gApp.boot_tick) gApp.boot_tick = 1; gApp.pic0 = PIC_Ticks;
-    if (!gApp.headless) gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
+    if (!gApp.headless) { int cg_ = gApp.cur_game; std::string o_; if (cg_ >= 0 && cg_ < (int)gApp.ui_.games.size()) for (auto & kv_ : gApp.ui_.games[cg_].ov) o_ += kv_.first + "=" + kv_.second + " "; gh_log("APPLYDIAG id=%s has_t=%d ov[%s] g.scan=%d glow=%d curve=%d", (cg_ >= 0 && cg_ < (int)gApp.ui_.games.size()) ? gApp.ui_.games[cg_].id.c_str() : "-", (int)(cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]), o_.c_str(), gApp.ui_.g.scan, gApp.ui_.g.glow, gApp.ui_.g.curve); } gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
     gh_log("DOS boot: 프롬프트 도달 — 셸 실행");
     SHELL_Run();
     gh_log("DOS boot: 셸 종료");
-    gApp.quit = true;
+    GH_QUITSET();
     return true;
 }
 
@@ -123,7 +123,7 @@ bool VM_Boot_DOSBox_Kernel() {
     /* t32: INT 18h 감싸기는 BIOS 리셋(포트 F0h, 약 2초) 뒤에 한다 — t31 은 리셋이 콜백 영역을 다시 써서 감싼 것이 사라졌다 */
     /* official DOSBox-X boots from inside its DOS kernel; the XMS driver has already taken all extended memory (BDA 0401h = 0), so games see no extended RAM */
     if (gApp.ext0) mem_writeb(0x401, 0x00);   /* t28: no longer needed - root cause was MOUSE_IRQ (t27); kept only as --ext0 test option */
-    if (di < 0 || di >= MAX_DISK_IMAGES || !imageDiskList[di]) { gh_log("ERROR: no image on boot drive"); gh_human(phr_("부팅할 디스크가 연결되어 있지 않습니다.\n작품 폴더 game.ini 의 disk_a / boot 줄을 확인해 주세요.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
+    if (di < 0 || di >= MAX_DISK_IMAGES || !imageDiskList[di]) { gh_log("ERROR: no image on boot drive"); gh_human(phr_("부팅할 디스크가 연결되어 있지 않습니다.\n작품 폴더 game.ini 의 disk_a / boot 줄을 확인해 주세요.")); gh_msgbox(gApp.errmsg.c_str()); GH_QUITSET(); return true; }
     bootSector bootarea;
     memset(&bootarea, 0, sizeof(bootarea));
     imageDisk * img = imageDiskList[di];
@@ -145,9 +145,9 @@ bool VM_Boot_DOSBox_Kernel() {
     Bitu stack_seg = 0x0030;
     if ((stack_seg + 0x20) > max_seg) stack_seg = max_seg - 0x20;
     if (!has_read) {
-        if (img->Read_Sector(0, 0, 1, (uint8_t *)&bootarea) != Int13Status::NoError) { gh_log("ERROR: boot sector read failed"); gh_human(phr_("첫 디스크의 부트 섹터를 읽지 못했습니다.\n이미지 파일이 손상됐거나 지원하지 않는 형식일 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
+        if (img->Read_Sector(0, 0, 1, (uint8_t *)&bootarea) != Int13Status::NoError) { gh_log("ERROR: boot sector read failed"); gh_human(phr_("첫 디스크의 부트 섹터를 읽지 못했습니다.\n이미지 파일이 손상됐거나 지원하지 않는 형식일 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); GH_QUITSET(); return true; }
     }
-    if (bootarea.rawdata[0] == 0 && bootarea.rawdata[1] == 0) { gh_log("ERROR: boot sector empty"); gh_human(phr_("첫 디스크의 부트 영역이 비어 있습니다.\n부팅 디스크가 아닌 이미지(데이터 디스크)를 첫 칸에 넣었을 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); gApp.quit = true; return true; }
+    if (bootarea.rawdata[0] == 0 && bootarea.rawdata[1] == 0) { gh_log("ERROR: boot sector empty"); gh_human(phr_("첫 디스크의 부트 영역이 비어 있습니다.\n부팅 디스크가 아닌 이미지(데이터 디스크)를 첫 칸에 넣었을 수 있습니다.")); gh_msgbox(gApp.errmsg.c_str()); GH_QUITSET(); return true; }
 
     if (drive == 'A' || drive == 'B') FDC_AssignINT13Disk((unsigned char)(drive - 'A'));
     GetDMAChannel(2)->tcount = true;
@@ -198,7 +198,7 @@ bool VM_Boot_DOSBox_Kernel() {
     }
     gApp.pic0 = PIC_Ticks;
     if (gApp.boot_n > 1) gh_log("INWIN 부팅 신호 n=%d (전환 뒤 %u ms)", gApp.boot_n, SDL_GetTicks() - gApp.inwin_t0);
-    if (!gApp.headless) gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
+    if (!gApp.headless) { int cg_ = gApp.cur_game; std::string o_; if (cg_ >= 0 && cg_ < (int)gApp.ui_.games.size()) for (auto & kv_ : gApp.ui_.games[cg_].ov) o_ += kv_.first + "=" + kv_.second + " "; gh_log("APPLYDIAG id=%s has_t=%d ov[%s] g.scan=%d glow=%d curve=%d", (cg_ >= 0 && cg_ < (int)gApp.ui_.games.size()) ? gApp.ui_.games[cg_].id.c_str() : "-", (int)(cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]), o_.c_str(), gApp.ui_.g.scan, gApp.ui_.g.glow, gApp.ui_.g.curve); } gh_apply_settings(gApp.ui_.effective(gApp.cur_game), true);
     gh_log("boot: CS:IP=%04x:%04x SS:SP=%04x:%04x", SegValue(cs), (unsigned)reg_ip, SegValue(ss), (unsigned)reg_sp);
     gh_bda_dump(gApp.boot_n > 1 ? "post2" : "post");
     gh_log("boot: regs AX=%04X BX=%04X CX=%04X DX=%04X SI=%04X DI=%04X BP=%04X boot400=%d", (unsigned)reg_ax, (unsigned)reg_bx, (unsigned)reg_cx, (unsigned)reg_dx, (unsigned)reg_si, (unsigned)reg_di, (unsigned)reg_bp, (int)gApp.boot400);

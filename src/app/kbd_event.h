@@ -89,17 +89,22 @@ static bool gh_kb_virt2win(int vx, int vy, int & wx, int & wy) {   /* 시험 전
 static bool gh_kbd_event(const SDL_Event & e) {
     if (gApp.headless || !gApp.win || !gApp.use_gl || !gApp.boot_tick || gApp.menu_open || (gApp.loading && !gApp.noload)) return false;
     int ph, mx, my;
-    if (e.type == SDL_MOUSEBUTTONDOWN) { ph = 0; mx = e.button.x; my = e.button.y; }
+    bool fin = false; static bool fown = false;   /* t147: 손가락 좌표로 직접 판정 + 소비한 터치의 마우스 에코는 삼킨다 */
+    if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERUP || e.type == SDL_FINGERMOTION) { int ww0 = 640, wh0 = 400; SDL_GetWindowSize(gApp.win, &ww0, &wh0); ph = e.type == SDL_FINGERDOWN ? 0 : e.type == SDL_FINGERUP ? 1 : 2; mx = (int)(e.tfinger.x * (float)ww0); my = (int)(e.tfinger.y * (float)wh0); fin = true; }
+    else if ((e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) && e.button.which == SDL_TOUCH_MOUSEID && fown) { if (e.type == SDL_MOUSEBUTTONUP) fown = false; return true; }
+    else if (e.type == SDL_MOUSEMOTION && e.motion.which == SDL_TOUCH_MOUSEID && fown) return true;
+    else if (e.type == SDL_MOUSEBUTTONDOWN) { ph = 0; mx = e.button.x; my = e.button.y; }
     else if (e.type == SDL_MOUSEBUTTONUP) { ph = 1; mx = e.button.x; my = e.button.y; }
     else if (e.type == SDL_MOUSEMOTION) { ph = 2; mx = e.motion.x; my = e.motion.y; }
     else return false;
     kbov::wake();   /* t52f: 마우스가 움직이거나 터치가 있으면 버튼 줄을 몇 초 진하게 */
     if (!kbov::active()) return false;
-    if (gApp.relmouse && !kbov::g_vis && !kbov::any_owned()) return false;   /* 마우스 가둠 중(키보드 숨김)에는 창 좌표를 믿을 수 없다 → 버튼 사용 불가, Alt+K·메뉴로 켠다 */
+    if (!fin && gApp.relmouse && !kbov::g_vis && !kbov::any_owned()) return false;   /* 마우스 가둠 중(키보드 숨김)에는 창 좌표를 믿을 수 없다 → 버튼 사용 불가, Alt+K·메뉴로 켠다 */
     int vx = -1000, vy = -1000; if (!gh_kb_win2virt(mx, my, vx, vy) && !kbov::any_owned()) return false;
-    int btn = (e.type == SDL_MOUSEMOTION) ? SDL_BUTTON_LEFT : e.button.button;
+    int btn = (e.type == SDL_MOUSEMOTION || fin) ? SDL_BUTTON_LEFT : e.button.button;
     if (btn != SDL_BUTTON_LEFT) { bool in = kbov::in_ui(vx, vy); if (in && ph != 2) { gApp.kb_cons++; return true; } return false; }
     bool c = kbov::pointer(0, ph, vx, vy);
+    if (fin) { if (ph == 0) fown = c; static int fl = 0; if (ph == 0 && fl < 40) { fl++; gh_log("KHA ov 손가락 x=%d y=%d v=(%d,%d) relmouse=%d → %s (%d/40)", mx, my, vx, vy, (int)gApp.relmouse, c ? "오버레이" : "통과", fl); } if (ph == 1) fown = fown && c; }
     if (ph != 2) { if (c) gApp.kb_cons++; else gApp.kb_pass++; }
     return c;
 }

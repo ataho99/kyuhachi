@@ -5,7 +5,7 @@ static void gh_main_conf() {
         DOSBOX_SetupConfigSections();
         {   /* r020 (#248): 기본 한글 패치 글꼴 = res\fonts\kyuhachi_font.bmp (t52g: 옛 이름 pc98player_font.bmp · 옛 위치도 허용) */
             std::string cc = g_conf_common; size_t at = cc.find("@FONT@");
-            if (at != std::string::npos) cc.replace(at, 6, gh_default_font_path());
+            if (at != std::string::npos) cc.replace(at, 6, gh_default_font_path()); cc = kha_mixer_patch(cc);
             control->ParseConfigString("gensei:common", cc.c_str());
         }
         {   /* 작품별 cycles / 글꼴 / extra (프로필 > 공통) */

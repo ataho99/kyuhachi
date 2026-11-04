@@ -321,7 +321,7 @@ static void gh_reload_games(void) {   /* 목록을 다시 만들고 보던 작�
     std::string keep = (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) ? gApp.ui_.games[gApp.cur_game].id : std::string();
     ui::settings_save(gApp.ui_, gApp.cfgpath);
     gApp.fdfiles.clear();
-    gh_ui_init_games(); ui::settings_load(gApp.ui_, gApp.cfgpath);
+    gh_ui_init_games(); ui::settings_load(gApp.ui_, gApp.cfgpath);   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "목록 재로드 직후", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
     for (size_t i = 0; i < gApp.ui_.games.size(); i++) if (gApp.ui_.games[i].id == keep) { gApp.cur_game = (int)i; gApp.ui_.cur = (int)i; gApp.ui_.pick = (int)i; }
     if (!gApp.headless) for (size_t i = 0; i < gApp.ui_.games.size(); i++) gh_refresh_game_slots((int)i);
 }
@@ -335,10 +335,12 @@ static aw::Summary gh_add_works(const std::vector<aw::Work> & ws, const char * w
 }
 /* 게임 폴더: 켤 때마다 훑어 새 작품만 자동 등록 */
 static int gh_scan_gamefolder(const char * why) {
+    kha_lib_init();   /* t137 */
     if (gApp.ui_.gamefolder.empty()) return 0;
     std::string dir = aw::u8_to_acp(gApp.ui_.gamefolder); if (!aw::dir_exists(dir)) { gh_log("GAMEFOLDER %s: 폴더 없음 (%s)", why, dir.c_str()); if (!gApp.ui_.add_log.empty()) gApp.ui_.add_log.clear(); gApp.ui_.add_log.push_back(phr_("게임 폴더를 찾을 수 없습니다")); return 0; }
     std::vector<aw::Work> ws; aw::collect(dir, 3, ws); aw::Summary S = gh_add_works(ws, why);
     gh_log("GAMEFOLDER %s: %d 후보, 추가 %d", why, (int)ws.size(), S.added);
+    S.added += kha_scan_extra(why);   /* t137: 등록 폴더 */
     if (S.added > 0) gh_reload_games(); return S.added;
 }
 #if defined(__ANDROID__)
@@ -348,7 +350,7 @@ static void gh_android_savedir(void);
 static void gh_add_action(int arg) {
     ui::Ui & U = gApp.ui_;
     if (arg == 0) { std::vector<std::string> fs; if (!gh_pick_files(fs)) return; std::vector<aw::Work> ws; aw::from_files(fs, ws); aw::Summary S = gh_add_works(ws, phr_("파일 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
-    else if (arg == 1) { std::string d; if (!gh_pick_folder(phr_("추가할 작품 폴더를 고르세요"), d)) return; std::vector<aw::Work> ws; aw::collect(d, 3, ws); aw::Summary S = gh_add_works(ws, phr_("폴더 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
+    else if (arg == 1) { std::string d; if (!gh_pick_folder(phr_("추가할 작품 폴더를 고르세요"), d)) return; kha_lib_add(d); std::vector<aw::Work> ws; aw::collect(d, 3, ws); aw::Summary S = gh_add_works(ws, phr_("폴더 추가")); if (S.added) { gh_reload_games(); U.add_new = S.added_ids; U.add_new_why = S.added_why; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); } }
     else if (arg == 2) { std::string d; if (!gh_pick_folder(phr_("「게임 폴더」를 고르세요 — 켤 때마다 새 작품을 찾아 등록합니다"), d)) return; U.gamefolder = aw::acp_to_u8(d); ui::settings_save(U, gApp.cfgpath); gh_scan_gamefolder(phr_("게임 폴더 지정"));
 #if defined(__ANDROID__)
     gh_android_savedir();
@@ -356,7 +358,7 @@ static void gh_add_action(int arg) {
 #endif
     }
     else if (arg == 3) { gh_scan_gamefolder(phr_("다시 검색")); if (!U.add_log.empty() && U.gamefolder.empty()) U.add_log.clear(); }
-    else if (arg == 4) { U.gamefolder.clear(); ui::settings_save(U, gApp.cfgpath); U.add_log.clear(); U.add_log.push_back(phr_("게임 폴더를 해제했습니다 (등록된 작품은 그대로입니다)")); }
+    else if (arg == 4) { kha_lib_clear(); U.gamefolder.clear(); ui::settings_save(U, gApp.cfgpath); U.add_log.clear(); U.add_log.push_back(phr_("게임 폴더를 해제했습니다 (등록된 작품은 그대로입니다)")); }
 }
 /* t44a (#494): 사용자 「언어」 지정 — user.ini [game] lang=ko|jp (자동 = 키 삭제). 저장 후 목록을 다시 만들고 보던 작품·항목 화면 대상을 id 로 되찾는다 */
 static void gh_setlang(int gi, int mode) {

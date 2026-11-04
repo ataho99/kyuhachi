@@ -31,7 +31,7 @@ struct Ui {
     int slotsel = 0;
     int quitsel = 0, startsel = 0, swapdrv = 0, swapsel = 0;
     static const int MAXG = 256;
-    Settings g, t[MAXG]; bool has_t[MAXG] = { false };
+    Settings g, t[MAXG]; bool has_t[MAXG] = { false };   bool nofollow[MAXG] = { false }; bool all_global = false; Settings fscratch;   /* t147d: 작품별 「전역 따르기」 끔 표시 · 전역 일괄 · 따르는 중 편집을 버리는 임시 칸 */
     int scope = 0;             /* 0 전역 1 이 작품 */
     Settings cb_g, cb_t; bool cb_has = false, cb_has_t = false; int cb_scope = 0, cb_cur = -1; std::string cb_fkr, cb_fjp;   /* t52e (#131 ③): 동작 환경 설정 진입 때 값 백업 */
     bool fs_now = false; Scr start_ret = S_MAIN;   /* t52i: fs_now = 호스트가 알려 주는 전체화면 여부 · start_ret = 시작 팝업을 연 화면(S_MAIN/S_PICK) */
@@ -51,9 +51,15 @@ struct Ui {
         return best;
     }
 
-    Settings & eff() { return (scope == 1 && has_t[cur]) ? t[cur] : g; }
-    Settings effective(int gi) const { if (gi >= 0 && gi < MAXG && has_t[gi]) return t[gi]; Settings s = g; if (gi >= 0 && gi < (int)games.size()) apply_ov(s, games[gi].ov); return s; }
-    Settings & edit() { if (scope == 1) { if (!has_t[cur]) { t[cur] = effective(cur); has_t[cur] = true; } return t[cur]; } return g; }
+    int scope3() const { return scope == 0 ? 0 : (cur >= 0 && cur < MAXG && nofollow[cur]) ? 2 : 1; }   /* 0 전역 · 1 이 작품(전역 따름) · 2 이 작품(전용) */
+    void scope_step(int d) { int i = scope3() + d; if (i < 0) i = 0; if (i > 2) i = 2; scope = i ? 1 : 0; if (i && cur >= 0 && cur < MAXG) { if (i == 2) { nofollow[cur] = true; if (!has_t[cur]) { t[cur] = g; has_t[cur] = true; } } else nofollow[cur] = false; } }   /* 전용으로 바꿀 때 보관해 둔 작품 값이 있으면 그대로, 없으면 지금 전역 값으로 채움 */
+    Settings & eff() { return (scope == 1 && cur >= 0 && cur < MAXG && has_t[cur] && nofollow[cur] && !all_global) ? t[cur] : g; }
+    Settings effective(int gi) const {   /* 우선순위: 일괄 켬 → 전역 / 작품 스위치 켬(기본) → 전역 + 프로파일 값(화면 효과 키 제외) / 작품 스위치 끔 → 작품 값 */
+        if (all_global) return g;
+        if (gi >= 0 && gi < MAXG && has_t[gi] && nofollow[gi]) return t[gi];
+        Settings s = g; if (gi >= 0 && gi < (int)games.size()) { std::map<std::string, std::string> m = games[gi].ov; static const char * const fxk[] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "fx" }; for (const char * k : fxk) m.erase(k); apply_ov(s, m); }
+        return s; }
+    Settings & edit() { if (scope == 1) { if (!(cur >= 0 && cur < MAXG && nofollow[cur]) || all_global) { fscratch = g; return fscratch; } if (!has_t[cur]) { t[cur] = g; has_t[cur] = true; } return t[cur]; } return g; }   /* 따르는 중 편집은 버려진다(값 변경은 「작품·전용」으로 바꾼 뒤) */
     const UiGame * game() const { return (cur >= 0 && cur < (int)games.size()) ? &games[cur] : NULL; }
     /* t48b2 (#632): 실행 막는 사유(block)는 작품 id 로 찾는다 — 배열 위치(행 gi · 현재 cur)로 곧바로 읽지 않는다. 회색 표시 · 시작 팝업 · 정보칸 · 슬롯 불러오기가 모두 이 세 함수를 쓴다 */
     const std::string & blk_id(const std::string & id) const { static const std::string E; if (id.empty()) return E; for (size_t i = 0; i < games.size(); i++) if (games[i].id == id) return games[i].block; return E; }
@@ -488,7 +494,7 @@ struct Ui {
         items(c, 40, 44, 256, n, sel, 24, &dim);
         rbox(c, 320, 24, 304, 212, WH, phr_("선택지"));
         auto row = [&](int i) { return sel == i; };
-        const char * sc[] = { phr_("전역"), phr_("이 작품") }; choices(c, 344, 44, sc, 2, scope, WH, row(0));
+        const char * sc[] = { phr_("전역"), phr_("작품·따름"), phr_("작품·전용") }; choices(c, 344, 44, sc, 3, scope3(), WH, row(0));
         const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, 68, rt, 3, s.ratio, WH, row(1));
         const char * sh[] = { "sharp", "crt", "nearest" }; choices(c, 344, 92, sh, 3, s.shader, WH, row(2));
         if (crt) {
@@ -685,7 +691,7 @@ struct Ui {
     }
     /* ---- 입력 */
     int nitems() const {
-        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return 11; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 8; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return KH_SCR_ROWS; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 8; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; }
@@ -733,7 +739,7 @@ struct Ui {
 
 static void settings_save(const Ui & u, const std::string & path) {
     FILE * f = fopen(path.c_str(), "wb"); if (!f) return;
-    fprintf(f, "; " KH_FULLNAME " 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)\n[global]\n"); ini_put(f, u.g);
+    fprintf(f, "; " KH_FULLNAME " 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)\n[global]\n"); ini_put(f, u.g); fprintf(f, "all_global=%d\n", u.all_global ? 1 : 0);
     fprintf(f, "lastgame=%d\nwmult=%d\nwinw=%d\nwinh=%d\ngamefolder=%s\nlang=%d\n", u.cur, u.wmult, u.winw, u.winh, u.gamefolder.c_str(), u.lang);
     fprintf(f, "lastgame_id=%s\nlastentry=%s\nsort=%s\nsortfav=%d\ntab=%s\nfont_kr=%s\nfont_jp=%s\n", (u.cur >= 0 && u.cur < (int)u.games.size()) ? u.games[u.cur].id.c_str() : "", u.sel_entry.c_str(), Ui::sort_id(u.sortm), u.sortfav ? 1 : 0, Ui::tab_id(u.tab), u.font_kr.c_str(), u.font_jp.c_str());
     for (auto & kv : u.gpad) if (!kv.second.empty()) fprintf(f, "%s=%s\n", kv.first.c_str(), kv.second.c_str());   /* t48e (#646): 전역 패드 배정 btn_* (표준 버튼 이름) */
@@ -741,7 +747,7 @@ static void settings_save(const Ui & u, const std::string & path) {
     fprintf(f, "[fav]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].fav) fprintf(f, "%s=1\n", u.games[i].id.c_str());
     fprintf(f, "[order]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].order_n > 0) fprintf(f, "%s=%d\n", u.games[i].id.c_str(), u.games[i].order_n);
     fprintf(f, "[play]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].play_s > 0) fprintf(f, "%s=%d\n", u.games[i].id.c_str(), u.games[i].play_s);
-    for (size_t i = 0; i < u.games.size() && i < (size_t)Ui::MAXG; i++) if (u.has_t[i]) { fprintf(f, "[%s]\n", u.games[i].id.c_str()); ini_put(f, u.t[i]); }
+    for (size_t i = 0; i < u.games.size() && i < (size_t)Ui::MAXG; i++) if (u.has_t[i]) { fprintf(f, "[%s]\nfollow_global=%d\n", u.games[i].id.c_str(), u.nofollow[i] ? 0 : 1); ini_put(f, u.t[i]); }
     fclose(f);
 }
 static void settings_load(Ui & u, const std::string & path) {
@@ -758,6 +764,8 @@ static void settings_load(Ui & u, const std::string & path) {
         }
         if (in_sec) { size_t e2 = s.find('='); if (e2 != std::string::npos) { std::string id = s.substr(0, e2); long long v = atoll(s.c_str() + e2 + 1); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].id == id) { if (in_sec == 1) u.games[i].last_run = v; else if (in_sec == 2) u.games[i].fav = v != 0; else u.games[i].order_n = (int)v; } } continue; }
         if (in_play) { size_t e2 = s.find('='); if (e2 != std::string::npos) { std::string id = s.substr(0, e2); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].id == id) u.games[i].play_s = atoi(s.c_str() + e2 + 1); } continue; }
+        if (cur && cur != &u.g && s.compare(0, 14, "follow_global=") == 0) { size_t ix = (size_t)(cur - u.t); if (ix < (size_t)Ui::MAXG) u.nofollow[ix] = atoi(s.c_str() + 14) == 0; continue; }   /* t147d: 없으면 따름(기본) — 옛 통째 복사 구역도 값은 보관만 */
+        if (cur == &u.g && s.compare(0, 11, "all_global=") == 0) { u.all_global = atoi(s.c_str() + 11) != 0; continue; }
         if (cur == &u.g && s.compare(0, 6, "wmult=") == 0) { u.wmult = atoi(s.c_str() + 6); continue; }
         if (cur == &u.g && s.compare(0, 5, "winw=") == 0) { u.winw = atoi(s.c_str() + 5); continue; }
         if (cur == &u.g && s.compare(0, 5, "winh=") == 0) { u.winh = atoi(s.c_str() + 5); continue; }

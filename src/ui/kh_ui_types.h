@@ -22,7 +22,7 @@ inline void apply_ov(Settings & s, const std::map<std::string, std::string> & m)
     { std::map<std::string, std::string>::const_iterator it = m.find("shader"); if (it != m.end()) { int sv = atoi(it->second.c_str());
         if (fxm) s.shader = (sv == 2) ? 2 : 0;
         else if (sv == 1) { s.shader = 0; if (s.scan <= 0 && s.mask <= 0 && s.bleed <= 0 && s.glow <= 0) { s.scan = 5; s.mask = 3; } if (s.curve <= 0 && !m.count("curve")) s.curve = 4; }
-        else { s.shader = (sv == 2) ? 2 : 0; s.scan = 0; s.mask = 0; s.bleed = 0; s.glow = 0; s.curve = 0; } } }
+        else { s.shader = (sv == 2) ? 2 : 0; } } }   /* t147c (답526-④): 옛 shader= 만으로 효과 5개를 0 으로 지우지 않는다 */
     auto cl = [](int v, int a, int b) { return v < a ? a : v > b ? b : v; };
     for (auto & kv : m) {
         int v = atoi(kv.second.c_str()); const std::string & k = kv.first;

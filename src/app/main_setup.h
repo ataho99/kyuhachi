@@ -25,8 +25,9 @@ static void gh_main_input_init(std::string & id) {
     gh_help_init(); if (gApp.helplog) ov::g_help_logfn = gh_help_logfn; ov::g_helpdev = SDL_NumJoysticks() > 0 ? 0 : 1;   /* t49a (#812): 시작값 = 패드가 연결돼 있으면 패드, 없으면 키보드 */
     gensei_lock = true;
     gh_ui_init_games();
-    ui::settings_load(gApp.ui_, gApp.cfgpath);
+    ui::settings_load(gApp.ui_, gApp.cfgpath);   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "시작 로드 직후", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
 #if defined(__ANDROID__)
+    kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_cfg_load(); kha_perm_ask_once(); kha_lib_init();   /* t137 */
     gh_android_savedir();
     gh_android_fontdiag();
 #endif
@@ -113,8 +114,9 @@ static void gh_main_select(std::string & id, const bool & ui_mode, const bool & 
         if (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) gh_rebuild_fds(gApp.prof_, gApp.ui_.games[gApp.cur_game]);
         { auto in = gApp.prof_.kv.find("install"); auto en = gApp.prof_.kv.find("entry_name"); if (in != gApp.prof_.kv.end() && !in->second.empty() && en != gApp.prof_.kv.end()) { FILE * pf = fopen((exedir + "\\install_pending.tsv").c_str(), "wb"); if (pf) { fprintf(pf, "%s\t%s\n", id.c_str(), en->second.c_str()); fclose(pf); } } }
         if (outdir_auto) {   /* UI 단계 로그는 logs\menu, 게임 로그는 logs\<작품> */
-            if (gApp.log) { fflush(gApp.log); fclose(gApp.log); }
-            std::string d = exedir + "\\logs\\" + id; plat::mkdir(d.c_str()); gApp.outdir = d; gApp.log = fopen((d + "\\kyuhachi_log.txt").c_str(), "w"); gApp.log_t0 = SDL_GetTicks();
+            { std::string d = exedir + "\\logs\\" + id; plat::mkdir(d.c_str()); FILE * nlg = fopen((d + "\\kyuhachi_log.txt").c_str(), "w");   /* t146: 게임 로그 dir 이 안 열리면 공용(menu) 로그에 계속 기록 */
+              if (nlg) { if (gApp.log) { fflush(gApp.log); fclose(gApp.log); } gApp.outdir = d; gApp.log = nlg; gApp.log_t0 = SDL_GetTicks(); }
+              else gh_log("LOGFALLBACK: 게임 로그 폴더를 못 열어 공용(menu) 로그에 계속 기록: %s (errno=%d)", d.c_str(), errno); }
             gh_log("gensei_host " GENSEI_BUILD_ID " game start from UI: '%s' resume_slot=%d noB=%d", id.c_str(), gApp.resume_slot, (int)gApp.noB);
         }
     } else {
@@ -143,7 +145,7 @@ static void gh_main_prep(std::string & id, const std::string & exedir) {
     }
     if (!gApp.headless) {
         gApp.ui_.cur = gApp.cur_game;
-        gh_apply_settings(gApp.ui_.effective(gApp.cur_game), false);
+        { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "첫 적용 직전", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); } gh_apply_settings(gApp.ui_.effective(gApp.cur_game), false);
         if (gApp.win) {   /* t39 (T11): 창 제목은 120바이트 이내 — 길면 short= 또는 자동 줄임 */
             SDL_SetWindowTitle(gApp.win, gh_window_title(gApp.ui_.games[gApp.cur_game], gApp.titlelegacy).c_str()); }
         if (!gApp.noboot && gApp.ui_.effective(gApp.cur_game).boot == 0) gh_boot_seq(false);   /* 짧은 헤더 + Now Loading (≤0.5초), 건너뛰기 가능 */

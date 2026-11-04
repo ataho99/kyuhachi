@@ -52,6 +52,7 @@ static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bo
 /* ------------------------------------------------------------------ r020 (#247정정·#248): 공용 자원 run\res\fonts · run\res\rhythm */
 static bool gh_exists(const std::string & p) { return plat::exists(p.c_str()); }
 static std::string gh_res_font_path(const std::string & name) {   /* 글꼴 이름 → 파일 (res\fonts 우선, 옛 exe 옆도 허용). 없으면 res 쪽 경로를 돌려준다 */
+    { std::string k = kha_font_lookup(name); if (!k.empty()) return k; }   /* t137 */
     std::string a = gApp.exedir + "\\res\\fonts\\" + name + ".bmp", b = gApp.exedir + "\\" + name + ".bmp";
     if (gh_exists(a)) return a; if (gh_exists(b)) return b; return a;
 }

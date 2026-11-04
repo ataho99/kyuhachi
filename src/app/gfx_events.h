@@ -1,8 +1,10 @@
+static void gh_finish(int rc);   /* t139: 전방 선언 */
 /* app/gfx_events.h -- S9b: GFX_Events. Moved unchanged from gensei_host.cpp lines 1795-1992 (as of t54t). Included in place; single translation unit. */
 void GFX_Events(void) {
     static unsigned int last_ev = 0;
     unsigned int now = SDL_GetTicks();
     kh_input_tick();
+    kha_ld_tick(now);
     if (now != last_ev) {
         last_ev = now;
         SDL_Event e;
@@ -31,7 +33,7 @@ void GFX_Events(void) {
             if (gh_kbd_event(e)) continue;   /* t46x: 화면 키보드·토글 버튼(메뉴 > 키보드 > 게임 순서) */
             if (!gApp.menu_open && gh_game_event(e)) continue;
             if (gensei_input_event(e)) continue;
-            if (e.type == SDL_QUIT) { gh_log("SDL_QUIT"); gApp.quit = true; }
+            if (e.type == SDL_QUIT) { gh_log("SDL_QUIT"); GH_QUITSET(); }
         }
         if (!gApp.headless) gh_wm_poll();
         { extern bool user_cursor_locked; bool lk = gApp.mouse_game && gApp.boot_tick && !gApp.menu_open; if (lk != user_cursor_locked) { user_cursor_locked = lk; gh_log("mouse: 코어 user_cursor_locked=%d (PC-98 버스마우스는 이 값이 참이어야 이동량을 받는다)", (int)lk); } }   /* r021: 코어 Mouse_CursorMoved 는 user_cursor_locked 일 때만 pc98_mouse_movement_apply 를 부른다 (r020 에서 커서가 안 움직인 원인) */
@@ -142,7 +144,7 @@ void GFX_Events(void) {
             static unsigned int next_shot = 0;
             if (next_shot < gApp.shots_ms.size() && since >= gApp.shots_ms[next_shot]) { gh_dump_shot(gApp.shots_ms[next_shot]); next_shot++; }
             { static bool n88 = false; if (!n88 && (unsigned)SegValue(cs) == 0xE800u && (reg_eip & 0xffffu) < 0x10u) { n88 = true;   /* t43k (#334 A2): N88-BASIC ROM 진입 = PC 판 미지원 — 안내 후 정상 종료 */
-                gh_log("N88: E800:%04x 도달 (t=%u) — 이 작품은 N88-BASIC 필요: PC 판 미지원(노바 np2kai 경로 예정)", (unsigned)(reg_eip & 0xffffu), since); if (!gApp.headless) { plat::msgbox_utf8(phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), 0, 256); } gApp.quit = true; } }
+                gh_log("N88: E800:%04x 도달 (t=%u) — 이 작품은 N88-BASIC 필요: PC 판 미지원(노바 np2kai 경로 예정)", (unsigned)(reg_eip & 0xffffu), since); if (!gApp.headless) { plat::msgbox_utf8(phr_("이 작품은 N88-BASIC 필요:\nPC 판 미지원(노바 np2kai 경로 예정)"), 0, 256); } GH_QUITSET(); } }
             static unsigned int last_stat = 0;
             if (gApp.dumpcode && since / 2000 != last_stat && since > 12000) {
                 PhysPt base = SegPhys(cs) + (reg_eip & (cpu.code.big ? 0xffffffffu : 0xffffu)); char hx[256]; int n = 0;
@@ -191,11 +193,11 @@ void GFX_Events(void) {
             if (gApp.mouse_game && since / 2000 != last_stat) { extern int8_t p7fd9_8255_mouse_x, p7fd9_8255_mouse_y, p7fd9_8255_mouse_x_latch, p7fd9_8255_mouse_y_latch; extern uint8_t p7fd9_8255_mouse_sel, p7fd9_8255_mouse_latch; gh_log("mousereg: x=%d y=%d latchx=%d latchy=%d sel=%u latch=%u", (int)p7fd9_8255_mouse_x, (int)p7fd9_8255_mouse_y, (int)p7fd9_8255_mouse_x_latch, (int)p7fd9_8255_mouse_y_latch, (unsigned)p7fd9_8255_mouse_sel, (unsigned)p7fd9_8255_mouse_latch); }   /* r021 진단: 게임이 버스마우스 레지스터를 읽어 가는가 */
             if (since / 2000 != last_stat) { last_stat = since / 2000; gh_log("stat: wall=%u ms game=%u ms (ratio %.3f) frames=%llu starts=%llu aborts=%llu cycles=%d auto=%d pmode=%d pct=%d CS:IP=%04x:%04x", since, (unsigned)(PIC_Ticks - gApp.pic0), since ? (double)(PIC_Ticks - gApp.pic0) / (double)since : 0.0, gApp.frames, gApp.starts, gApp.aborts, (int)CPU_CycleMax, (int)CPU_CycleAutoAdjust, (int)cpu.pmode, (int)CPU_CyclePercUsed, SegValue(cs), (unsigned)reg_ip);
                 gh_log("audio: dev='%s' freq=%d blk=%d cb=%u underrun=%u drop=%u", gensei_audio_dev ? gensei_audio_dev : "(default)", gensei_audio_obt_freq, gensei_audio_obt_samples, gensei_mix_cb, gensei_mix_under, gensei_mix_drop); gh_log("OUTRMS samples=%llu rms=%.2f (창 시작 %u ms)", gensei_out_n, gensei_out_n ? sqrt(gensei_out_sumsq / (double)gensei_out_n) : 0.0, gApp.rms_from); }
-            if (gApp.run_ms && since >= gApp.run_ms) { gh_log("run time reached"); gApp.quit = true; }
+            if (gApp.run_ms && since >= gApp.run_ms) { gh_log("run time reached"); GH_QUITSET(); }
         }
         if (gApp.inwin_wait) {   /* t51a: 창 안 전환 뒤 부팅 도달 신호(g_boot_tick) 대기 — 8초 안에 없으면 실패로 보고 나간다(폴백은 gh_inwin_cycle) */
             if (gApp.boot_tick) { gApp.inwin_wait = false; }
-            else if (SDL_GetTicks() - gApp.inwin_t0 > 8000u) { gApp.inwin_wait = false; gApp.inwin_timeout = true; gApp.quit = true; }
+            else if (SDL_GetTicks() - gApp.inwin_t0 > 8000u) { gApp.inwin_wait = false; gApp.inwin_timeout = true; GH_QUITSET(); }
         }
         if (gApp.quit) throw (int)0;
     }

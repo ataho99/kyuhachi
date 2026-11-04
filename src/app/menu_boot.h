@@ -65,12 +65,12 @@ static bool gh_boot_seq(bool full) {
     if (gApp.headless || !gApp.use_gl) return false;
     if (full) {   /* t52d (#129): 시작 로고 1.4초 — 아무 키·클릭이면 부팅 연출 전체를 건너뜀 */
         unsigned tl = SDL_GetTicks(); bool sk = false;
-        for (;;) { if (SDL_GetTicks() - tl >= 1400u) break; SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { gApp.quit = true; sk = true; } if (ak) sk = true; } if (sk) return true; gh_logo_frame(); SDL_Delay(16); }
+        for (;;) { if (SDL_GetTicks() - tl >= 1400u) break; SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { GH_QUITSET(); sk = true; } if (ak) sk = true; } if (sk) return true; gh_logo_frame(); SDL_Delay(16); }
     }
     unsigned t0 = SDL_GetTicks(); bool beeped = false; bool skipped = false; unsigned total = full ? 1800u : 500u;
     for (;;) {
         unsigned t = SDL_GetTicks() - t0; if (t >= total) break;
-        SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { gApp.quit = true; skipped = true; } if (ak) skipped = true; }
+        SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { GH_QUITSET(); skipped = true; } if (ak) skipped = true; }
         if (skipped) break;
         if (full) {
             if (t >= 300 && !beeped) { beeped = true; gh_beep(gApp.ui_.effective(gApp.cur_game).se_gain()); }
@@ -153,7 +153,7 @@ static void gh_menu_run(void) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (gh_evpre(e, 1)) continue;
-            if (e.type == SDL_QUIT) { gApp.quit = true; done = true; break; }
+            if (e.type == SDL_QUIT) { GH_QUITSET(); done = true; break; }
             if (gh_wm_hotkey(e)) continue;
 #if defined(__ANDROID__)
             if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERMOTION || e.type == SDL_FINGERUP) { gh_touch_feed(e); continue; }   /* t55a: menu touch */
@@ -162,7 +162,7 @@ static void gh_menu_run(void) {
             ui::Act a = U.key(k);
             switch (a.t) {
             case ui::A_RESUME: done = true; break;
-            case ui::A_NEXTSTAGE: if (!gApp.stage_next.empty()) { gh_log("STAGE F12 메뉴 「%s」 -> %s", U.stage_next_label.c_str(), gApp.stage_next.c_str()); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) { gApp.inwin_req = 1; gApp.inwin_target = gApp.stage_next; } else gApp.stage_go = true; gApp.quit = true; done = true; } break;   /* t49a (#847) · t51a: 창 안 전환 먼저, 안 되면 gh_inwin_cycle 이 g_stage_go 로 폴백 */
+            case ui::A_NEXTSTAGE: if (!gApp.stage_next.empty()) { gh_log("STAGE F12 메뉴 「%s」 -> %s", U.stage_next_label.c_str(), gApp.stage_next.c_str()); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) { gApp.inwin_req = 1; gApp.inwin_target = gApp.stage_next; } else gApp.stage_go = true; GH_QUITSET(); done = true; } break;   /* t49a (#847) · t51a: 창 안 전환 먼저, 안 되면 gh_inwin_cycle 이 g_stage_go 로 폴백 */
             case ui::A_SAVE: { std::string d = gApp.savedir + "\\" + gApp.prof_.id; plat::mkdir(gApp.savedir.c_str()); plat::mkdir(d.c_str());
                 bool ok = gh_do_save(gh_slot_n(gApp.cur_game, a.slot), false); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 에 저장했습니다") : std::string(phr_("저장에 실패했습니다")), 2000); done = true; break; }
             case ui::A_LOAD: { if (!U.games[gApp.cur_game].slot[a.slot].used) { gh_osd(phr_("비어 있는 슬롯입니다"), 1500); break; }
@@ -181,8 +181,8 @@ static void gh_menu_run(void) {
                 if (fit_ != gApp.fdfiles.end() && a.arg >= 0 && a.arg < (int)fit_->second.size() && a.slot >= 0 && a.slot < 2) { ok = gh_attach(a.slot, fit_->second[a.arg].c_str(), true); if (ok) U.games[gApp.cur_game].cur_fd[a.slot] = U.games[gApp.cur_game].fds[a.arg]; }
                 gh_log("DISKSWAP drive=%c idx=%d %s", a.slot ? 'B' : 'A', a.arg, ok ? "OK" : "FAIL");
                 gh_osd(ok ? std::string(a.slot ? "B" : "A") + phr_(" 드라이브 : ") + U.games[gApp.cur_game].cur_fd[a.slot] : std::string(phr_("디스크 교체에 실패했습니다")), 3000); done = true; break; }
-            case ui::A_MAINMENU: gh_play_commit(); ui::settings_save(U, gApp.cfgpath); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) gApp.inwin_req = 2; else gh_spawn_menu(); gApp.quit = true; done = true; break;   /* t51a: 창 안 메뉴 */
-            case ui::A_QUIT: gh_play_commit(); if (a.arg) ui::settings_save(U, gApp.cfgpath); gApp.quit = true; done = true; break;
+            case ui::A_MAINMENU: gh_play_commit(); ui::settings_save(U, gApp.cfgpath); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) gApp.inwin_req = 2; else gh_spawn_menu(); GH_QUITSET(); done = true; break;   /* t51a: 창 안 메뉴 */
+            case ui::A_QUIT: gh_play_commit(); if (a.arg) ui::settings_save(U, gApp.cfgpath); GH_QUITSET(); done = true; break;
             default: break; }
             if (done) break;
         }
@@ -193,7 +193,7 @@ static void gh_menu_run(void) {
     }
     if (U.dirty) { ui::settings_save(U, gApp.cfgpath); U.dirty = false; }
     U.in_game = false; gApp.menu_open = false; gApp.bk_last = SDL_GetTicks();   /* t47a: 메뉴에 있던 시간은 자동 입력 시계에서 뺀다 */
-    gh_apply_settings(U.effective(gApp.cur_game), true); gh_boost_update(); kbov::wake();
+    { int cg_ = gApp.cur_game; std::string o_; if (cg_ >= 0 && cg_ < (int)U.games.size()) for (auto & kv_ : U.games[cg_].ov) o_ += kv_.first + "=" + kv_.second + " "; gh_log("APPLYDIAG id=%s has_t=%d ov[%s] g.scan=%d glow=%d curve=%d", (cg_ >= 0 && cg_ < (int)U.games.size()) ? U.games[cg_].id.c_str() : "-", (int)(cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && U.has_t[cg_]), o_.c_str(), U.g.scan, U.g.glow, U.g.curve); } gh_apply_settings(U.effective(gApp.cur_game), true); gh_boost_update(); kbov::wake();
     if (gApp.osd_until && !gApp.boost_on && SDL_GetTicks() < gApp.osd_until && gApp.osd.find("▶▶") == 0) gApp.osd_until = 0;
     if (sendk) gh_sendkey(sendarg);
     if (!gApp.fb.empty()) gh_publish(gApp.fb.data(), gApp.fbw, gApp.fbh);

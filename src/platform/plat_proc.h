@@ -37,6 +37,9 @@ inline unsigned long process_id() { return (unsigned long)GetCurrentProcessId();
 inline unsigned long handle_count() { DWORD hc = 0; GetProcessHandleCount(GetCurrentProcess(), &hc); return (unsigned long)hc; }
 }
 #else
+#if defined(__ANDROID__)
+extern "C" bool kha_relaunch_c(const char * cmd);
+#endif
 #include <unistd.h>
 namespace plat {
 /* S9e-N 4: POSIX bodies. On Android /proc/self/exe is the zygote helper; the Android main sets the app folder itself. */
@@ -46,7 +49,11 @@ inline bool beside_exe_u8(const wchar_t * name, std::string & out) {
     for (const wchar_t * w = name; *w; ++w) { if (*w >= 0x80) return false; p.push_back((char)*w); }
     out = p; return true;
 }
-inline bool spawn(const std::string &, const std::string &, const std::string &, unsigned long * err) { if (err) *err = 38; return false; }   /* ENOSYS: no second process on this platform */
+#if defined(__ANDROID__)
+inline bool spawn(const std::string &, const std::string & cmd, const std::string &, unsigned long * err) { if (kha_relaunch_c(cmd.c_str())) return true; if (err) *err = 38; return false; }   /* t145: 안드로이드 = 앱 프로세스 재시작 */
+#else
+inline bool spawn(const std::string &, const std::string &, const std::string &, unsigned long * err) { if (err) *err = 38; return false; }
+#endif   /* ENOSYS: no second process on this platform */
 /* S9e-N 5: POSIX bodies of the process helpers */
 inline void putenv_a(const char * s) { putenv(strdup(s)); }
 inline unsigned long long working_set_bytes() {

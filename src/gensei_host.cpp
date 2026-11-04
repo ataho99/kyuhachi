@@ -120,6 +120,7 @@ uint32_t GFX_Rmask = 0x00FF0000, GFX_Gmask = 0x0000FF00, GFX_Bmask = 0x000000FF,
 unsigned char GFX_Rshift = 16, GFX_Gshift = 8, GFX_Bshift = 0, GFX_bpp = 32;
 
 #include "app/state.h"   /* S9d */
+#include "app/android_ext_decl.h"   /* t137 */
 #include "app/opts_log.h"   /* S9b */
 #include "app/res_prof.h"   /* S9b */
 #include "app/video_sink.h"   /* S9a */
@@ -167,6 +168,7 @@ void MAPPER_AddHandler(MAPPER_Handler *, MapKeys, Bitu, char const * const event
 #include "app/gfx_events.h"   /* S9b */
 #if defined(__ANDROID__)
 #include "app/folder_pick.h"   /* t55b */
+#include "app/android_ext.h"   /* t137 */
 #endif
 #include "app/crash_inwin.h"   /* S9b */
 #include "app/main_front.h"   /* S9c */
@@ -175,6 +177,10 @@ void MAPPER_AddHandler(MAPPER_Handler *, MapKeys, Bitu, char const * const event
 
 int main(int argc, char * argv[]) {
     SDL_SetMainReady();
+#if defined(__ANDROID__)
+    std::vector<std::string> kh_av; std::vector<char *> kh_ap;   /* t145: 재시작 인자 */
+    if (kha_take_nextargs(kh_av)) { kh_av.insert(kh_av.begin(), argc > 0 ? std::string(argv[0]) : std::string("kyuhachi")); for (auto & s : kh_av) kh_ap.push_back((char *)s.c_str()); kh_ap.push_back(NULL); argc = (int)kh_av.size(); argv = kh_ap.data(); }
+#endif
     for (int i = 0; i < argc; i++) gApp.argv_saved.push_back(argv[i]);   /* t49a (#845): 단계 전환 때 같은 인자로 다시 띄운다 */
     std::string id;
     { int rc = gh_main_args(argc, argv, id); if (rc >= 0) return rc; }   /* S9c */

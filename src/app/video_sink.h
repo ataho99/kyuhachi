@@ -122,6 +122,7 @@ static void gh_win_apply(int m, bool osd) {   /* m>0: 배율 · m==0: 사용자 
 static void gh_titlebar_event(const SDL_Event * e);   /* t52a (#54/#55) */
 static int SDLCALL gh_ev_watch(void *, SDL_Event * e) {
     gh_titlebar_event(e);
+    kha_ev_watch(e);
     if (e->type != SDL_WINDOWEVENT || (e->window.event != SDL_WINDOWEVENT_SIZE_CHANGED && e->window.event != SDL_WINDOWEVENT_RESIZED) || !gApp.win) return 0;
     int w = e->window.data1, h = e->window.data2; unsigned now = SDL_GetTicks();
     if (!gh_win_userresize(w, h, SDL_GetWindowFlags(gApp.win), gApp.wm_ew, gApp.wm_eh, now, gApp.wm_expect_until)) return 0;
@@ -249,6 +250,7 @@ static int SDLCALL gl_thread(void *) {
     int tw = 0, th = 0, cw = 0, ch = 0; int ovw = 0, ovh = 0, otw = 0, oth = 0; bool ov_has = false, ov_dirty = false; std::vector<uint32_t> sw;
     GLuint vp_tex = 0; std::vector<uint32_t> vp_buf; unsigned vp_mask = ~0u; int vp_w = 0, vp_h = 0, vp_sx = -1, vp_sw = -1;   // virtual pad
     while (!gApp.gl_stop) {
+        { unsigned hd = g_kha_hold; if (hd && (hd == 0xFFFFFFFFu || (int)(SDL_GetTicks() - hd) < 0)) { g_kha_glidle = 1; g_kha_was = 1; SDL_GL_MakeCurrent(gApp.win, NULL); SDL_Delay(10); continue; } g_kha_glidle = 0; if (g_kha_was) { g_kha_was = 0; g_kha_rl = 4; } if (g_kha_rl > 0) { g_kha_rl--; int rc0 = SDL_GL_MakeCurrent(gApp.win, gApp.glctx); gh_log("KHA glres rc=%d err=%s cur=%p ctx=%p", rc0, rc0 ? SDL_GetError() : "", (void *)SDL_GL_GetCurrentContext(), (void *)gApp.glctx); } }   /* t146 glres (a127) */
         int dw = 0, dh = 0; SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
         bool nf = false;
         SDL_LockMutex(gApp.fb_mtx);

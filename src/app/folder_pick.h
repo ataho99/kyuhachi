@@ -74,7 +74,7 @@ static bool gh_folder_explorer(const char * title_u8, std::string & out) {
     for (;;) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) { gApp.quit = true; return false; }
+            if (e.type == SDL_QUIT) { GH_QUITSET(); return false; }
             if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERMOTION || e.type == SDL_FINGERUP) { gh_touch_feed(e); continue; }
             if (gh_wm_hotkey(e)) continue;
             ui::UKey k = gh_ev2uk(e, NULL); if (k == ui::UK_NONE) continue;

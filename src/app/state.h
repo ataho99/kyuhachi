@@ -240,7 +240,11 @@ struct AppState {
     volatile int fit = FIT_43;
     volatile int shader = SH_SHARP;
     volatile float curve = 0.0f;
+#if defined(__ANDROID__)
+    bool windowed = false;   /* t137: 안드로이드는 전체화면 기본 */
+#else
     bool windowed = true;
+#endif
     bool use_gl = false;
     int winw = 1280;
     int winh = 800;
@@ -285,3 +289,4 @@ struct AppState {
     unsigned int tex_gl = 0;
 };
 static AppState gApp;
+#define GH_QUITSET() (gh_log("QUIT-SET %s:%d", __FILE__, __LINE__), gApp.quit = true)   /* t139: quit 세우는 곳 사유 로그(항상) */

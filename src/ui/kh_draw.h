@@ -148,6 +148,18 @@ static std::vector<HelpKey> g_helpkeys;         /* 호스트가 실제 키 매�
 typedef void (*HelpLogFn)(const std::string & text, int padw, int kbdw, int cellw, bool two);
 static HelpLogFn g_help_logfn = NULL;
 static std::string help_rep(std::string s, const std::string & from, const std::string & to) { size_t p = 0; while ((p = s.find(from, p)) != std::string::npos) { s.replace(p, from.size(), to); p += to.size(); } return s; }
+#if defined(__ANDROID__)
+#define KH_SCR_ROWS 9
+#define KH_SNDLABEL "소리 버퍼 (다음 시작부터)"
+static int g_lblcfg = 0;   /* t137: 패드 라벨 방식 0 자동 1 retro 2 xbox */
+static int g_sndbuf = 1;   /* t137: 소리 버퍼 단계 0..3 */
+static void (*g_kha_save)(void) = 0;
+static std::string kh_lbl(std::string s) { int m = g_lblcfg ? g_lblcfg : (gensei_padkind_v == 1 ? 2 : 1); const char * Lb[4] = { m == 1 ? "A" : "B", m == 1 ? "B" : "A", m == 1 ? "Y" : "X", m == 1 ? "X" : "Y" }; s = help_rep(s, "○", Lb[0]); s = help_rep(s, "×", Lb[1]); s = help_rep(s, "□", Lb[2]); s = help_rep(s, "△", Lb[3]); return s; }
+#else
+#define KH_SCR_ROWS 11
+#define KH_SNDLABEL phr_("소리 출력 장치")
+static std::string kh_lbl(std::string s) { return s; }
+#endif
 static std::string help_common(std::string s) {   /* 장치와 무관한 잘림 수정: 구분 「, 」 → 공백 두 칸, 끝의 외로운 「×」 에 「:나감」 */
     s = help_rep(s, ", ", "  ");
     const std::string x = "×"; if (s.size() >= x.size() && s.compare(s.size() - x.size(), x.size(), x) == 0) s += phr_(":나감");
@@ -163,7 +175,7 @@ static std::string help_kbd(std::string s) {
 static std::string dkey(std::string s) {
     { const std::string sel = help_name("SEL"); s = help_rep(s, "{SEL}{로}", g_helpdev == 1 ? sel + (sel == "Tab" ? "으로" : "로") : std::string("SEL로")); }   /* t52a (#49): 「Tab」은 받침 ㅂ 이라 「으로」 */
     static const char * sy[] = { "SEL", "○", "□", "△", "×" };
-    for (const char * y : sy) { std::string tag = std::string("{") + y + "}"; s = help_rep(s, tag, g_helpdev == 1 ? help_name(y) : std::string(y)); }
+    for (const char * y : sy) { std::string tag = std::string("{") + y + "}"; s = help_rep(s, tag, g_helpdev == 1 ? help_name(y) : kh_lbl(std::string(y))); }
     return s;
 }
 /* t52a (#49): 부팅 화면 아래 F키 줄 — 마지막 입력 장치에 맞춰 기호↔키 이름. 라벨은 문구 파일에서 바꿀 수 있다 */
@@ -175,13 +187,13 @@ static void fncells_boot(Canvas & c) {
 static int help_rows(const Canvas & c, const std::string & s0) {
     std::string sp = help_common(s0), sk = help_kbd(sp);
     if (g_help_osk && g_helpdev == 1) sk = phr_("키보드로 입력  Enter:완료  Esc:취소  Backspace:지움  한/영 키:한글/영문");
-    return tw(g_helpdev == 1 ? sk : sp) > c.w - 16 ? 2 : 1;
+    return tw(g_helpdev == 1 ? sk : kh_lbl(sp)) > c.w - 16 ? 2 : 1;
 }
 static void helpline(Canvas & c, const std::string & s0) {
     const int maxw = c.w - 16; const bool osk = g_help_osk; g_help_osk = false;
     std::string sp = help_common(s0), sk = help_kbd(sp);
     if (osk && g_helpdev == 1) sk = phr_("키보드로 입력  Enter:완료  Esc:취소  Backspace:지움  한/영 키:한글/영문");
-    std::string s = g_helpdev == 1 ? sk : sp;
+    std::string s = g_helpdev == 1 ? sk : kh_lbl(sp);
     bool two = tw(s) > maxw;
     if (g_help_logfn) g_help_logfn(s0, tw(sp), tw(sk), maxw, tw(sp) > maxw || tw(sk) > maxw);
     if (!two) { c.rect(0, c.h - 16, c.w, 16, K); text(c, 8, c.h - 16, s, YL, K); return; }

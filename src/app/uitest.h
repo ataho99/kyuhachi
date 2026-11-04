@@ -30,8 +30,7 @@ static bool gh_ui_main_(std::string & out_id) {
     if (!gApp.noboot && U.g.boot == 0) { if (gh_boot_seq(true) && gApp.quit) return false; }
     static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 };
 #if defined(__ANDROID__)
-    gh_log("FIRSTRUN check games=%d gamefolder_empty=%d headless=%d", (int)U.games.size(), U.gamefolder.empty() ? 1 : 0, gApp.headless ? 1 : 0);
-    if ((U.games.empty() || (U.games.size() == 1 && U.games[0].id.empty())) && U.gamefolder.empty() && !gApp.headless) gh_add_action(2);   /* t55b: first run, no works registered -> pick the game folder */
+    if (U.games.empty() && U.gamefolder.empty() && !gApp.headless) gh_add_action(2);   /* t55b: first run, no works registered -> pick the game folder */
 #endif
     gh_diag_enter(0);
     for (;;) {
@@ -55,8 +54,8 @@ static bool gh_ui_main_(std::string & out_id) {
             ui::UKey k = gh_ev2uk(e, NULL); if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) gh_log("DIAG btn -> ev2uk=%d none=%d", (int)k, k == ui::UK_NONE ? 1 : 0); if (k == ui::UK_NONE) continue;
             ui::Act a = U.key(k);
             switch (a.t) {
-            case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = a.game; gApp.cur_game = a.game; gApp.resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
-            case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; gh_launch_note(U, a); U.cur = gApp.cur_game = a.game; gApp.resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
+            case ui::A_START: if (U.games[a.game].id.empty()) break; if (!gh_font_guard()) break; if (!gh_disk_guard(U.games[a.game].id)) break; gh_launch_note(U, a); U.cur = a.game; gApp.cur_game = a.game; gApp.resume_slot = a.resume && U.games[a.game].lastslot >= 0 ? U.games[a.game].lastslot + 1 : 0; gh_chain_start(U, a.game); out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
+            case ui::A_LOAD: if (U.games[a.game].id.empty() || !U.blk_id(U.games[a.game].id).empty()) break; if (!gh_font_guard()) break; if (!gh_disk_guard(U.games[a.game].id)) break; gh_launch_note(U, a); U.cur = gApp.cur_game = a.game; gApp.resume_slot = a.slot + 1; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true;
             case ui::A_DELSLOT: gh_delete_slot(a.game, a.slot); break;
             case ui::A_APPLY: gh_apply_settings(U.scr == ui::S_SCREEN ? U.eff() : U.effective(U.cur), false); kh_western = (U.scr == ui::S_PAD || U.scr == ui::S_PADKEY ? U.eff() : U.effective(U.cur)).pad == 1; break;   /* t48e: 시작 메뉴의 결정/취소 버튼도 방식을 따른다 */
             case ui::A_WINMULT: gh_win_apply(a.arg, false); break;
@@ -66,7 +65,7 @@ static bool gh_ui_main_(std::string & out_id) {
             case ui::A_SETTITLE: gh_settitle(a.game, a.entry); break;
             case ui::A_TEST: gh_spawn_test(U.games[a.game].id, a.entry, a.arg); break;
             case ui::A_EXTRA:
-                if (a.arg == 1 && !gh_font_guard()) break;
+                if (a.arg == 1 && (!gh_font_guard() || !gh_disk_guard(U.games[a.game].id))) break;
                 if (a.arg == 1) gh_launch_note(U, a);
                 if (a.arg == 1) { gApp.noB = true; gApp.resume_slot = 0; U.cur = gApp.cur_game = a.game; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true; }
                 if (a.arg == 2) { gh_boot_seq(true); }

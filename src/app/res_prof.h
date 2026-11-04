@@ -236,6 +236,27 @@ static bool gh_profile(const std::string & id, GProfile & p, bool quick = false)
     return true;
 }
 
+/* #451 step 1: pre-flight. Every disk / CD image the chosen work needs must open; otherwise stay in the menu and say why (same slot as gh_font_guard). */
+/* screen phrase via the phrase table (key = original Korean text); thin wrapper so the T11 literal check sees keyed phrases */
+static inline const char * T(const char * s) { return phr_(s); }
+static bool gh_disk_guard(const std::string & id) {
+    GProfile p; if (id.empty() || !gh_profile(id, p, true)) return true;   /* unknown profile: the normal path reports it */
+    std::string dir = gApp.imgdir_given ? gApp.imgdir : (p.imgdir.empty() ? gApp.imgdir : p.imgdir);
+    std::vector<std::string> need;
+    for (int i = 0; i < 4; i++) if (p.disk[i]) need.push_back(dir + "\\" + p.disk[i]);
+    for (auto & sw : p.swap) need.push_back(dir + "\\" + sw);
+    if (!p.cd.empty()) need.push_back(p.cd);
+    for (auto & path : need) {
+        FILE * f = fopen(path.c_str(), "rb"); if (f) { fclose(f); continue; }
+        int e = errno; size_t b = path.find_last_of("\\/"); std::string nm = b == std::string::npos ? path : path.substr(b + 1);
+        std::string why = e == ENOENT ? T("파일이 없습니다") : (e == EACCES ? T("열 권한이 없습니다") : T("열지 못했습니다"));
+        gh_log("ERROR: disk preflight failed -> start blocked: %s (errno=%d)", path.c_str(), e);
+        std::string msg = std::string(T("디스크를 열 수 없습니다: ")) + aw::acp_to_u8(nm) + " (" + why + ")";
+        gApp.note = msg; gApp.note_until = SDL_GetTicks() + 8000u; gh_osd(msg, 8000); return false;
+    }
+    return true;
+}
+
 /* t51a (#878 묶음 2): 창 안 전환 — 일시정지 메뉴 「다음 단계」·「메인 메뉴로」 가 창·프로세스를 닫지 않고 같은 창에서 디스크를 바꿔 리셋한다. 실패하면 현행 재실행 경로(폴백, 설계_창안전환_874.md §9) */
 static void gh_apply_settings(const ui::Settings & s, bool vol);
 

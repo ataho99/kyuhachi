@@ -337,6 +337,12 @@ void RENDER_SetSize(Bitu width, Bitu height, Bitu bpp, float fps, double scrn_ra
         gApp.tex = SDL_CreateTexture(gApp.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, gApp.fbw, gApp.fbh);
         int sc = 1; while ((gApp.fbw * (sc + 1) <= 1600) && (gApp.fbh * (sc + 1) <= 1000)) sc++;
         SDL_SetWindowSize(gApp.win, gApp.fbw * sc, gApp.fbh * sc);
+
+#if defined(__ANDROID__)
+        SDL_RenderSetLogicalSize(gApp.ren, gApp.fbw, gApp.fbw * 3 / 4);   /* fixed 4:3 outer frame */
+#else
         SDL_RenderSetLogicalSize(gApp.ren, gApp.fbw, gApp.fbh);
+#endif
+
     }
 }

@@ -140,7 +140,14 @@ void RENDER_EndUpdate(bool abort) {
     } else if (!gApp.headless && gApp.ren && gApp.tex && !gApp.fb.empty()) {
         if (gApp.loading && !gApp.noload) { static std::vector<uint32_t> lv; lv.assign(gApp.fb.size(), 0); gh_loading_draw(lv.data(), gApp.fbw, gApp.fbh); SDL_UpdateTexture(gApp.tex, NULL, lv.data(), gApp.fbw * 4); } else SDL_UpdateTexture(gApp.tex, NULL, gApp.fb.data(), gApp.fbw * 4);
         SDL_RenderClear(gApp.ren);
+
+#if defined(__ANDROID__)
+        /* Android: fixed 4:3 outer frame; inner picture 4:3 (stretched) or 16:10 (letterboxed) by gApp.fit */
+        { SDL_Rect d; d.x = 0; d.w = gApp.fbw; if (gApp.fit == FIT_43) { d.y = 0; d.h = gApp.fbw * 3 / 4; } else { d.h = gApp.fbh; d.y = (gApp.fbw * 3 / 4 - d.h) / 2; } SDL_RenderCopy(gApp.ren, gApp.tex, NULL, &d); }
+#else
         SDL_RenderCopy(gApp.ren, gApp.tex, NULL, NULL);
+#endif
+
         SDL_RenderPresent(gApp.ren);
     }
     if (gApp.scr_pend > 0 && --gApp.scr_pend == 0) gh_shot_save();

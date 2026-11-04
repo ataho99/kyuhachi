@@ -7,6 +7,9 @@
 #include <vector>
 #if !defined(_WIN32)
 #include <iconv.h>
+#if defined(__ANDROID__)
+#include "ksx_hangul_tab.h"
+#endif
 #endif
 #include "platform/plat.h" /* S3: platform layer */
 #include "text/kh_phrase.h"   /* t52a (#49): windows.h 와 그 앞의 LEAN_AND_MEAN 정의 뒤에 둔다 */
@@ -137,6 +140,10 @@ static unsigned cp2code(uint32_t cp) {
     }
 #else
     if (cp >= 0xAC00 && cp <= 0xD7A3) {
+#if defined(__ANDROID__)
+        /* no EUC-KR iconv on Android: look the syllable up in the KS X 1001 table (index = EUC-KR cell order) */
+        { int lo = 0, hi = 2349; while (lo <= hi) { int m = (lo + hi) >> 1; if (kKsxTab[m] == cp) { unsigned a = 0xB0u + (unsigned)(m / 94), b = 0xA1u + (unsigned)(m % 94); return jis2sjis((int)(a - 0xA0) + 0x20, (int)(b - 0xA0) + 0x20); } if (kKsxTab[m] < cp) lo = m + 1; else hi = m - 1; } return 0; }
+#endif
         static std::vector<uint32_t> tab; if (tab.empty()) { tab.assign(0xB000, 0); }
         iconv_t ic = iconv_open("EUC-KR", "UTF-32LE"); if (ic != (iconv_t)-1) { char in[4] = { (char)(cp & 255), (char)((cp >> 8) & 255), (char)((cp >> 16) & 255), 0 }; char out[8]; char * ip = in, * op = out; size_t il = 4, ol = 8; size_t r = iconv(ic, &ip, &il, &op, &ol); iconv_close(ic); if (r != (size_t)-1 && op - out == 2) { unsigned a = (uint8_t)out[0], b = (uint8_t)out[1]; if (a >= 0xB0 && a <= 0xC8 && b >= 0xA1) return jis2sjis((int)(a - 0xA0) + 0x20, (int)(b - 0xA0) + 0x20); } }
     }

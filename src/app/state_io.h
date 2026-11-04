@@ -83,6 +83,15 @@ static std::string gh_slot_n(int gi, int slot /*0..7*/) {
     char b[700]; snprintf(b, sizeof b, "%s\\%s\\slot%02d.g98s", gApp.savedir.c_str(), gApp.ui_.games[gi].id.c_str(), slot + 1); return b;
 }
 static void gh_publish(const uint32_t * px, int w, int h) {
+#if defined(__ANDROID__)
+    /* Android software path (no GL): draw the menu/boot canvas into the 4:3 outer frame; touch/keys come through the normal SDL events */
+    if (!gApp.headless && !gApp.use_gl && gApp.ren && gApp.win) {
+        static SDL_Texture * mt = NULL; static int mw = 0, mh = 0;
+        if (!mt || mw != w || mh != h) { if (mt) SDL_DestroyTexture(mt); mt = SDL_CreateTexture(gApp.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h); mw = w; mh = h; }
+        if (mt) { SDL_UpdateTexture(mt, NULL, px, w * 4); SDL_RenderSetLogicalSize(gApp.ren, w, w * 3 / 4); SDL_RenderClear(gApp.ren); SDL_Rect d; d.x = 0; d.w = w; if (gApp.fit == FIT_1610) { d.h = h; d.y = (w * 3 / 4 - h) / 2; } else { d.y = 0; d.h = w * 3 / 4; } SDL_RenderCopy(gApp.ren, mt, NULL, &d); SDL_RenderPresent(gApp.ren); }
+        return;
+    }
+#endif
     if (gApp.headless || !gApp.use_gl || !gApp.fb_mtx) return;
     SDL_LockMutex(gApp.fb_mtx);
     gApp.pub.assign(px, px + (size_t)w * h); gApp.pub_w = w; gApp.pub_h = h; gApp.pub_new = true; gh_ovl_off();

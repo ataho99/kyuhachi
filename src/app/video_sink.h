@@ -247,6 +247,7 @@ static void gl_rect(int dw, int dh, int w, int h, int fit, int & x, int & y, int
 static int SDLCALL gl_thread(void *) {
     SDL_GL_MakeCurrent(gApp.win, gApp.glctx);
     int tw = 0, th = 0, cw = 0, ch = 0; int ovw = 0, ovh = 0, otw = 0, oth = 0; bool ov_has = false, ov_dirty = false; std::vector<uint32_t> sw;
+    GLuint vp_tex = 0; std::vector<uint32_t> vp_buf; unsigned vp_mask = ~0u; int vp_w = 0, vp_h = 0, vp_sx = -1, vp_sw = -1;   // virtual pad
     while (!gApp.gl_stop) {
         int dw = 0, dh = 0; SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
         bool nf = false;
@@ -304,6 +305,29 @@ static int SDLCALL gl_thread(void *) {
             F.VertexAttribPointer(0, 2, GL_FLOAT, 0, 16, (const void *)0); F.VertexAttribPointer(1, 2, GL_FLOAT, 0, 16, (const void *)8);
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glDisable(GL_BLEND); glBindTexture(GL_TEXTURE_2D, gApp.tex_gl);
+        }
+        if (vpad::g_show && srw > 0 && dw > 0 && dh > 0 && gApp.prog_ov.ok) {   // virtual pad in the side bands (window space)
+            vpad::Geo vg; vpad::layout(dw, dh, sx, srw, vg);
+            if (vg.on) {
+                unsigned vm = vpad::g_mask;
+                if (vp_tex == 0) {
+                    glGenTextures(1, &vp_tex); glBindTexture(GL_TEXTURE_2D, vp_tex);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                }
+                glBindTexture(GL_TEXTURE_2D, vp_tex);
+                if (vm != vp_mask || dw != vp_w || dh != vp_h || sx != vp_sx || srw != vp_sw) {
+                    vp_buf.assign((size_t)dw * dh, 0); vpad::render(vp_buf.data(), dw, dh, vg, vm);
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, dw, dh, 0, GL_BGRA, GL_UNSIGNED_BYTE, vp_buf.data());
+                    vp_mask = vm; vp_w = dw; vp_h = dh; vp_sx = sx; vp_sw = srw;
+                }
+                glViewport(0, 0, dw, dh); glEnable(GL_BLEND); glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                F.UseProgram(gApp.prog_ov.p); if (gApp.prog_ov.uTex >= 0) F.Uniform1i(gApp.prog_ov.uTex, 0);
+                F.BindBuffer(GL_ARRAY_BUFFER, gApp.vbo); F.EnableVertexAttribArray(0); F.EnableVertexAttribArray(1);
+                F.VertexAttribPointer(0, 2, GL_FLOAT, 0, 16, (const void *)0); F.VertexAttribPointer(1, 2, GL_FLOAT, 0, 16, (const void *)8);
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                glDisable(GL_BLEND); glBindTexture(GL_TEXTURE_2D, gApp.tex_gl);
+            }
         }
         if (gApp.shot_req) {
             int r0x = 0, r0y = 0, rwd = dw, rht = dh;

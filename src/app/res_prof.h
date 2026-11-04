@@ -47,6 +47,8 @@ static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bo
 #include "input/kh_kbtable.h"
 #include "input/kh_kbov.h"
 #include "ui/kh_kbov_draw.h"   /* S6: kbov drawing half */
+#include "input/kh_vpad.h"
+#include "ui/kh_vpad_draw.h"
 /* ------------------------------------------------------------------ r020 (#247정정·#248): 공용 자원 run\res\fonts · run\res\rhythm */
 static bool gh_exists(const std::string & p) { return plat::exists(p.c_str()); }
 static std::string gh_res_font_path(const std::string & name) {   /* 글꼴 이름 → 파일 (res\fonts 우선, 옛 exe 옆도 허용). 없으면 res 쪽 경로를 돌려준다 */

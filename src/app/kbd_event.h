@@ -103,6 +103,59 @@ static bool gh_kbd_event(const SDL_Event & e) {
     if (ph != 2) { if (c) gApp.kb_cons++; else gApp.kb_pass++; }
     return c;
 }
+/* ---- virtual pad glue (window-space side bands): same actions as a real pad via the shared bindings */
+static void gh_vpad_fire(int b, bool d) {
+    static const KBD_KEYS K[4] = { KBD_up, KBD_down, KBD_left, KBD_right };
+    static const char * W[vpad::NB] = { "VPAD UP", "VPAD DOWN", "VPAD LEFT", "VPAD RIGHT", "VPAD O", "VPAD X", "VPAD SELECT", "VPAD START" };
+    gh_log("VPAD %s %s", W[b], d ? "down" : "up");
+    if (b < 4) kh_key(K[b], d, W[b]);
+    else kh_bind_fire(b == vpad::B_O ? PB_EAST : b == vpad::B_X ? PB_SOUTH : b == vpad::B_SEL ? PB_BACK : PB_START, d, W[b]);
+}
+static bool g_vpad_inited = (vpad::g_fire = gh_vpad_fire, true);
+static bool gh_vpad_update(vpad::Geo & g, int & ww, int & wh, int & dw, int & dh) {   /* decides whether the pad is shown and active */
+    bool ok = !(gApp.headless || !gApp.win || !gApp.use_gl || !gApp.boot_tick || gApp.menu_open || (gApp.loading && !gApp.noload));
+    if (ok && vpad::g_mode == 0) ok = false;
+    if (ok && vpad::g_mode == 2 && (!kh_pads.empty() || SDL_GetNumTouchDevices() <= 0)) ok = false;   /* auto: touch screen and no real pad */
+    int rx = 0, ry = 0, rw = 0, rh = 0;
+    if (ok) ok = gh_kb_geom(ww, wh, dw, dh, rx, ry, rw, rh);
+    if (ok) { vpad::layout(dw, dh, rx, rw, g); ok = g.on; }
+    vpad::g_show = ok ? 1 : 0;
+    static int lastk = -1; int gk = ok ? (dw * 7 + dh * 13 + rx * 17 + rw * 19 + 1) : 0;   // log only when geometry or visibility changes
+    if (gk != lastk) {
+        lastk = gk;
+        if (ok) gh_log("VPAD geo dw=%d dh=%d fx=%d fw=%d START=(%d,%d) O=(%d,%d)", dw, dh, rx, rw,
+                       g.r[vpad::B_START].x + g.r[vpad::B_START].w / 2, g.r[vpad::B_START].y + g.r[vpad::B_START].h / 2,
+                       g.r[vpad::B_O].x + g.r[vpad::B_O].w / 2, g.r[vpad::B_O].y + g.r[vpad::B_O].h / 2);
+        else gh_log("VPAD hidden");
+    }
+    if (!ok) vpad::release_all();
+    return ok;
+}
+static void gh_vpad_tick(void) { vpad::Geo g; int a = 0, b = 0, c = 0, d = 0; gh_vpad_update(g, a, b, c, d); }
+static bool gh_vpad_testpos(const char * nm, int & wx, int & wy) {   /* test only: window position of a pad button */
+    static const char * N[vpad::NB] = { "UP", "DOWN", "LEFT", "RIGHT", "O", "X", "SEL", "START" };
+    vpad::Geo g; int ww = 0, wh = 0, dw = 0, dh = 0; if (!gh_vpad_update(g, ww, wh, dw, dh)) return false;
+    for (int b = 0; b < vpad::NB; b++) if (!strcmp(nm, N[b])) {
+        wx = (g.r[b].x + g.r[b].w / 2) * ww / dw; wy = (g.r[b].y + g.r[b].h / 2) * wh / dh; return true;
+    }
+    return false;
+}
+static bool gh_vpad_event(const SDL_Event & e) {
+    vpad::Geo g; int ww = 0, wh = 0, dw = 0, dh = 0;
+    if (!gh_vpad_update(g, ww, wh, dw, dh)) return false;
+    long long id = -1; int ph = 0, x = 0, y = 0; bool echo = false;
+    if (e.type == SDL_FINGERDOWN || e.type == SDL_FINGERUP || e.type == SDL_FINGERMOTION) {
+        id = (long long)e.tfinger.fingerId; ph = e.type == SDL_FINGERDOWN ? 0 : e.type == SDL_FINGERUP ? 1 : 2;
+        x = (int)(e.tfinger.x * dw); y = (int)(e.tfinger.y * dh);
+    } else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
+        if (e.button.button != SDL_BUTTON_LEFT) return false;
+        ph = e.type == SDL_MOUSEBUTTONDOWN ? 0 : 1; x = e.button.x * dw / ww; y = e.button.y * dh / wh; echo = e.button.which == SDL_TOUCH_MOUSEID;
+    } else if (e.type == SDL_MOUSEMOTION) {
+        ph = 2; x = e.motion.x * dw / ww; y = e.motion.y * dh / wh; echo = e.motion.which == SDL_TOUCH_MOUSEID;
+    } else return false;
+    if (echo) return vpad::hit(g, x, y) >= 0 || vpad::owned();   /* finger events drive the pad; swallow their mouse echo */
+    return vpad::pointer(g, id, ph, x, y);
+}
 /* 시험 전용(--kbshow/--kbhide/--kbclick/--kbbtn): SDL 마우스 이벤트를 창 좌표로 밀어 넣어 hit-test·표시 사각형 변환까지 통과시킨다(키 함수를 직접 부르지 않음) */
 static void gh_parse_kbclick(const char * a) {   /* "<시작초>:라벨,라벨,..." — 라벨은 키 표의 label, 같은 이름이 여럿이면 라벨#n(0부터), BTN = 토글 버튼, OUT = 영역 밖 */
     gApp.kbt_click_ms = (unsigned)(atof(a) * 1000.0); const char * p = strchr(a, ':'); if (!p) return; p++;
@@ -116,12 +169,18 @@ static void gh_kbtest_tick(unsigned since) {
     if (nextat == 0) nextat = gApp.kbt_click_ms ? gApp.kbt_click_ms : 1;
     if (since < nextat) return;
     std::string lb = gApp.kbt_seq[ci]; bool hold = false; if (!lb.empty() && lb[lb.size() - 1] == '!') { hold = true; lb.erase(lb.size() - 1); } int vx = 320, vy = 100;   /* 라벨 끝 ! = 누른 채로 둠(뗌 없음) */
+    int wx = 0, wy = 0; bool padl = false;
+    if (lb == "WINSHOT") { gh_winshot(); gh_log("KBTEST WINSHOT at %u ms", since); ci++; nextat = since + 300; return; }   // test: full window capture
     bool lng = false; int ovs = -1; if (lb.size() >= 3 && lb[0] == 'O' && lb[1] == 'V' && lb[2] >= '1' && lb[2] <= '4') { ovs = lb[2] - '0'; lng = lb.size() > 3 && lb[3] == 'L'; }   /* t52f: OV1 메뉴 · OV2 저장 · OV3 불러오기 · OV4 배속, 끝 L = 0.9초 누름 */
     if (ovs >= 0) { vx = kbov::sx(ovs) + kbov::BW / 2; vy = kbov::BY + kbov::BH / 2; }
     else if (lb == "BTN") { vx = kbov::BX + kbov::BW / 2; vy = kbov::BY + kbov::BH / 2; }
+    else if (lb.compare(0, 4, "PAD_") == 0) {
+        padl = gh_vpad_testpos(lb.c_str() + 4, wx, wy);
+        if (!padl) { gh_log("KBTEST pad button not available: %s", lb.c_str()); ci++; return; }
+    }
     else if (lb != "OUT") { std::string nm = lb; int nth = 0; size_t h = nm.find('#'); if (h != std::string::npos) { nth = atoi(nm.c_str() + h + 1); nm = nm.substr(0, h); }
         int ix = kbov::find_label(nm.c_str(), nth); if (ix < 0 || !kbov::key_center(ix, vx, vy)) { gh_log("KBTEST 라벨 없음: %s", lb.c_str()); ci++; return; } }
-    int wx = 0, wy = 0; if (!gh_kb_virt2win(vx, vy, wx, wy)) { gh_log("KBTEST 창 좌표 변환 실패(%s)", lb.c_str()); ci++; return; }
+    if (!padl && !gh_kb_virt2win(vx, vy, wx, wy)) { gh_log("KBTEST 창 좌표 변환 실패(%s)", lb.c_str()); ci++; return; }
     SDL_Event se; memset(&se, 0, sizeof se);
     se.type = phase == 0 ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP; se.button.windowID = SDL_GetWindowID(gApp.win); se.button.button = SDL_BUTTON_LEFT; se.button.state = phase == 0 ? SDL_PRESSED : SDL_RELEASED; se.button.clicks = 1; se.button.x = wx; se.button.y = wy;
     SDL_PushEvent(&se);

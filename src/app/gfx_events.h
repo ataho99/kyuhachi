@@ -27,6 +27,7 @@ void GFX_Events(void) {
                 else hit = false;
                 if (hit) continue;
             }
+            if (gh_vpad_event(e)) continue;   // virtual pad (side bands)
             if (gh_kbd_event(e)) continue;   /* t46x: 화면 키보드·토글 버튼(메뉴 > 키보드 > 게임 순서) */
             if (!gApp.menu_open && gh_game_event(e)) continue;
             if (gensei_input_event(e)) continue;
@@ -51,7 +52,7 @@ void GFX_Events(void) {
                 gh_log("automouse #%u at %u ms dx=%.0f dy=%.0f act=%d", (unsigned)gApp.next_mouse, since, (double)m.dx, (double)m.dy, m.act); gApp.next_mouse++;
             }
             while (gApp.next_inj < gApp.inj.size() && since + gApp.inj_base >= gApp.inj[gApp.next_inj].at) { gh_inj_run(gApp.inj[gApp.next_inj], since + gApp.inj_base); gApp.next_inj++; }   /* t48e (#648): --inject · t51a: 창 안 전환을 건너도 시험 시계가 이어지게 g_inj_base 를 더한다 */
-            kbov::tick();   /* t52f: 빠른 불러오기 길게 누름(0.6초) 판정 */
+            kbov::tick(); gh_vpad_tick();   /* t52f: 빠른 불러오기 길게 누름(0.6초) 판정 */
             if (!gApp.headless && gApp.win && gApp.use_gl) gh_kbtest_tick(since);   /* t46x 시험 전용(옵션이 없으면 아무 일도 안 함) */
             kh_vmouse_pump();   /* t34: 호스트 마우스 이동량을 20ms 마다 ±100 이하로 코어에 */
 #if defined(__ANDROID__)

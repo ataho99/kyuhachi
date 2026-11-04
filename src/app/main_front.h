@@ -71,6 +71,7 @@ static int gh_main_args(int argc, char * argv[], std::string & id) {
         else if (a == "--kbhide" && i + 1 < argc) gApp.kbt_hide_ms = (unsigned)(atof(argv[++i]) * 1000.0);
         else if (a == "--kbclick" && i + 1 < argc) gh_parse_kbclick(argv[++i]);   /* "<시작초>:STOP,GRPH,X,GRPH,KANA" */
         else if (a == "--kbbtn" && i + 1 < argc) kbov::g_cli_btn = atoi(argv[++i]) ? 1 : 0;
+        else if (a == "--vpad" && i + 1 < argc) vpad::g_cli = atoi(argv[++i]);   // test: virtual pad 0 off 1 on 2 auto
         else if (a == "--ovbtn" && i + 1 < argc) kbov::g_cli_ov = atoi(argv[++i]) ? 1 : 0;   /* t52f 시험: 오버레이 버튼 줄 켬/끔 */
         else if (a == "--ovstrong") kbov::g_force_strong = true;   /* t52f 시험: 버튼 줄을 항상 진하게 */
         else if (a == "--lang" && i + 1 < argc) gApp.cli_lang = atoi(argv[++i]);   /* t52g 시험 */

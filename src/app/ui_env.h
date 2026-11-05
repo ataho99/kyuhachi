@@ -189,6 +189,7 @@ static void gh_ui_init_games(void) {
     };
     for (auto & d : subs) {
         GProfile p; if (!gh_profile(d, p)) continue;
+        if (p.kv.count("dup_of")) continue;   /* 1b-3: 같은 이미지의 중복 작품은 목록에서만 숨긴다(폴더는 옮기지 않음) */
         E e; e.order = 100; auto o = p.kv.find("order"); if (o != p.kv.end()) e.order = atoi(o->second.c_str());
         e.g.id = d; e.g.title = p.title; e.g.src = p.src; e.g.ov = p.ov;
         e.g.title_db = p.title;   /* t49a (#809): 사용자 지정 표시 제목 — user.ini [game] title_user= (비면 DB·game.ini 제목) */

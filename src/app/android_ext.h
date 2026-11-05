@@ -45,11 +45,11 @@ static void kha_cfg_save(void) {
 }
 static void kha_lib_init(void) {
     if (gh_all_files_ok()) {
-        std::string b = KHA_BASE; plat::mkdir(b); plat::mkdir(b + "\\games"); plat::mkdir(b + "\\fonts");
-        std::string g = b + "\\여기에_넣으세요.txt";
+        std::string b = KHA_BASE; plat::mkdir(b); plat::mkdir(b + "/games"); plat::mkdir(b + "/fonts");
+        std::string g = b + "/여기에_넣으세요.txt";
         if (!plat::exists(g)) { FILE * f = fopen(g.c_str(), "w"); if (f) { fputs(phr_("games 폴더 안에 게임 폴더(.fdi .hdi .d88 등)를 넣고 앱에서 「다시 검색」을 누르세요.\nfonts 폴더에는 글꼴 BMP 를 넣으세요.\n"), f); fclose(f); } }
     }
-    if (gApp.ui_.gamefolder.empty()) { gApp.ui_.gamefolder = std::string(KHA_BASE) + "\\games"; ui::settings_save(gApp.ui_, gApp.cfgpath); gh_log("KHA default game folder = %s", gApp.ui_.gamefolder.c_str()); }
+    if (gApp.ui_.gamefolder.empty()) { gApp.ui_.gamefolder = std::string(KHA_BASE) + "/games"; ui::settings_save(gApp.ui_, gApp.cfgpath); gh_log("KHA default game folder = %s", gApp.ui_.gamefolder.c_str()); }
 }
 static int gh_scan_gamefolder(const char * why);
 static void gh_android_savedir(void);

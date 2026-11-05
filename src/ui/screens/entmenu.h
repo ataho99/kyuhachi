@@ -20,7 +20,7 @@ inline void Ui::k_entmenu(UKey k, Act & a) {
             else if (menusel == 6) {   /* t49a (#845): 다음 단계 돌려 고르기 — user.ini [entry:<이름>] next= (기존 저장 경로) */
                 std::vector<std::string> cs = next_cands(entg, v[menu_ent]); auto it = e.kv.find("next"); std::string cur_n = it == e.kv.end() || it->second.empty() ? std::string("none") : it->second; size_t ci = 0; for (size_t i = 0; i < cs.size(); i++) if (cs[i] == cur_n) ci = i;
                 std::string nv = cs[(ci + 1) % cs.size()]; ent::Kv kv = e.kv; kv["next"] = nv; std::string nm = e.name;
-                bool ok = env.save && env.save(entg, nm, kv, std::string()); if (ok && env.reload) env.reload(entg); dirty = true; msg = ok ? phr_("다음 단계를 바꿨습니다.") : phr_("저장하지 못했습니다.");
+                bool ok = env.save && env.save(entg, nm, kv, std::string()); if (ok && env.reload) env.reload(entg); dirty = true; msg = ok ? std::string(phr_("다음 단계: ")) + next_label(entg, menu_ent) + phr_("(으)로 바꿨습니다.") : std::string(phr_("저장하지 못했습니다."));   /* 1b-3: 바뀐 값을 알림에 넣는다 */
             }
             else {
                 std::vector<std::string> names; for (size_t i = 0; i < games[entg].ents.size(); i++) if (!games[entg].ents[i].pseudo && games[entg].ents[i].vgi < 0) names.push_back(games[entg].ents[i].name);

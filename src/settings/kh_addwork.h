@@ -138,11 +138,12 @@ inline void index_registered(Ctx & c) {
     c.reg.clear(); c.ids.clear(); c.hashidx.clear(); c.dbidx.clear(); c.nkidx.clear(); std::vector<std::string> files, subs; list_dir(c.games_dir, files, &subs);
     for (auto & s : subs) {
         c.ids.insert(lower(s)); prof::Ini gi; if (!prof::ini_load(join(join(c.games_dir, s), "game.ini"), gi) || !gi.count("game")) continue;
-        auto & g = gi["game"]; auto it = g.find("sig"); if (it != g.end() && !it->second.empty()) c.reg[it->second] = s;
-        auto is = g.find("sigs"); if (is != g.end()) for (auto & x : prof::split_list(is->second)) if (!x.empty()) c.reg[x] = s;
-        auto ih = g.find("sha1s"); if (ih != g.end()) for (auto & x : prof::split_list(ih->second)) if (x.size() == 40 && !c.hashidx.count(x)) c.hashidx[x] = s;
-        auto id = g.find("dbid"); if (id != g.end() && !id->second.empty() && !c.dbidx.count(id->second)) c.dbidx[id->second] = s;
-        auto ig = g.find("nk_gid"); if (ig != g.end() && !ig->second.empty() && !c.nkidx.count(ig->second)) c.nkidx[ig->second] = s;
+        auto & g = gi["game"]; const std::string tgt = g.count("dup_of") ? g["dup_of"] : s;   /* 1b-3: 숨긴 중복 작품은 주 작품으로 연결 */
+        auto it = g.find("sig"); if (it != g.end() && !it->second.empty()) c.reg[it->second] = tgt;
+        auto is = g.find("sigs"); if (is != g.end()) for (auto & x : prof::split_list(is->second)) if (!x.empty()) c.reg[x] = tgt;
+        auto ih = g.find("sha1s"); if (ih != g.end()) for (auto & x : prof::split_list(ih->second)) if (x.size() == 40 && !c.hashidx.count(x)) c.hashidx[x] = tgt;
+        auto id = g.find("dbid"); if (id != g.end() && !id->second.empty() && !c.dbidx.count(id->second)) c.dbidx[id->second] = tgt;
+        auto ig = g.find("nk_gid"); if (ig != g.end() && !ig->second.empty() && !c.nkidx.count(ig->second)) c.nkidx[ig->second] = tgt;
     }
 }
 /* 한글 → 로마자(국어의 로마자 표기법, 소리 변화 없이 글자 그대로) */
@@ -281,20 +282,17 @@ inline int merge_dups(Ctx & c, std::vector<std::string> * log) {
     std::map<std::string, std::string> first; int moved = 0;
     for (auto & s : subs) {
         if (s.empty() || s[0] == '_') continue; std::string gi = join(join(c.games_dir, s), "game.ini"); prof::Ini ini; if (!prof::ini_load(gi, ini) || !ini.count("game")) continue;
-        auto & g = ini["game"]; if (g.count("auto") == 0 || g["auto"] != "1") continue;
+        auto & g = ini["game"]; if (g.count("dup_of")) continue; if (g.count("auto") == 0 || g["auto"] != "1") continue;   /* 1b-3: 이미 중복 표시한 작품은 건너뜀 */
         std::string imgdir = sys_from_ini(g.count("imgdir") ? g["imgdir"] : std::string()); if (imgdir.empty() || !dir_exists(imgdir)) continue;
         std::vector<std::string> f2; list_dir(imgdir, f2, NULL); std::set<std::string> hs; for (auto & f : f2) if (img_ext(f)) { std::string h = c.cache ? c.cache->sha1(join(imgdir, f)) : prof::sha1_file(join(imgdir, f)); if (!h.empty()) hs.insert(h); }
         if (hs.empty()) continue;
         std::string same; bool all = true; for (auto & h : hs) { auto it = first.find(h); if (it == first.end()) { all = false; break; } if (same.empty()) same = it->second; else if (same != it->second) { all = false; break; } }
         if (all && !same.empty()) {
-            std::string dd = join(c.games_dir, sys_from_ini("_중복")); make_dir(dd); std::string dst = join(dd, s); int k = 2; while (dir_exists(dst)) dst = join(dd, s + "_" + std::to_string(k++));
+            /* 1b-3 (#510-4): 사용자 폴더는 옮기거나 이름을 바꾸지 않는다 — game.ini 에 dup_of 만 적어 목록에서 숨긴다 */
             std::string src = g.count("srcdir") ? g["srcdir"] : std::string();
-            if (rename(join(c.games_dir, s).c_str(), dst.c_str()) == 0) {
+            if (ini_patch(gi, { { "dup_of", same, 3 } })) {
                 moved++; if (!src.empty()) ini_patch(join(join(c.games_dir, same), "game.ini"), { { "alt_src", src, 2 } });
-                std::string zr = lower(join(c.games_dir, "_zip")); std::string lid = lower(imgdir);
-                if (lid.compare(0, zr.size(), zr) == 0) { prof::Ini si; std::string sg = join(join(c.games_dir, same), "game.ini");
-                    if (prof::ini_load(sg, si) && si.count("game") && lower(sys_from_ini(si["game"]["imgdir"])) != lid) { std::string zd = join(dd, "zip_" + s); int k2 = 2; while (dir_exists(zd)) zd = join(dd, "zip_" + s + "_" + std::to_string(k2++)); rename(imgdir.c_str(), zd.c_str()); } }
-                if (log) log->push_back("중복 합침: " + s + " → " + same + " (games\\_중복 로 옮김)");
+                if (log) log->push_back("중복 합침: " + s + " → " + same + " (목록에서만 숨김, 폴더는 그대로)");
             }
             continue;
         }

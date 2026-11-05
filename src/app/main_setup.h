@@ -3,8 +3,8 @@
 /* t56a: Android save dir = <chosen game folder>\saves (same sub-layout as <exe>\saves on Windows) */
 static void gh_android_savedir(void) {
     if (gApp.ui_.gamefolder.empty()) return;
-    std::string sd = gApp.ui_.gamefolder + "\\saves";
-    if (!plat::exists(sd) && gApp.ui_.gamefolder.compare(0, strlen(KHA_BASE), KHA_BASE) != 0) sd = std::string(KHA_BASE) + "\\saves";   /* 1b-2: new saves for an external (SD) game folder go to the app folder, not beside the originals; existing saves stay */
+    std::string sd = gApp.ui_.gamefolder + "/saves";
+    if (!plat::exists(sd) && gApp.ui_.gamefolder.compare(0, strlen(KHA_BASE), KHA_BASE) != 0) sd = std::string(KHA_BASE) + "/saves";   /* 1b-2: new saves for an external (SD) game folder go to the app folder, not beside the originals; existing saves stay */
     plat::mkdir(sd);
     bool ok = plat::exists(sd);
     gh_log("SAVEDIR folder=%s -> %s (%s)", gApp.ui_.gamefolder.c_str(), sd.c_str(), ok ? "ok" : "mkdir failed, keep app dir");
@@ -29,7 +29,7 @@ static void gh_main_input_init(std::string & id) {
     gh_ui_init_games();
     ui::settings_load(gApp.ui_, gApp.cfgpath);   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "after-start-load", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
 #if defined(__ANDROID__)
-    kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_cfg_load(); kha_perm_ask_once(); kha_lib_init();   /* t137 */
+    kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_cfg_load(); for (size_t i_ = 0; i_ < gApp.ui_.gamefolder.size(); i_++) if (gApp.ui_.gamefolder[i_] == '\\') gApp.ui_.gamefolder[i_] = '/';   /* 1b-3: 안드 경로 구분자 통일 */ kha_perm_ask_once(); kha_lib_init();   /* t137 */
     gh_android_savedir();
     gh_android_fontdiag();
 #endif

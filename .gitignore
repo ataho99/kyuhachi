@@ -55,3 +55,6 @@ font.bmp
 *.hdd
 *.dsk
 *.bdf
+
+# 시험 기준 샷·세이브(게임 파생물) — 저장소에 올리지 않음
+tests/golden/

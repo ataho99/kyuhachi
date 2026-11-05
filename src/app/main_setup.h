@@ -142,11 +142,11 @@ static void gh_main_prep(std::string & id, const std::string & exedir) {
         gApp.dosfd = gApp.prof_.kv.count("dosfd") && gApp.prof_.kv["dosfd"] == "1" && (gApp.prof_.disk[0] != NULL || gApp.prof_.disk[1] != NULL) && gApp.prof_.disk[2] == NULL && gApp.prof_.disk[3] == NULL;
         { /* 2d (#580): 시작을 막지 않는다 — 디스크 없음(B3)·부팅 드라이브에 디스크 없음(B4)·부트 섹터가 빈 데이터 디스크(B6)는 내장 DOS 프롬프트로 열고 화면 위에 이유 한 줄 */
             bool nod_ = gApp.prof_.disk[0] == NULL && gApp.prof_.disk[1] == NULL && gApp.prof_.disk[2] == NULL && gApp.prof_.disk[3] == NULL; int bi_ = gApp.prof_.bootletter - 'A'; const char * why_ = NULL;
-            if (nod_ && gApp.prof_.cd.empty()) why_ = phr_("부팅할 수 있는 디스크가 없어 DOS 프롬프트로 열었습니다");
-            else if (!nod_ && !gApp.dosfd && bi_ >= 0 && bi_ < 4 && gApp.prof_.disk[bi_] == NULL) why_ = phr_("부팅 드라이브에 디스크가 없어 DOS 프롬프트로 열었습니다");
-            else if (!nod_ && !gApp.dosfd && bi_ >= 0 && bi_ < 2 && gApp.prof_.disk[bi_] != NULL) { prof::ImgInfo ii_ = prof::probe(gApp.prof_.disk[bi_]); prof::probe_boot(ii_); if (prof::fmt_supported(ii_.fmt) && !ii_.boot_ok) why_ = phr_("부팅 디스크가 아닌 데이터 디스크라 DOS 프롬프트로 열었습니다"); }
+            if (nod_ && gApp.prof_.cd.empty()) why_ = phr_("dos_why_nodisk");
+            else if (!nod_ && !gApp.dosfd && bi_ >= 0 && bi_ < 4 && gApp.prof_.disk[bi_] == NULL) why_ = phr_("dos_why_noboot");
+            else if (!nod_ && !gApp.dosfd && bi_ >= 0 && bi_ < 2 && gApp.prof_.disk[bi_] != NULL) { prof::ImgInfo ii_ = prof::probe(gApp.prof_.disk[bi_]); prof::probe_boot(ii_); if (prof::fmt_supported(ii_.fmt) && !ii_.boot_ok) why_ = phr_("dos_why_data"); }
             gApp.dosmode = gApp.dosfd || (nod_ && !gApp.prof_.cd.empty()) || why_ != NULL;
-            if (why_) { gApp.osd = why_; gApp.osd_until = SDL_GetTicks() + 12000u; gh_log("DOS 프롬프트로 열기: %s", why_); } }
+            if (why_) { gApp.osd = why_; gApp.osd_until = SDL_GetTicks() + 12000u; gh_log("DOS prompt open: %s", why_); } }
         if (!gApp.prof_.cd.empty() && !gApp.dosmode) gh_log("WARN: cd 슬롯과 디스크가 함께 있음 — 이 빌드는 게스트 IDE 연결을 하지 않아 cd 를 무시: %s", gApp.prof_.cd.c_str());
         if (!gApp.dosmode && !gApp.prof_.disk[0] && !gApp.prof_.disk[1] && !gApp.prof_.disk[2] && !gApp.prof_.disk[3]) { gh_log("ERROR: 부팅 가능한 디스크 없음 (%s)", gApp.prof_.reason.c_str()); gh_msgbox(phr_("이 작품은 바로 부팅할 수 있는 디스크가 없습니다.\n(하드 설치 전용이거나 지원하지 않는 형식입니다)")); gh_finish(1); }
     }

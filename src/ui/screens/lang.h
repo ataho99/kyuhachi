@@ -11,10 +11,10 @@ inline void Ui::d_lang(Canvas & c) {
     int gi = (sel >= 0 && sel < (int)lang_gid.size()) ? gidx_of(lang_gid[sel]) : -1;
     if (gi >= 0) {
         const UiGame & g = games[gi];
-        text(c, 340, 44, fit(g.title, 270), WH, K); text(c, 340, 68, phr_("언어"), CY, K); text(c, 340 + 76, 68, fit(lang_label(g), 190), YL, K);
-        std::string w = (sel < (int)lang_why.size()) ? lang_why[sel] : std::string(); text(c, 340, 92, phr_("분류 근거"), CY, K); text(c, 340 + 76, 92, fit(!g.lang_exp.empty() ? std::string(phr_("사용자 지정")) : !g.lang.empty() ? std::string(phr_("gamedb 와 sha1 일치")) : std::string(phr_("근거 없음 (미분류)")), 190), WH, K);
+        text(c, 340, 44, fit(g.title, 270), WH, K); const int LX2 = 340 + std::max(tw(phr_("언어")), tw(phr_("분류 근거"))) + 14, VW2 = 620 - LX2; text(c, 340, 68, phr_("언어"), CY, K); text(c, LX2, 68, fit(lang_label(g), VW2), YL, K);   /* 4a: 라벨 칸 폭 = 가장 긴 라벨 + 14 (분류 근거 와 값이 붙던 것) */
+        std::string w = (sel < (int)lang_why.size()) ? lang_why[sel] : std::string(); text(c, 340, 92, phr_("분류 근거"), CY, K); text(c, LX2, 92, fit(!g.lang_exp.empty() ? std::string(phr_("사용자 지정")) : !g.lang.empty() ? std::string(phr_("gamedb 와 sha1 일치")) : std::string(phr_("근거 없음 (미분류)")), VW2), WH, K);
         if (!w.empty()) text(c, 340, 116, fit(w, 270), GY, K);
-        text(c, 340, 152, phr_("한글판 → 한글 글꼴 / 원판 → 일본어 글꼴"), WH, K);
+        { std::vector<std::string> fl = clamp_lines(wrap_words(std::string(phr_("한글판 → 한글 글꼴 / 원판 → 일본어 글꼴")), 270), 3, 270); for (size_t i = 0; i < fl.size(); i++) text(c, 340, 152 + (int)i * 18, fl[i], WH, K); }   /* 4a: 오른쪽에서 잘리던 줄을 접어 쓴다 */
     }
     desc(c, 264, 64, { dkey(phr_("{○} 또는 ←→:미분류 → 한글판 → 원판 일본어 순으로 바꿉니다.")), phr_("저장 위치: 작품 폴더의 user.ini [game] lang= (미분류면 지움).") });
     helpline(c, phr_("↑↓:작품, ○/←→:언어 바꾸기, ×:돌아가기"));

@@ -143,7 +143,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "valdump") { gh_log("uikeys: T52I VALDUMP bgm=%d se=%d bmult=%d bmode=%d dirty=%d scr=%d", U.g.bgm, U.g.se, U.g.bmult, U.g.bmode, U.dirty ? 1 : 0, (int)U.scr); continue; }   /* t52i 시험 전용: 동작 환경 값 기록 */
             if (tk == "save") { std::string sp = gApp.uitest_dir + "\\settings_uikeys.ini"; ui::settings_save(U, sp); gh_log("uikeys: 설정 저장 %s (bleed=%d)", sp.c_str(), U.g.bleed); continue; }   /* t42: 저장 시험 */
             if (tk == "ingame") { U.in_game = true; U.scr = ui::S_GAME; U.sel = 0; continue; }   /* t39ui4: 게임 중 메뉴로 진입 */
-            if (tk.compare(0, 4, "tab:") == 0) { std::string t = tk.substr(4); int want = t == "ko" ? 0 : t == "jp" ? 1 : 2; for (int gg = 0; gg < 4 && (int)U.tab != want; gg++) U.key(ui::UK_R); continue; }   /* t39ui4: 탭 맞추기 */
+            if (tk.compare(0, 4, "tab:") == 0) { std::string t = tk.substr(4); int want = t == "ko" ? 0 : t == "jp" ? 1 : t == "un" ? 2 : 3; for (int gg = 0; gg < 5 && (int)U.tab != want; gg++) U.key(ui::UK_R); continue; }   /* t39ui4: 탭 맞추기 */
             if (tk.compare(0, 3, "go:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(3)) { int b = U.base_of((int)i); if (!U.row_in_tab(b)) U.tab = ui::Ui::TAB_ALL; U.rebuild_vis((int)i); } continue; }
             if (tk.compare(0, 4, "sel:") == 0) { U.sel = atoi(tk.c_str() + 4); continue; }   /* t44c: 시험 전용 — 선택 행 직접 지정 */
             if (tk == "entlang") { U.sel = (int)std::max<size_t>(U.vents(U.entg).size(), 1) + 1; continue; }   /* t44c: S_ENT 의 「언어」 행 */

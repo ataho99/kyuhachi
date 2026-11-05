@@ -76,7 +76,7 @@ struct UiGame {
     std::string more;   /* r019: 함께 있는 이미지(같은 작품의 다른 이미지) 목록 */
     std::string orig, dbhit;   /* r018: 원판 제목(변형 판정) · DB 일치한 작품 이름 */
     /* t39 */
-    std::string lang = "jp", short_t, dir, imgdir, variant_of, fgroup, gfont, defent;   /* lang ko|jp · short= · 폴더 · 이미지 폴더 · 변형이면 기반 id · 글꼴 묶음(전용=custom) · 전용 글꼴 이름 · 기본 항목 */
+    std::string lang, short_t, dir, imgdir, variant_of, fgroup, gfont, defent;   /* lang ko|jp|빈값(미분류) · short= · 폴더 · 이미지 폴더 · 변형이면 기반 id · 글꼴 묶음(전용=custom) · 전용 글꼴 이름 · 기본 항목 */
     int base = -1; bool fav = false, need_install = false; long long last_run = 0; int order_n = 0;   /* base = 변형이면 기반 작품 index */
     std::vector<UiEnt> ents;
 };

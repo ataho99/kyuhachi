@@ -4,7 +4,7 @@ inline void Ui::d_pick(Canvas & c) {
     titlebar(c, phr_("작품 선택"));
     std::string bt = std::string(phr_("작품 선택  ")) + (sortfav ? "★" : "") + sort_name(sortm) + (reorder ? phr_("  [순서 이동]") : "");
     rbox(c, 16, 24, 288, 224, WH, bt.c_str());
-    { int x = 36; for (int t = 0; t < 3; t++) { const char * nm = tab_name(t); int w = tw(nm) + 12; if (t == tab) { c.rect(x - 4, 42, w, 21, WH); text(c, x + 2, 45, nm, K, WH); } else text(c, x + 2, 45, nm, CY, K); x += w + 6; } }
+    { int x = 30, nun = 0; for (size_t q = 0; q < games.size(); q++) if (games[q].variant_of.empty() && games[q].lang.empty()) nun++; for (int t = 0; t < 4; t++) { std::string nm = tab_name(t); if (t == TAB_UN && nun > 0) nm += "(" + std::to_string(nun) + ")"; int w = tw(nm) + 12; if (t == tab) { c.rect(x - 4, 42, w, 21, WH); text(c, x + 2, 45, nm, K, WH); } else text(c, x + 2, 45, nm, CY, K); x += w + 4; } }
     int nv = (int)vis.size(), n = nv + 1;
     if (pick != pick_seen) { pick_seen = pick; pick_since = ts_ms; }
     const int VIS = 7, PT = 24, LX = 40, LWD = 256, AVAIL = 236, Y0 = 70; int top = pick - 3; if (top > n - VIS) top = n - VIS; if (top < 0) top = 0;
@@ -62,7 +62,7 @@ inline void Ui::k_pick(UKey k, Act & a) {
     do { {
             int nv = (int)vis.size();
             if (reorder) { if (k == UK_OK || k == UK_CANCEL) { reorder = false; dirty = true; a.t = A_APPLY; } break; }
-            if (k == UK_L || k == UK_R) { int keep = cur; tab = (tab + (k == UK_R ? 1 : 2)) % 3; rebuild_vis(keep); dirty = true; break; }
+            if (k == UK_L || k == UK_R) { int keep = cur; tab = (tab + (k == UK_R ? 1 : 3)) % 4; rebuild_vis(keep); dirty = true; break; }
             if (pick >= nv) { if (k == UK_OK) go(S_ADD, 0); else if (k == UK_CANCEL) go(S_MAIN, 0); break; }
             int gi = vis[pick];
             if (k == UK_LEFT || k == UK_RIGHT) { std::vector<int> v = tvents(gi); if (v.size() > 1) { int ei = row_ent(gi), idx = 0; for (size_t q = 0; q < v.size(); q++) if (v[q] == ei) idx = (int)q; idx = (idx + (k == UK_RIGHT ? 1 : (int)v.size() - 1)) % (int)v.size(); if ((int)rent.size() <= gi) rent.resize(games.size(), -1); rent[gi] = v[idx]; sync_cur(); } break; }

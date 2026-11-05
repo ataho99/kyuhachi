@@ -66,26 +66,26 @@ struct Ui {
     const std::string & blk_cur() const { const UiGame * g = game(); return blk_id(g ? g->id : std::string()); }
     const std::string & blk_row(int gi) const { int ei = row_ent(gi); int tg = (ei >= 0 && games[gi].ents[ei].vgi >= 0 && games[gi].ents[ei].vgi < (int)games.size()) ? games[gi].ents[ei].vgi : gi; return blk_id(games[tg].id); }
     /* ================================================================ t39: 목록(탭·정렬) · 실행 방법 · 글꼴 */
-    enum { TAB_KO, TAB_JP, TAB_ALL };
+    enum { TAB_KO, TAB_JP, TAB_UN, TAB_ALL };
     enum { SM_TITLE, SM_ORIG, SM_YEAR, SM_COMPANY, SM_RECENT, SM_PLAY, SM_CUSTOM, SM_N };
     int tab = TAB_KO, sortm = SM_RECENT; bool sortfav = true;
     std::vector<int> vis, rent;   /* vis: 목록에 보이는 작품(index) 순서 · rent[작품]: 행이 가리키는 실행 방법(ents index, -1 = 자동) */
     std::string sel_entry;        /* 고른 실행 방법 이름 — 실행 요청(Act.entry)에 실려 간다. 빈칸 = 폴더 기본 */
     bool reorder = false; long long now_s = 0; Env env;
     std::vector<UiFont> fonts; std::string font_kr, font_jp; int lang = 0; bool lang_chg = false;   /* t52g (#133): UI 언어 0 한국어 1 English 2 にほんご (전역 전용 · settings.ini [global] lang=) · 바뀌면 목록을 다시 만든다 */   /* 글꼴 폴더 목록 · 전역 선택(빈칸 = 기본) */
-    static const char * tab_name(int t) { static const char * n[] = { phr_("한글판"), phr_("원판 일본어"), phr_("전체") }; return n[t < 0 || t > 2 ? 2 : t]; }
+    static const char * tab_name(int t) { const char * n[] = { phr_("한글판"), phr_("원판"), phr_("미분류"), phr_("전체") }; return n[t < 0 || t > 3 ? 3 : t]; }
     static const char * sort_name(int m) { static const char * n[] = { phr_("제목"), phr_("원제"), phr_("연도"), phr_("제작사"), phr_("최근 실행"), phr_("자주 실행"), phr_("사용자 지정") }; return n[m < 0 || m >= SM_N ? 0 : m]; }
     static const char * sort_id(int m) { static const char * n[] = { "title", "orig", "year", "company", "recent", "play", "custom" }; return n[m < 0 || m >= SM_N ? 0 : m]; }
     static int sort_from(const std::string & s) { for (int i = 0; i < SM_N; i++) if (s == sort_id(i)) return i; return SM_RECENT; }
-    static const char * tab_id(int t) { static const char * n[] = { "ko", "jp", "all" }; return n[t < 0 || t > 2 ? 2 : t]; }
-    static int tab_from(const std::string & s) { for (int i = 0; i < 3; i++) if (s == tab_id(i)) return i; return TAB_KO; }
+    static const char * tab_id(int t) { static const char * n[] = { "ko", "jp", "un", "all" }; return n[t < 0 || t > 3 ? 3 : t]; }
+    static int tab_from(const std::string & s) { for (int i = 0; i < 4; i++) if (s == tab_id(i)) return i; return TAB_ALL; }
 
     /* ---- 제목 도우미 (#288): 자리마다 정한 규칙으로 줄인다 */
     static std::string short_of(const UiGame & g) { return g.short_t.empty() ? auto_short(g.title) : g.short_t; }
     static std::string ttl_fit(const UiGame & g, int px) { return fit_title(short_of(g), px); }
     static std::string ttl_suf(const UiGame & g, const char * suf, int px) { int sw = tw(std::string(" ") + suf); return fit_title(short_of(g), px - sw) + " " + suf; }
     /* t44a (#494): 작품 언어 표시 — 사용자 지정(lang_exp) > 자동 판정 */
-    static std::string lang_label(const UiGame & g) { if (g.lang_exp == "ko") return phr_("한글판 (지정)"); if (g.lang_exp == "jp") return phr_("원판 일본어 (지정)"); return std::string(phr_("자동 → ")) + (g.lang == "ko" ? phr_("한글판") : phr_("원판 일본어")); }
+    static std::string lang_label(const UiGame & g) { if (g.lang_exp == "ko") return phr_("한글판 (지정)"); if (g.lang_exp == "jp") return phr_("원판 일본어 (지정)"); if (g.lang == "ko") return phr_("한글판 (gamedb)"); if (g.lang == "jp") return phr_("원판 일본어 (gamedb)"); return phr_("미분류"); }
     int gidx_of(const std::string & id) const { for (size_t i = 0; i < games.size(); i++) if (games[i].id == id) return (int)i; return -1; }
     void open_lang(const std::vector<std::string> & ids, const std::vector<std::string> & why, Scr ret) { lang_gid = ids; lang_why = why; lang_ret = ret; if (lang_why.size() < lang_gid.size()) lang_why.resize(lang_gid.size()); sel = 0; scr = S_LANG; }
     void d_lang(Canvas & c);
@@ -95,7 +95,7 @@ struct Ui {
     std::vector<int> vents(int gi) const { std::vector<int> r; if (gi < 0 || gi >= (int)games.size()) return r; for (size_t i = 0; i < games[gi].ents.size(); i++) if (!games[gi].ents[i].hidden) r.push_back((int)i); return r; }
     /* t41 (#306): 탭이 실행 언어를 정한다 — 한글판 탭은 원판(jp) 항목을, 원판 일본어 탭은 jp 가 아닌 항목을 ←→ 순환·행 표시에서 뺀다. 전체 탭은 전부. 항목 언어가 비면 작품 언어를 따른다. 걸러서 비면 전부(안전). 편집 메뉴(vents)는 그대로 전부 본다. */
     std::vector<int> tvents(int gi) const {
-        std::vector<int> v = vents(gi); if (tab == TAB_ALL || gi < 0 || gi >= (int)games.size()) return v;
+        std::vector<int> v = vents(gi); if (tab == TAB_ALL || tab == TAB_UN || gi < 0 || gi >= (int)games.size()) return v;
         const UiGame & g = games[gi]; std::vector<int> r;
         for (int i : v) { const std::string & el = g.ents[i].lang.empty() ? g.lang : g.ents[i].lang; if (tab == TAB_JP ? el == "jp" : el != "jp") r.push_back(i); }
         return r.empty() ? v : r;
@@ -110,8 +110,8 @@ struct Ui {
     }
     bool row_in_tab(int gi) const {
         const UiGame & g = games[gi]; if (!g.variant_of.empty()) return false;
-        if (tab == TAB_ALL) return true; if (tab == TAB_KO) return g.lang == "ko";
-        if (g.lang == "jp") return true; for (auto & e : g.ents) if (!e.hidden && e.lang == "jp") return true; return false;
+        if (tab == TAB_ALL) return true; if (tab == TAB_KO) return g.lang == "ko"; if (tab == TAB_UN) return g.lang.empty();
+        if (g.lang.empty()) return false; if (g.lang == "jp") return true; for (auto & e : g.ents) if (!e.hidden && e.lang == "jp") return true; return false;
     }
     int ent_warn(int gi, int ei) {   /* 1 = 경고 있음 */
         if (gi < 0 || gi >= (int)games.size() || ei < 0 || ei >= (int)games[gi].ents.size()) return 0;
@@ -158,7 +158,7 @@ struct Ui {
     }
     void renumber_order() { for (size_t k = 0; k < vis.size(); k++) games[vis[k]].order_n = (int)(k + 1) * 10; }
     /* 처음 한 번: 마지막 작품이 탭에 안 보이면 탭을 맞춘다 */
-    void fit_tab_to_cur() { int b = base_of(cur); if (b < 0 || b >= (int)games.size()) return; if (row_in_tab(b)) return; tab = games[b].lang == "jp" ? TAB_JP : TAB_KO; if (!row_in_tab(b)) tab = TAB_ALL; }
+    void fit_tab_to_cur() { int b = base_of(cur); if (b < 0 || b >= (int)games.size()) return; if (row_in_tab(b)) return; tab = games[b].lang == "jp" ? TAB_JP : games[b].lang == "ko" ? TAB_KO : TAB_UN; if (!row_in_tab(b)) tab = TAB_ALL; }
 
     /* ---- 편집 상태 */
     int eg = -1;                 /* 편집 대상 작품(user.ini 를 쓸 폴더) */
@@ -559,7 +559,7 @@ struct Ui {
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
     void yn_open(Scr ret, int act, const std::string & a0, const std::string & a1 = std::string(), const std::string & a2 = std::string(), int arg = 0) { yn_msg[0] = a0; yn_msg[1] = a1; yn_msg[2] = a2; yn_act = act; yn_ret = ret; ynsel = 1; yn_arg = arg; scr = S_YN; }
-    std::string default_label(int g) const { return games[g].lang == "jp" ? std::string(phr_("원판 일본어")) : std::string(phr_("한글판")); }
+    std::string default_label(int g) const { return games[g].lang == "jp" ? std::string(phr_("원판 일본어")) : games[g].lang == "ko" ? std::string(phr_("한글판")) : std::string(phr_("기본")); }
     void resolved_into(int g, ent::Kv & out) { out.clear(); if (env.resolved) env.resolved(g, out); }
     void begin_new_from_kv(int g, const ent::Kv & kv, const std::string & name) { eg = g; ed = kv; ed_name = ent::unique_name(name, ents_used(g)); en_orig = ed_name; ed0 = ent::Kv(); ed_name0 = ed_name; enew = true; ed_setdef = false; msg.clear(); sel = 0; scr = S_EDIT; }
     void begin_edit_ent(int gi, int vi) {
@@ -703,7 +703,7 @@ struct Ui {
     }
     /* ---- 입력 */
     int nitems() const {
-        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return KH_SCR_ROWS; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 8; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return KH_SCR_ROWS; case S_CONF: return 14; case S_SAVE: return 8; case S_EXTRA: return 9; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; }

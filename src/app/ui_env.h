@@ -247,6 +247,13 @@ static void gh_ui_init_games(void) {
     std::stable_sort(es.begin(), es.end(), [](const E & a, const E & b) { return a.order < b.order; });
     for (auto & e : es) gApp.ui_.games.push_back(e.g);
     ulist::load_all(gApp.ui_.games, &gApp.vlabel);
+    {   /* 빌드 3 (#547): 분류 집계 로그 + 업그레이드 뒤 첫 실행 한 번 안내(파일 이동 없음) */
+        int nko = 0, njp = 0, nun = 0; for (auto & g_ : gApp.ui_.games) { if (!g_.variant_of.empty() || g_.id.empty()) continue; if (g_.lang == "ko") nko++; else if (g_.lang == "jp") njp++; else nun++; }
+        gh_log("CLASS ko=%d jp=%d un=%d", nko, njp, nun);
+        const std::string mk_ = gApp.exedir + "\\unclass_notice.txt";
+        if (nun > 0 && !plat::exists(mk_)) { FILE * nf_ = fopen(mk_.c_str(), "wb"); if (nf_) { fputs("1\n", nf_); fclose(nf_); }
+            gApp.note = std::string(phr_("분류가 확실하지 않은 작품")) + " " + std::to_string(nun) + " " + phr_("(미분류 탭으로 옮김)"); gApp.note_until = SDL_GetTicks() + 8000u; }
+    }
     if (gApp.ui_.games.empty()) {
         ui::UiGame g; g.id = ""; g.title = phr_("작품이 없습니다"); g.disk[0] = phr_("games 폴더에 작품 폴더를 넣어 주세요"); g.boot_note = ""; gApp.ui_.games.push_back(g);
         if (!gApp.uitest_dir.empty()) {   /* 캡처 시험용 표본 */

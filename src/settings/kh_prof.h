@@ -681,13 +681,11 @@ inline const DbGame * db_find(const std::vector<DbGame> & db, const std::vector<
     return NULL;
 }
 
-/* t39: 목록 구분 — lang=ko|jp 가 있으면 그것, 없으면 「한글」 증거(patch 표기·제목)가 있을 때만 ko, 아니면 jp(원판) */
+/* 빌드 3 (#547): 목록 구분 — lang=ko|jp(gamedb 의 sha1 일치 항목 또는 사용자 지정)가 있을 때만 그것, 나머지는 추측하지 않고 빈 값(미분류) */
 inline std::string eff_lang(const Profile & p) {
     auto g = [&](const char * k) -> std::string { auto it = p.kv.find(k); return it == p.kv.end() ? std::string() : it->second; };
     std::string l = g("lang"); if (l == "ko" || l == "jp") return l;
-    const std::string han = "\xED\x95\x9C\xEA\xB8\x80";   /* 한글 */
-    if (g("patch").find(han) != std::string::npos || p.title.find(han) != std::string::npos) return "ko";
-    return "jp";
+    return std::string();
 }
 static std::string g_entry_req;   /* t36cd: --entry <이름> (호스트가 채움) */
 static std::string g_userini_override;   /* t39: --userini 로 시험 실행에만 쓰는 user.ini 경로 */

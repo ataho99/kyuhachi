@@ -2,6 +2,16 @@
 # {X} {O} {T} {S} placeholders keep as is.
 한글판=Korean patch
 원판 일본어=Original (JP)
+미분류=Unclassified
+한글판 (gamedb)=Korean patch (gamedb)
+원판 일본어 (gamedb)=Original (JP) (gamedb)
+분류 근거=Basis
+gamedb 와 sha1 일치=Matches gamedb (sha1)
+근거 없음 (미분류)=No basis (unclassified)
+{○} 또는 ←→:미분류 → 한글판 → 원판 일본어 순으로 바꿉니다.={○} or ←→: cycles Unclassified → Korean → Original JP.
+저장 위치: 작품 폴더의 user.ini [game] lang\= (미분류면 지움).=Saved in the game folder's user.ini [game] lang\= (removed if Unclassified).
+분류가 확실하지 않은 작품=Works with unclear classification:
+(미분류 탭으로 옮김)=(moved to the Unclassified tab)
 전체=All
 제목=Title
 원제=Orig. title
@@ -12,7 +22,6 @@
 사용자 지정=Custom
 한글판 (지정)=Korean (set)
 원판 일본어 (지정)=Original JP (set)
-자동 → =Auto → 
 언어 지정=Set language
 작품 언어=Game language
 (없음)=(none)
@@ -21,11 +30,7 @@
 상세=Details
 언어=Language
 자동 판정=Auto detect
-한글 증거 있음=Korean evidence found
-한글 증거 없음 (원판 취급)=No Korean evidence (original)
 한글판 → 한글 글꼴 / 원판 → 일본어 글꼴=Korean → Korean font / Original → JP font
-{○} 또는 ←→:자동 → 한글판 → 원판 일본어 순으로 바꿉니다.={○} or ←→: cycles Auto → Korean → Original JP.
-저장 위치: 작품 폴더의 user.ini [game] lang\= (자동이면 지움).=Saved in the game folder's user.ini [game] lang\= (removed if Auto).
 ↑↓:작품, ○/←→:언어 바꾸기, ×:돌아가기=↑↓:Game, ○/←→:Language, ×:Back
 B 버튼=B button
 A 버튼=A button

@@ -81,8 +81,8 @@ static void kha_lib_add(const std::string & d) {
 }
 static void kha_lib_clear(void) { g_kha_libs.clear(); kha_cfg_save(); }
 static std::string kha_font_lookup(const std::string & name) {   /* 내부 저장소/Kyuhachi\fonts → 등록 폴더의 fonts → (없으면 빈 문자열 = 앱 내장) */
-    std::string p = std::string(KHA_BASE) + "\\fonts\\" + name + ".bmp"; if (plat::exists(p)) return p;
-    for (auto & d : g_kha_libs) { std::string q = d + "\\fonts\\" + name + ".bmp"; if (plat::exists(q)) return q; }
+    std::string p = std::string(KHA_BASE) + "/fonts/" + name + ".bmp"; if (plat::exists(p)) return p;
+    for (auto & d : g_kha_libs) { std::string q = d + "/fonts/" + name + ".bmp"; if (plat::exists(q)) return q; }
     return std::string();
 }
 static std::string kha_mixer_conf(void) {

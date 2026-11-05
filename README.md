@@ -60,7 +60,7 @@ Upgrading from the old *Kyuhachi* (v0.5.x): on first run your saves are copied t
 - **Hangul-ready** — built-in font derived from Neodgm for Korean fan translations; menus in English, Japanese and Korean (`strings_en.txt`, `strings_ja.txt`, `strings_ko.txt` — edit them in any text editor).
 - **Rhythm samples** — optional YM2608 rhythm WAVs in `res/rhythm/` (not bundled).
 
-Android usage is covered in [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) (Korean; also as `KyuhachiX-v0.6.0-manual-ko.zip` on the Releases page).
+Android usage is covered in [`docs/manual/안드로이드_사용설명서.md`](docs/manual/안드로이드_사용설명서.md) (Korean; also as `KyuhachiX-v0.6.0-manual-ko.zip` on the Releases page).
 
 ## Build from source
 

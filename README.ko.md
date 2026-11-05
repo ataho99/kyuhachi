@@ -60,7 +60,7 @@
 - **한글 대응** — 한글패치용으로 Neodgm 기반 내장 글꼴. 메뉴는 영·일·한(`strings_en.txt`, `strings_ja.txt`, `strings_ko.txt`)이며 메모장으로 고칠 수 있습니다.
 - **리듬 음원** — `res/rhythm/` 에 YM2608 리듬 WAV 를 넣으면 드럼이 납니다(저작권상 동봉하지 않음).
 
-안드로이드 사용법은 [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) 를 보세요(릴리스 페이지의 `KyuhachiX-v0.6.0-manual-ko.zip` 에도 있음).
+안드로이드 사용법은 [`docs/manual/안드로이드_사용설명서.md`](docs/manual/안드로이드_사용설명서.md) 를 보세요(릴리스 페이지의 `KyuhachiX-v0.6.0-manual-ko.zip` 에도 있음).
 
 ## 소스에서 빌드
 

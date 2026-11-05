@@ -129,7 +129,7 @@ static void gh_main_select(std::string & id, const bool & ui_mode, const bool & 
 static void gh_main_prep(std::string & id, const std::string & exedir) {
     if (gApp.uitest_dir.empty() && !gh_any_font_bmp(NULL)) {   /* #500 (t52b #127 대체): 글꼴 BMP 0개여도 막지 않는다 — gh_default_font_path 가 빈 글꼴(res\.nofont.bin)을 건네고 화면 안내만 한다 */
         gh_log("WARN: 글꼴 BMP(anex86 형식 524,350 B) 없음: %s\\res\\fonts -> 빈 글꼴로 시작", exedir.c_str());
-        gApp.osd = phr_("글꼴 없음: 기본 글꼴로 실행합니다 (글자가 안 보일 수 있음 — res/fonts 에 글꼴 BMP 를 넣으세요)"); gApp.osd_until = SDL_GetTicks() + 8000u;
+        gApp.osd = phr_("글꼴 없음: 앱 기본 글꼴로 실행합니다 (글자가 다르게 보일 수 있음)"); gApp.osd_until = SDL_GetTicks() + 8000u;
     }
     gApp.pid = id;   /* t51a: 창 안 전환이 프로필을 다시 읽을 때 쓰는 작품 id */
     if (gApp.uitest_dir.empty()) {

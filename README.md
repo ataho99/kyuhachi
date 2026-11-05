@@ -115,6 +115,7 @@ Kyuhachi/
 ## Bring your own
 
 Kyuhachi ships **no** game images, NEC BIOS or font ROMs, and no font without a redistribution license.
+`res/fonts/kyuhachi_font.bmp` — Neodgm(SIL OFL 1.1) 기반으로 Kyuhachi 팀이 만든 파생 글꼴, OFL 1.1 로 배포 (a derivative of Neodgm by the Kyuhachi team, distributed under OFL 1.1; Neodgm © Eunbin Jeong). It is the default font; without any other font BMP the app still starts.
 Dump what you own and drop it in. A font BMP in `res/fonts/` is required to start a game (the menu itself uses a built-in font).
 Korean patches / Korean editions need a Korean font BMP (a Korean font ROM saved as anex86 BMP) that matches the game — you can pick any font per game.
 Rhythm (drum) sounds: put the six YM2608 rhythm samples (`2608_bd.wav`, `2608_sd.wav`, `2608_top.wav`, `2608_hh.wav`, `2608_tom.wav`, `2608_rim.wav`) in `res/rhythm/`. They are not bundled (copyright). Without them only the drums of the FM music are silent; everything else works.

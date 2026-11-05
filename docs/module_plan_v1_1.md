@@ -289,7 +289,7 @@ kyuhachi/                      (git 저장소 루트)
 | 위치 | H:\RETRO_SET\PC98_PLAYER\kyuhachi\ (새 폴더. 옛 work\·release\ 는 건드리지 않음) |
 | 들어가는 것 | src · core_patches · core_added · tools · tests(golden 의 작은 파일) · res 문구 3개 · docs 중 개발 문서 · CMakeLists · DOSBOX_X.lock |
 | .gitignore 로 뺄 것 | build/ out/ work/ release/ *.zip *.exe *.obj *.o *.pdb test_*/ out_*/ live*/ games/ saves/ settings.ini *.log *.png(golden 외) third_party/dosbox-x/ |
-| 큰 바이너리 | shinonome16_jp.fnt(253 KB)는 라이선스 파일과 함께 res\fonts 에 포함 가능. 라이선스 불명 글꼴 BMP 는 제외(U7) |
+| 큰 바이너리 | shinonome16_jp.fnt(253 KB)는 라이선스 파일과 함께 res\fonts 에 포함 가능. kyuhachi_font.bmp 는 자체 제작(Neodgm 파생, OFL 1.1)이라 라이선스 파일과 함께 포함(U7 닫음). 출처 불명 글꼴 BMP 는 제외 |
 | 줄바꿈 | `.gitattributes`: 소스 LF, `*.bat` CRLF, 문구 파일 UTF-8 |
 
 ### 4-2. 기준선과 커밋 규칙
@@ -435,7 +435,7 @@ SF 를 S0 바로 다음에 두는 이유: 구조 빌드는 빌드 이름이 바�
 | U4 | `GH_DOSKERNEL` 변형이 아직 쓰이는지 | S1 CMake 옵션 수 | 빌드 스크립트 grep (S0) |
 | U5 | 측정 출력의 「297」(빌드 스크립트 수로 추정) | 보관 범위 | S0 확인 |
 | U6 | 전역 177개의 모듈별 귀속 전수표 | R-1 | S0 `docs\globals_map.md` |
-| U7 | 글꼴 BMP(kyuhachi_font.bmp 등)의 재배포 권한 | 저장소·공개 범위 | 슨상/대장방 확인 |
+| U7 | 글꼴 BMP(kyuhachi_font.bmp 등)의 재배포 권한 | 저장소·공개 범위 | 닫음 — 슨상 확인 20261105 — 자체 제작(Neodgm 파생, OFL) |
 | U8 | 로그 문구 중 사용자에게 노출되는 것이 있는지 | R-4 범위 | S4 첫 작업 |
 | U9 | mixer·paging 의 정확한 수정 줄 수 | §1-6 | S0 diff |
 

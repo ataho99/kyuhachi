@@ -343,7 +343,8 @@ struct Ui {
     void sample_or_game(Canvas & c, int x, int y, int w, int h) { thumb(c, game(), x, y, w, h); }
 
     /* ---- 화면별 그리기 */
-    void draw(Canvas & c);
+    void draw(Canvas & c); void draw_body(Canvas & c);
+    void d_shim(Canvas & c); void k_shim(UKey k, Act & a);
     /* 인포메이션 = 현재 작품의 게임 정보 */
     static std::string src_label(const std::string & m) {   /* 내부 출처 이름 → 화면 글 (내부 용어는 쓰지 않는다) */
         if (m.empty() || m == "none") return std::string();
@@ -639,7 +640,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_SET: case S_GKB: case S_SHARE: case S_SHIMP: case S_SHPREV: case S_EXEPICK: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_SET: case S_GKB: case S_SHARE: case S_SHIMP: case S_SHPREV: case S_SHIM: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -790,6 +791,7 @@ struct Ui {
         case S_SHARE: k_share(k, a); break;
         case S_SHIMP: k_shimp(k, a); break;
         case S_SHPREV: k_shprev(k, a); break;
+        case S_SHIM: k_shim(k, a); break;
         case S_OSK: k_osk(k, a); break;
         case S_NAME: k_name(k, a); break;
         case S_YN: k_yn(k, a); break;
@@ -813,7 +815,7 @@ struct Ui {
     std::string pre_name(int i) const { if (i < PRE_NB) { static const char * const KN[3] = { "preset_b0", "preset_b1", "preset_b2" }; return std::string(phr_(KN[i])); } if (i < PRE_NB + (int)presets.size()) return presets[(size_t)(i - PRE_NB)].name; return std::string(phr_("preset_new")); }
     void pre_add(const Settings & s) { if ((int)presets.size() >= PRE_MAX) return; std::string nm; for (int n = 1; n < 100; n++) { nm = std::string(phr_("preset_user")) + " " + std::to_string(n); bool dup = false; for (size_t q = 0; q < presets.size(); q++) if (presets[q].name == nm) dup = true; if (!dup) break; } Preset p; p.name = nm; pre_copy(p.st, s); presets.push_back(p); pre_i = PRE_NB + (int)presets.size() - 1; dirty = true; }
     int nitems() const {
-        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_SET: return 4; case S_GKB: return 5; case S_EXTRA: return 9; case S_GAME: return 8 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_SET: return 5; case S_SHIM: return 5; case S_GKB: return 5; case S_EXTRA: return 9; case S_GAME: return 8 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; }

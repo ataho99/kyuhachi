@@ -34,6 +34,7 @@
 #include "ui/screens/kbpick.h"
 #include "ui/screens/set.h"
 #include "ui/screens/share.h"
+#include "ui/screens/shim.h"
 #include "ui/screens/hot.h"
 #include "ui/screens/ext.h"
 #include "ui/screens/font.h"
@@ -41,6 +42,12 @@
 #include "ui/screens/exepick.h"
 
 inline void Ui::draw(Canvas & c) {
+    c.shim = !in_game && g.shim != 0;
+    g_shim.mode = g.shim; g_shim.amp = g.shim_amp; g_shim.spd = g.shim_spd; g_shim.glow = g.shim_glow; g_shim.col = g.shim_col; g_shim.ms = ts_ms;
+    draw_body(c);
+    if (c.shim) { shim_glow(c); c.shim = false; }
+}
+inline void Ui::draw_body(Canvas & c) {
     hits.clear();
     jp_refresh();   /* t52h (#134) */
     if (scr != S_GAME && scr != S_KEYS && !(in_game && (scr == S_QUIT || scr == S_SWAP || scr == S_SWAPI))) c.rect(0, 0, c.w, c.h, K);
@@ -65,7 +72,7 @@ inline void Ui::draw(Canvas & c) {
     case S_OSK: d_osk(c); break; case S_NAME: d_name(c); break; case S_YN: d_yn(c, yn_ret); break; case S_HDDASK: d_hddask(c); break; case S_LANG: d_lang(c); break; case S_VALS: d_vals(c); break;
     case S_EXEPICK: d_exepick(c); break;
     case S_PAD: d_pad(c); break; case S_PADKEY: d_padkey(c); break; case S_HOT: d_hot(c); break; case S_EXT: d_ext(c); break; case S_KBPICK: d_kbpick(c); break; case S_SET: d_set(c); break; case S_GKB: d_gkb(c); break;
-    case S_SHARE: d_share(c); break; case S_SHIMP: d_shimp(c); break; case S_SHPREV: d_shprev(c); break;
+    case S_SHARE: d_share(c); break; case S_SHIMP: d_shimp(c); break; case S_SHPREV: d_shprev(c); break; case S_SHIM: d_shim(c); break;
     }
 }
 

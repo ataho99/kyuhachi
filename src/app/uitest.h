@@ -191,6 +191,10 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "shmake") { U.shr_open_make(U.cur, 0); continue; }
             if (tk == "shprev") { U.shr_preview(U.sh_code); continue; }
             if (tk == "tplscr") { U.entg = U.cur; U.scr = ui::S_TPL; U.sel = 9; continue; }
+            if (tk == "shimscr") { U.scr = ui::S_SHIM; U.sel = 0; continue; }
+            if (tk == "shimstate") {
+                gh_log("uikeys: SHIMSTATE scr=%d sel=%d m=%d a=%d s=%d g=%d c=%d", (int)U.scr, U.sel, U.g.shim, U.g.shim_amp, U.g.shim_spd,
+                       U.g.shim_glow, U.g.shim_col); continue; }
             if (tk == "shstate") {
                 gh_log("uikeys: SHSTATE scr=%d code=%d found=%d total=%d miss=%d nents=%d nreal=%d", (int)U.scr, (int)U.sh_code.size(), U.sh_found, U.sh_total,
                        (int)U.sh_missing.size(), U.entg >= 0 ? (int)U.games[U.entg].ents.size() : -1,

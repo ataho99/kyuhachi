@@ -28,6 +28,8 @@ struct Settings {
     int ovbtn = 1;      /* t52f (#132): 오버레이 버튼 줄(메뉴·저장·불러오기·배속·키보드) 표시 0 숨김 1 표시 */
     int padbtn = 2;     // virtual pad in the side bands: 0 off, 1 on, 2 auto (on with a touch screen and no real pad)
     int bsound = 2;     /* r017 배속 중 소리: 0 끔 1 빠르게(음높이 상승) 2 음높이 유지 */
+    int shim = 1;       /* build 7: menu text shimmer 0 off 1 per letter 2 per dot (global only) */
+    int shim_amp = 4, shim_spd = 3, shim_glow = 6, shim_col = 0;   /* strength 1..10, speed 1..10, glow 0..10, color 0 green 1 amber 2 white 3 cyan */
     bool lmode = false, lseen = false; int l_sh = 0, l_scan = 5, l_mask = 1, l_bleed = 0, l_curve = 4;   /* t48c: 옛 형식(fx=1 표지 없음) 파일을 읽는 동안만 쓰는 칸. 끝나면 fx_finish 가 새 칸으로 옮긴다 */
     float curve_f() const { return curve * 0.01f; }
     float glow_f() const { return glow * 0.1f; }
@@ -51,6 +53,7 @@ inline void fx_finish(Settings & s) {
 /* ---- 설정 파일 (settings.ini) -- 전역 [global] + 작품별 [id] */
 static void ini_put(FILE * f, const Settings & s) {
     fprintf(f, "fx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nbgm=%d\nse=%d\ndevice=%d\npad=%d\nbmult=%d\nbmode=%d\nboot=%d\nbosd=%d\nbsound=%d\nkbbtn=%d\nkbshader=%d\novbtn=%d\npadbtn=%d\n", s.ratio, (s.shader == 2 ? 2 : 0), s.curve, s.bleed, s.glow, s.scan, s.mask, s.bgm, s.se, s.device, s.pad, s.bmult, s.bmode, s.boot, s.bosd, s.bsound, s.kbbtn, s.kbshader, s.ovbtn, s.padbtn);
+    fprintf(f, "shim=%d\nshim_amp=%d\nshim_spd=%d\nshim_glow=%d\nshim_col=%d\n", s.shim, s.shim_amp, s.shim_spd, s.shim_glow, s.shim_col);
     fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다: 작품 구역은 전역 값을 먼저 복사하므로 줄이 없으면 전역 켬이 새어 든다 */
 }
 static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587: 작품 구역에는 바꾼 줄만 쓴다 (비트 = Ui::fbit_of 순서) */
@@ -73,6 +76,11 @@ static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587
     if (m & (1u << 16)) fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다 (T252) */
 }
 static bool ini_set(Settings & s, const std::string & k, int v) {
+    if (k == "shim") { s.shim = v < 0 ? 0 : v > 2 ? 2 : v; return true; }   /* build 7: menu text shimmer keys (before the long chain) */
+    if (k == "shim_amp") { s.shim_amp = v < 1 ? 1 : v > 10 ? 10 : v; return true; }
+    if (k == "shim_spd") { s.shim_spd = v < 1 ? 1 : v > 10 ? 10 : v; return true; }
+    if (k == "shim_glow") { s.shim_glow = v < 0 ? 0 : v > 10 ? 10 : v; return true; }
+    if (k == "shim_col") { s.shim_col = v < 0 ? 0 : v > 3 ? 3 : v; return true; }
     if (k == "fx") { s.lmode = false; }   /* t48c: 새 형식 표지. 이 구역의 화면 키는 새 범위로 읽는다 */
     else if (s.lmode && (k == "shader" || k == "curve" || k == "bleed" || k == "scan" || k == "mask")) { s.lseen = true; if (k == "shader") s.l_sh = v; else if (k == "curve") s.l_curve = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "bleed") s.l_bleed = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "scan") s.l_scan = v < 0 ? 0 : v > 10 ? 10 : v; else s.l_mask = v < 0 ? 0 : v > 3 ? 3 : v; }   /* 옛 형식: 구역이 끝날 때 fx_finish 가 옮긴다 */
     else if (k == "ratio") s.ratio = v; else if (k == "shader") s.shader = (v == 2) ? 2 : 0; else if (k == "curve") s.curve = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "bleed") s.bleed = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "glow") s.glow = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "scan") s.scan = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "mask") s.mask = v < 0 ? 0 : v > 10 ? 10 : v;

@@ -3,19 +3,20 @@
 inline void Ui::d_set(Canvas & c) {
     titlebar(c, "");
     rbox(c, 16, 24, 288, 224, WH, phr_("set_title"));
-    std::vector<std::string> m = { phr_("set_screen"), phr_("set_sound"), phr_("set_control"), phr_("set_system") };
+    std::vector<std::string> m = { phr_("set_screen"), phr_("set_sound"), phr_("set_control"), phr_("set_system"), phr_("set_shim") };
     items(c, 40, 46, 256, m, sel, 28);
     info_box(c, 320, 24, 304, 224);
-    static const char * md[] = { "set_d0", "set_d1", "set_d2", "set_d3" };
-    desc(c, 264, 64, { phr_(md[sel >= 0 && sel < 4 ? sel : 0]) });
+    static const char * md[] = { "set_d0", "set_d1", "set_d2", "set_d3", "set_d4" };
+    desc(c, 264, 64, { phr_(md[sel >= 0 && sel < 5 ? sel : 0]) });
     helpline(c, phr_("set_help"));
 }
 inline void Ui::k_set(UKey k, Act & a) {
     (void)a;
-    if (k == UK_UP) sel = (sel + 3) % 4;
-    else if (k == UK_DOWN) sel = (sel + 1) % 4;
+    if (k == UK_UP) sel = (sel + 4) % 5;
+    else if (k == UK_DOWN) sel = (sel + 1) % 5;
     else if (k == UK_OK) {
         if (sel == 0) { scr_from = S_SET; enter_screen_cfg(); go(S_SCREEN, 0); }
+        else if (sel == 4) go(S_SHIM, 0);
         else { conf_grp = sel; enter_conf_cfg(); go(S_CONF, 0); }
     } else if (k == UK_CANCEL) {
         conf_grp = 0;

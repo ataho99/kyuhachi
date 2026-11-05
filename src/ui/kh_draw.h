@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <string>
 #include <vector>
 #if !defined(_WIN32)
@@ -18,8 +19,31 @@ namespace ov {
 /* ---- 색 (0x00RRGGBB) */
 enum : uint32_t { K = 0x000000, WH = 0xFFFFFF, CY = 0x00FFFF, YL = 0xFFFF00, OR = 0xFFA000, GY = 0x666666, GR = 0x00FF00, RD = 0xFF0000, NOBG = 0xFF000000u };
 
+struct ShimCfg { int mode = 0, amp = 4, spd = 3, glow = 6, col = 0, ms = 0; };
+static ShimCfg g_shim;
+/* build 7: shimmer. Brightness of one lit dot; mode 1 = same phase for the whole glyph (origin ox,oy), mode 2 = every dot on its own. */
+static uint32_t shim_fg(uint32_t fg, int ox, int oy, int px, int py) {
+    if (fg == K) return fg;
+    static const uint32_t tint[4] = { 0x7CF2B0u, 0xFFB547u, 0xE8EEF0u, 0x5FD7FFu };
+    const int ax = g_shim.mode == 2 ? px : ox, ay = g_shim.mode == 2 ? py : oy;
+    uint32_t hh = ((uint32_t)ax * 73856093u) ^ ((uint32_t)ay * 19349663u);
+    hh ^= hh >> 13; hh *= 0x5BD1E995u; hh ^= hh >> 15;
+    const double lp = (hh & 0xFFFFu) / 65536.0 * 6.2831853, lf = 0.6 + ((hh >> 16) & 0xFFu) / 255.0 * 0.9;
+    const double t = g_shim.ms / 1000.0 * (g_shim.spd * 0.3);
+    const double q = 0.5 + 0.5 * sin(t * lf + lp), pw = q * q * q;
+    const double amp = g_shim.amp * 0.055, kk = (1.0 - amp) + amp * 2.2 * pw;
+    const uint32_t col = (fg == WH) ? tint[g_shim.col & 3] : fg;
+    const double base = kk < 1.0 ? kk : 1.0, over = kk > 1.0 ? kk - 1.0 : 0.0;
+    uint32_t out = 0;
+    for (int sh = 0; sh <= 16; sh += 8) {
+        const double v = ((col >> sh) & 0xFFu) * base + 255.0 * over;
+        out |= (uint32_t)(v > 255.0 ? 255.0 : v) << sh;
+    }
+    return out;
+}
+
 struct Canvas {
-    uint32_t * p; int w, h;
+    uint32_t * p; int w, h; bool shim = false;
     int clx0 = 0, cly0 = 0, clx1 = 1 << 30, cly1 = 1 << 30;   /* r018: 그리기 제한 영역 (긴 제목을 상자 안에서 자르기) */
     void clip(int x, int y, int cw, int ch) { clx0 = x; cly0 = y; clx1 = x + cw; cly1 = y + ch; }
     void unclip() { clx0 = 0; cly0 = 0; clx1 = 1 << 30; cly1 = 1 << 30; }
@@ -32,10 +56,52 @@ struct Canvas {
 };
 
 
+/* build 7: soft glow around bright dots (box blur of the bright part, added back) */
+static void shim_glow(Canvas & c) {
+    const int w = c.w, h = c.h, R = 2; const double ga = g_shim.glow * 0.1;
+    if (ga <= 0.0 || w < 8 || h < 8) return;
+    static std::vector<float> ch[3], tmp; static std::vector<char> rowhas;
+    const size_t n = (size_t)w * h; bool any = false;
+    for (int k = 0; k < 3; k++) ch[k].assign(n, 0.0f);
+    tmp.assign(n, 0.0f); rowhas.assign((size_t)h, 0);
+    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+        const size_t i = (size_t)y * w + x; const uint32_t px = c.p[i];
+        const int r = (px >> 16) & 255, g = (px >> 8) & 255, b = px & 255;
+        const int lum = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        if (lum < 140) continue;
+        const float a = (float)(ga * (lum - 140) / 115.0);
+        ch[0][i] = r * a; ch[1][i] = g * a; ch[2][i] = b * a; rowhas[(size_t)y] = 1; any = true;
+    }
+    if (!any) return;
+    for (int k = 0; k < 3; k++) {
+        float * s = ch[k].data(); float * t = tmp.data();
+        for (int y = 0; y < h; y++) {
+            if (!rowhas[(size_t)y]) { for (int x = 0; x < w; x++) t[(size_t)y * w + x] = 0.0f; continue; }
+            for (int x = 0; x < w; x++) {
+                float acc = 0.0f;
+                for (int d = -R; d <= R; d++) { const int xx = x + d; if (xx >= 0 && xx < w) acc += s[(size_t)y * w + xx]; }
+                t[(size_t)y * w + x] = acc * (1.0f / (2 * R + 1));
+            }
+        }
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+            float acc = 0.0f;
+            for (int d = -R; d <= R; d++) { const int yy = y + d; if (yy >= 0 && yy < h) acc += t[(size_t)yy * w + x]; }
+            s[(size_t)y * w + x] = acc * (1.0f / (2 * R + 1));
+        }
+    }
+    for (size_t i = 0; i < n; i++) {
+        const float a0 = ch[0][i], a1 = ch[1][i], a2 = ch[2][i];
+        if (a0 + a1 + a2 < 1.0f) continue;
+        const uint32_t px = c.p[i]; const float gain = 1.6f;
+        const float r = (float)((px >> 16) & 255) + a0 * gain, g = (float)((px >> 8) & 255) + a1 * gain, b = (float)(px & 255) + a2 * gain;
+        c.p[i] = ((uint32_t)(r > 255.0f ? 255.0f : r) << 16) | ((uint32_t)(g > 255.0f ? 255.0f : g) << 8) | (uint32_t)(b > 255.0f ? 255.0f : b);
+    }
+}
+
 static void blit_glyph(Canvas & c, const uint8_t * g, int gw, int bpr, int x, int y, uint32_t fg, uint32_t bg) {
     for (int j = 0; j < 16; j++) for (int i = 0; i < gw; i++) {
         int on = (g[j * bpr + (i >> 3)] >> (7 - (i & 7))) & 1;
-        if (on) c.set(x + i, y + j, fg); else if (bg != NOBG) c.set(x + i, y + j, bg);
+        if (on) c.set(x + i, y + j, c.shim ? shim_fg(fg, x, y, x + i, y + j) : fg); else if (bg != NOBG) c.set(x + i, y + j, bg);
     }
 }
 /* 오른쪽 삼각형(▶) 직접 그리기: 16x16 칸 */
@@ -74,7 +140,7 @@ static int text_bmp(Canvas & c, const BmpFont & f, int x, int y, const std::stri
         uint32_t cp = u8next(s); if (!cp) break;
         if (cp < 0x80) { const uint8_t * g = g_sb.glyph(cp); if (g) blit_glyph(c, g, 8, 1, cx, y, fg, bg); cx += 8; continue; }
         int ku, ten; if (f.ok && bmp_cell(cp, ku, ten)) {
-            for (int j = 0; j < 16; j++) for (int i = 0; i < 16; i++) { if (f.ink(ku * 16 + i, (ten + 32) * 16 + j)) c.set(cx + i, y + j, fg); else if (bg != NOBG) c.set(cx + i, y + j, bg); }
+            for (int j = 0; j < 16; j++) for (int i = 0; i < 16; i++) { if (f.ink(ku * 16 + i, (ten + 32) * 16 + j)) c.set(cx + i, y + j, c.shim ? shim_fg(fg, cx, y, cx + i, y + j) : fg); else if (bg != NOBG) c.set(cx + i, y + j, bg); }
         } else if (bg != NOBG) c.rect(cx, y, 16, 16, bg);
         cx += 16;
     }

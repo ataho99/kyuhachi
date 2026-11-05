@@ -100,7 +100,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/kyuhachi.res
 # ---- 링크 (옛 스크립트와 같은 순서: 미리 빌드 목록 → host → menu → s9 → s17(bios·savestate·fmstate) → paging → mixer → 나머지 → stubs → 라이브러리 → res)
 file(READ ${SRC}/stubs_1.altrsp KH_ALT)
 set(KH_LIBS_SYS opengl32.lib kernel32.lib user32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib winmm.lib ws2_32.lib gdi32.lib imm32.lib setupapi.lib version.lib iphlpapi.lib uuid.lib comdlg32.lib dbghelp.lib shlwapi.lib)
-set(KH_RSP "/nologo\n\"/LIBPATH:${KH_MSVC}/lib/x64\"\n\"/LIBPATH:${KH_SDK}/Lib/${KH_SDKV}/ucrt/x64\"\n\"/LIBPATH:${KH_SDK}/Lib/${KH_SDKV}/um/x64\"\n/MACHINE:X64\n/DEBUG\n/SUBSYSTEM:WINDOWS\n/ENTRY:mainCRTStartup\n\"/OUT:${CMAKE_BINARY_DIR}/Kyuhachi.exe\"\n")
+set(KH_RSP "/nologo\n\"/LIBPATH:${KH_MSVC}/lib/x64\"\n\"/LIBPATH:${KH_SDK}/Lib/${KH_SDKV}/ucrt/x64\"\n\"/LIBPATH:${KH_SDK}/Lib/${KH_SDKV}/um/x64\"\n/MACHINE:X64\n/DEBUG\n/SUBSYSTEM:WINDOWS\n/ENTRY:mainCRTStartup\n\"/OUT:${CMAKE_BINARY_DIR}/KyuhachiX.exe\"\n")
 foreach(o ${KH_PRE_A})
   string(APPEND KH_RSP "\"${o}\"\n")
 endforeach()
@@ -127,8 +127,8 @@ endforeach()
 string(APPEND KH_RSP "\"${CMAKE_BINARY_DIR}/kyuhachi.res\"\n")
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/link.rsp CONTENT "${KH_RSP}")
 
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/Kyuhachi.exe
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/KyuhachiX.exe
   COMMAND "${KH_LINK}" @${CMAKE_BINARY_DIR}/link.rsp
   DEPENDS kh_host kh_bios kh_savestate kh_fmstate kh_mixer kh_stubnames ${CMAKE_BINARY_DIR}/stubs_1.obj ${CMAKE_BINARY_DIR}/kyuhachi.res ${CMAKE_BINARY_DIR}/link.rsp
   VERBATIM)
-add_custom_target(kyuhachi ALL DEPENDS ${CMAKE_BINARY_DIR}/Kyuhachi.exe)
+add_custom_target(kyuhachi ALL DEPENDS ${CMAKE_BINARY_DIR}/KyuhachiX.exe)

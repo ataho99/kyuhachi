@@ -15,9 +15,6 @@ live*/
 /settings.ini
 *.log
 *.png
-!tests/golden/**/*.png
-tests/golden/saves/*
-!tests/golden/saves/t52i_A_s1.g98s
 .git_failed_*/
 third_party/dosbox-x/
 
@@ -46,3 +43,15 @@ font.bmp
 
 # user data
 /save/
+
+# game-derived test data and other disk/ROM formats - never commit
+/tests/golden/ini/
+/tests/golden/saves/
+*.g98s
+*.iso
+*.img
+*.bin
+*.nhd
+*.hdd
+*.dsk
+*.bdf

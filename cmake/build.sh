@@ -18,6 +18,6 @@ export WSLENV=INCLUDE:LIB
 echo "== configure rc=${PIPESTATUS[0]}"
 "$CMW" --build "$OUTW" 2>&1 | tr -d '\r'
 echo "== build rc=${PIPESTATUS[0]}"
-ls -l "$P/build/$OUTN/Kyuhachi.exe" 2>&1
+ls -l "$P/build/$OUTN/KyuhachiX.exe" 2>&1
 mkdir -p "$P/build/$OUTN" && cp "$SRCL/res/strings/"strings_*.txt "$P/build/$OUTN/" 2>/dev/null; echo "== strings copied from res/strings: $(ls "$P/build/$OUTN"/strings_*.txt 2>/dev/null | wc -l) files"
-[ -s "$P/build/$OUTN/Kyuhachi.exe" ]   # exit status = exe exists (the strings copy above must not hide a failed build)
+[ -s "$P/build/$OUTN/KyuhachiX.exe" ]   # exit status = exe exists (the strings copy above must not hide a failed build)

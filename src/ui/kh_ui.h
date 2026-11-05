@@ -64,6 +64,7 @@ struct Ui {
     /* t48b2 (#632): 실행 막는 사유(block)는 작품 id 로 찾는다 — 배열 위치(행 gi · 현재 cur)로 곧바로 읽지 않는다. 회색 표시 · 시작 팝업 · 정보칸 · 슬롯 불러오기가 모두 이 세 함수를 쓴다 */
     const std::string & blk_id(const std::string & id) const { static const std::string E; if (id.empty()) return E; for (size_t i = 0; i < games.size(); i++) if (games[i].id == id) return games[i].block; return E; }
     const std::string & blk_cur() const { const UiGame * g = game(); return blk_id(g ? g->id : std::string()); }
+    const std::string & dn_cur() const { static const std::string E; const UiGame * g = game(); if (!g || g->id.empty()) return E; for (size_t i = 0; i < games.size(); i++) if (games[i].id == g->id) return games[i].dosnote; return E; }   /* 2d (#580): 막지 않는 작품의 안내(DOS 프롬프트로 열림 사유) */
     const std::string & blk_row(int gi) const { int ei = row_ent(gi); int tg = (ei >= 0 && games[gi].ents[ei].vgi >= 0 && games[gi].ents[ei].vgi < (int)games.size()) ? games[gi].ents[ei].vgi : gi; return blk_id(games[tg].id); }
     /* ================================================================ t39: 목록(탭·정렬) · 실행 방법 · 글꼴 */
     enum { TAB_KO, TAB_JP, TAB_UN, TAB_ALL };

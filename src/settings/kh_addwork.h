@@ -184,21 +184,23 @@ inline bool mouse_released(const std::map<std::string, std::string> & kv) {
     if (mouse_ok()) return true; auto f = [&](const char * k) -> bool { auto it = kv.find(k); if (it == kv.end() || it->second.empty()) return false; std::string v = it->second; for (auto & c : v) c = (char)tolower((unsigned char)c); return mouse_games().count(v) != 0; };
     return f("__id") || f("nk_gid");
 }
-inline std::string block_reason(const prof::Profile & p, const std::map<std::string, std::string> & kv) {
+inline std::string block_reason_raw(const prof::Profile & p, const std::map<std::string, std::string> & kv, bool * soft) {   /* 2d (#580): soft = 막지 않고 내장 DOS 프롬프트로 여는 사유 */
     auto g = [&](const char * k) -> std::string { auto it = kv.find(k); return it == kv.end() ? std::string() : it->second; };
     /* t48a (#615): 「마우스 필수」는 실행을 막는 사유에서 뺐다(마우스 지원됨). 화면에는 「장치: 마우스 필수」 표시만 남는다. */
     bool nodisk = true; for (auto & d : p.disk) if (!d.empty()) nodisk = false;
     if (nodisk && !g("cd").empty() && g("cd") != "-") return "";   /* t40: CD 이미지가 잡힌 작품 = 내장 DOS 로 D: 에 올려 실행 */
-    if (p.install_required && nodisk) return "설치 전용 작품 (설치 단계 미지원)";
+    if (p.install_required && nodisk) { if (soft) *soft = true; return "설치 전용 작품 (설치 단계 미지원)"; }
     if (g("curated") != "1") {
         std::string fl = "," + g("nk_flags") + ","; std::string md = g("nk_media");
         if (md == "CD" || md == "CDFD" || fl.find(",cd,") != std::string::npos) { if (nodisk) return "CD 작품 (CD 미지원)"; }
         bool hd = !p.disk[2].empty() || !p.disk[3].empty();
-        if (fl.find(",inst,") != std::string::npos && !hd) return "하드 설치가 필요한 작품 (설치 단계 미지원)";
+        if (fl.find(",inst,") != std::string::npos && !hd) { if (soft) *soft = true; return "하드 설치가 필요한 작품 (설치 단계 미지원)"; }
     }
-    if (nodisk) return p.reason.empty() ? std::string("부팅할 수 있는 디스크가 없음") : p.reason;
+    if (nodisk) { if (soft) *soft = true; return p.reason.empty() ? std::string("부팅할 수 있는 디스크가 없음") : p.reason; }
     return "";
 }
+inline std::string block_reason(const prof::Profile & p, const std::map<std::string, std::string> & kv) { bool s = false; std::string r = block_reason_raw(p, kv, &s); return s ? std::string() : r; }   /* 2d: 막는 사유(C2 CD 미지원 등)만 */
+inline std::string dos_note(const prof::Profile & p, const std::map<std::string, std::string> & kv) { bool s = false; std::string r = block_reason_raw(p, kv, &s); return s ? r : std::string(); }   /* 2d: 막지 않고 DOS 프롬프트로 열 때 정보창에 보일 사유 */
 
 /* r019: zip 안의 디스크 이미지 — 먼저 메모리로 풀어 sha1 을 구하고, 이미 등록된 해시면 디스크에 쓰지 않는다 (같은 이미지는 한 번만).
    새 이미지는 games\_zip\<첫 이미지 sha1 앞 12자>\ 에 푼다 (이름이 아니라 해시가 키 → 같은 zip 을 날짜만 바꿔 복사해도 한 벌).

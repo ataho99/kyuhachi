@@ -70,7 +70,7 @@ struct UiGame {
     std::vector<uint32_t> thmb; int tw_ = 0, th_ = 0;  /* 마지막 저장 THMB (0x00RRGGBB) */
     SlotInfo slot[5]; int lastslot = -1;   /* 1b: 5칸 = 0 자동 · 1 퀵 · 2~4 일반 1~3 */
     /* r017: 판정·출처·실행 불가 */
-    char grade = '-'; std::string judge, metasrc, block, jshort; bool autoreg = false;
+    char grade = '-'; std::string judge, metasrc, block, jshort, dosnote; bool autoreg = false;
     std::string title_db, title_user;   /* t49a (#809): DB·game.ini 제목 / 사용자 지정 표시 제목(user.ini [game] title_user=, 비면 없음) */
     std::string lang_exp;   /* t44a (#494): 사용자 지정 언어(user.ini [game] lang=) — ko/jp, 비면 자동 */
     std::string more;   /* r019: 함께 있는 이미지(같은 작품의 다른 이미지) 목록 */

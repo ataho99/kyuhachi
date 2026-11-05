@@ -48,13 +48,13 @@ inline void Ui::d_pick(Canvas & c) {
       if (ei < 0) ev = phr_("자동 판정"); else { std::vector<int> v = tvents(gi); int idx = 0; for (size_t q = 0; q < v.size(); q++) if (v[q] == ei) idx = (int)q; const UiEnt & e = gb.ents[ei];
         ev = std::string(v.size() > 1 ? "← " : "") + e.label + (v.size() > 1 ? " →" : "") + " (" + std::to_string(idx + 1) + "/" + std::to_string((int)v.size()) + ")"; if (ent_warn(gi, ei)) col = OR; }
       row(phr_("실행"), fit(ev, IW - LB), col, 1); }
-    row(phr_("판정"), g.jshort.empty() ? std::string("-") : g.jshort, WH, 1);
+    if (!blk && !dn_cur().empty()) row(phr_("안내"), fit(dn_cur(), IW - LB), OR, 1); else row(phr_("판정"), g.jshort.empty() ? std::string("-") : g.jshort, WH, 1);
     if (blk) row(phr_("사유"), bk, OR, 1);
     else { std::string st = phr_("없음"); if (g.lastslot >= 0 && g.slot[g.lastslot].used) st = phr_("슬롯 ") + slot_lbl(g.lastslot) + "  " + g.slot[g.lastslot].stamp; row(phr_("저장"), st, WH, 1); }
     c.unclip();
     std::vector<std::string> d;
     if (blk) d = { fit_title(gb.title, 560 - tw(phr_("   [실행 불가]"))) + phr_("   [실행 불가]"), fit(phr_("사유: ") + bk, 560) };
-    else { std::string suf = g.lastslot >= 0 && g.slot[g.lastslot].used ? phr_("   마지막 저장 ") + g.slot[g.lastslot].stamp : std::string(phr_("   처음부터 시작합니다")); d = { fit_title(gb.title, 560 - tw(suf)) + suf, fit(g.judge.empty() ? (g.disk[0] + (g.disk[1].empty() ? std::string() : "    " + g.disk[1])) : g.judge, 560) }; }
+    else { std::string suf = g.lastslot >= 0 && g.slot[g.lastslot].used ? phr_("   마지막 저장 ") + g.slot[g.lastslot].stamp : std::string(phr_("   처음부터 시작합니다")); d = { fit_title(gb.title, 560 - tw(suf)) + suf, fit(!dn_cur().empty() ? dn_cur() : g.judge.empty() ? (g.disk[0] + (g.disk[1].empty() ? std::string() : "    " + g.disk[1])) : g.judge, 560) }; }
     desc(c, 264, 64, d, blk ? 1 : -1);
     helpline(c, reorder ? phr_("↑↓:순서 이동, ○ 또는 ×:끝") : phr_("↑↓:작품, ←→:실행 방법, L R:탭, ○:정함, □:편집, △:정렬, SEL:부가, ×"));
 }

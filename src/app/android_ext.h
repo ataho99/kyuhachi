@@ -144,7 +144,7 @@ static void kha_seed_assets(void) {
     plat::mkdir(gApp.exedir + "\\res"); plat::mkdir(gApp.exedir + "\\res\\fonts"); plat::mkdir(gApp.exedir + "\\res\\rhythm"); plat::mkdir(gApp.exedir + "\\res\\shaders");
     int made = 0, have = 0, miss = 0;
     for (auto & p : T) {
-        std::string dst = gApp.exedir + "\\" + p[1]; if (plat::exists(dst)) { have++; continue; }
+        std::string dst = gApp.exedir + "\\" + p[1]; if (plat::exists(dst) && strncmp(p[1], "strings_", 8) != 0) { have++; continue; }   /* 4: 문구 파일은 APK 것으로 매번 갱신(사용자 덮어쓰기는 strings.txt) */
         SDL_RWops * r = SDL_RWFromFile(p[0], "rb"); if (!r) { miss++; continue; }
         Sint64 n = SDL_RWsize(r); std::vector<char> b; if (n > 0) { b.resize((size_t)n); size_t got = SDL_RWread(r, b.data(), 1, (size_t)n); b.resize(got); } SDL_RWclose(r);
         FILE * f = fopen(dst.c_str(), "wb"); if (f) { fwrite(b.data(), 1, b.size(), f); fclose(f); made++; } else miss++;

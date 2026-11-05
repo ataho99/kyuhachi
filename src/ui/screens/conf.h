@@ -28,7 +28,11 @@ inline void Ui::d_conf(Canvas & c) {
     text(c, 344, ry(11), fit(font_kr.empty() ? std::string(phr_("기본 (kyuhachi_font)")) : font_kr, 250), row(11) ? K : WH, row(11) ? WH : K);
     text(c, 344, ry(12), fit(font_jp.empty() ? std::string(phr_("기본 (jp_default)")) : font_jp, 250), row(12) ? K : WH, row(12) ? WH : K);
     { const char * lg[] = { "한국어", "English", "にほんご" }; choices(c, 344, ry(13), lg, 3, lang, WH, row(13)); }   /* t52g (#133): 언어 */
-    static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("BGM 음량입니다. 효과음과 따로 조절합니다."), phr_("효과음 음량입니다. 시작 소리도 이 값을 따릅니다."), phr_("소리가 나오는 장치입니다. 지금은 기본 장치만 씁니다."), phr_("패드 배치입니다. ○가 결정, ×가 취소입니다."), phr_("배속 배율입니다."), phr_("홀드는 누르는 동안, 토글은 눌러 켜고 끄기, 둘 다는 둘 다."), phr_("끔=무음 · 빠르게=음높이 상승 · 음높이 유지=높이 그대로"), phr_("시작할 때 나오는 부팅 화면을 켜고 끕니다."), phr_("배속 중에 오른쪽 위에 ▶▶ 배율을 계속 표시합니다. 캡처에는 찍히지 않습니다."), phr_("게임 중 화면 아래의 오버레이 버튼(메뉴·저장·불러오기·배속·키보드)을 보입니다. 끄면 전부 숨깁니다."), phr_("한글판 기본 글꼴입니다. {○} 로 고릅니다. 같은 배치의 글꼴만 나옵니다."), phr_("원판(일본어) 기본 글꼴입니다. {○} 로 고릅니다."), phr_("화면 문구 언어입니다. 바꾸면 바로 적용되고 저장됩니다.") };
-    desc(c, 328, 44, { fit(dkey(dd[sel]), 560) }, -1, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
+#if defined(__ANDROID__)
+    static const char * dd[] = { "desc_scope", "desc_bgm", "desc_se", "desc_sndbuf", "desc_pad", "desc_bmult", "desc_bmode", "desc_bsound", "desc_boot", "desc_bosd", "desc_ovbtn", "desc_fontkr", "desc_fontjp", "desc_lang" };
+#else
+    static const char * dd[] = { "desc_scope", "desc_bgm", "desc_se", "desc_snddev", "desc_pad", "desc_bmult", "desc_bmode", "desc_bsound", "desc_boot", "desc_bosd", "desc_ovbtn", "desc_fontkr", "desc_fontjp", "desc_lang" };
+#endif
+    desc_mq(c, 328, 44, dkey(phr_(dd[sel])), phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
     helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
 }

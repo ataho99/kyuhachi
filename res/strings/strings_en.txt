@@ -703,3 +703,30 @@ DOS 프롬프트=DOS prompt
 dos_why_nodisk=No bootable disk - opened at the DOS prompt
 dos_why_noboot=No disk in the boot drive - opened at the DOS prompt
 dos_why_data=Not a boot disk (data disk) - opened at the DOS prompt
+desc_scope=Global = applies to all games · Game·Follow = this game follows the global value · Game·Own = values set for this game only
+desc_ratio=Screen shape. 4:3 = original PC-98 shape · 16:10 = stretched sideways to fit the device · Integer = exact 2x/3x dots (sharp, but with borders)
+desc_filter=sharp = smooth edges when enlarged · nearest = dots kept as squares (rough but original). Effects work with either filter.
+desc_scan=CRT horizontal stripes. Higher = darker lines and a darker screen (off to 100%).
+desc_mask=The red/green/blue dot or stripe grid inside CRT glass. Higher = a stronger grid (off to 100%).
+desc_bleed=CRT color bleed: red/green/blue drift sideways. Higher = colored fringes on text edges (off to 100%).
+desc_glow=Light that spreads softly around bright areas. Higher = wider, stronger glow (off to 100%).
+desc_curve=CRT-style rounded screen edges. Flat at 0; higher = more curve and rounder corners.
+desc_fullscr=Fullscreen: switch between windowed and fullscreen. Alt+Enter works too.
+desc_fps=Shows frames per second and speed in a corner. In game: Alt+F or pad SELECT+R1 toggles it.
+desc_bgm=BGM volume, set separately from sound effects.
+desc_se=Sound effect volume. The startup sound follows this value.
+desc_snddev=Sound output device. Only the default device is used for now.
+desc_sndbuf=Sound buffer size. Larger = fewer dropouts but slightly delayed sound (applies from next start).
+desc_pad=Japanese style = right button confirms, bottom button cancels (PC-98 convention) · Western style = bottom confirms, right cancels. {○} opens the settings.
+desc_bmult=Fast-forward speed (x2 to x8). Higher = faster, but sound and motion may get rough.
+desc_bmode=Hold = fast only while the button is held · Toggle = press once to turn on, again to turn off · Both = either way.
+desc_bsound=Sound during fast-forward. Off = silent · Fast = pitch rises · Keep pitch = pitch unchanged.
+desc_boot=Shows the PC-98 boot screen (memory check, system text) at startup. Off = straight into the game.
+desc_bosd=Keeps showing the ▶▶ speed in the top right during fast-forward. Not captured in screenshots.
+desc_ovbtn=Shows the overlay buttons under the game screen (menu, save, load, speed, keyboard). Off hides them all.
+desc_fontkr=Glyph shapes for Korean-patched games. Choose with {○}. Without a font file (BMP) the default font is used.
+desc_fontjp=Glyph shapes for original (Japanese) games. Choose with {○}.
+desc_lang=Language of the Kyuhachi menu text (한국어 / English / にほんご), unrelated to in-game text. Applies and saves immediately.
+scr_allglobal_on=Apply to all globally: ON ({○} turns off)
+scr_allglobal_off=Apply to all globally: OFF ({○} turns on)
+scr_follow=This game follows the global settings (switch to Game·Own for separate values)

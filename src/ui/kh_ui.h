@@ -358,7 +358,20 @@ struct Ui {
         int e = ts_ms - pick_since; if (e < 0) e = 0; int tc = e % cyc;
         if (tc < hold0) return 0; if (tc < hold0 + span) return (tc - hold0) / 25; return maxoff;
     }
+    int dq_key = -1, dq_since = 0;
+    void dline(Canvas & c, int x, int y, int w, const std::string & full) {   /* 4 (#543): 한 줄 설명이 칸보다 길면 가로로 흐른다(1초 쉼 → 흐름 → 끝에서 잠깐 멈춤 → 처음). 줄이 바뀌면 처음부터 */
+        const int key = (int)scr * 256 + sel; if (key != dq_key) { dq_key = key; dq_since = ts_ms; }
+        const int t = tw(full); if (t <= w) { text(c, x, y, full, WH, K); return; }
+        const int maxoff = t - w + 8, span = maxoff * 25, hold0 = 1000, hold1 = 800, cyc = hold0 + span + hold1;
+        int e = ts_ms - dq_since; if (e < 0) e = 0; const int tc = e % cyc; const int off = tc < hold0 ? 0 : tc < hold0 + span ? (tc - hold0) / 25 : maxoff;
+        c.clip(x, y - 3, w, 22); text(c, x - off, y, full, WH, K); c.unclip();
+    }
+    void desc_mq(Canvas & c, int y, int h, const std::string & full, const char * help = NULL) {   /* desc() 와 같은 상자 + 한 줄 흐름 */
+        int y0 = 14; if (help && y + h > c.h - 32 && help_rows(c, help) == 2) { h = c.h - 32 - 1 - y; y0 = 6; }
+        rbox(c, 16, y, 608, h, OR, NULL); dline(c, 40, y + y0, 560, full);
+    }
     /* ================================================================ t39: 새 화면 그리기 */
+
     int def_ent(int gi) const {
         std::vector<int> v = vents(gi); if (v.empty()) return -1; const UiGame & g = games[gi];
         if (!g.defent.empty()) for (int i : v) if (g.ents[i].vgi < 0 && g.ents[i].name == g.defent) return i;

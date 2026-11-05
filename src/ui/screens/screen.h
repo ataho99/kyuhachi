@@ -31,12 +31,12 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     thumb(c, game(), 40, 258, 96, 60);
     const UiGame * gm = game();
     { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 258, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
-    text(c, 156, 278, sel == 0 && scope == 0 ? std::string(all_global ? "전역 일괄 적용: 켬 (○ 로 끔)" : "전역 일괄 적용: 끔 (○ 로 켬)") : (scope == 1 && !nofollow[cur] ? std::string("이 작품은 전역 설정을 따릅니다 (작품·전용 으로 바꾸면 별도)") : std::string(phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."))), WH, K);
+    text(c, 156, 278, sel == 0 && scope == 0 ? dkey(phr_(all_global ? "scr_allglobal_on" : "scr_allglobal_off")) : (scope == 1 && !nofollow[cur] ? std::string(phr_("scr_follow")) : std::string(phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."))), WH, K);
     text(c, 156, 298, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
     char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
     static std::string wd; wd = wb;
-    static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("화면 비율: 4:3 은 원래 비율, 정수배는 또렷한 배율."), phr_("필터: sharp 는 또렷하게, nearest 는 원본 그대로. 효과는 어느 필터에나 얹습니다."), phr_("주사선: 가로줄 무늬의 진하기 (끔 ~ 100%)."), phr_("마스크: 화소 배열 무늬의 진하기 (끔 ~ 100%)."), phr_("RGB 번짐: 색 어긋남과 가로 번짐 (가장자리일수록 큼, 끔 ~ 100%)."), phr_("빛 번짐: 밝은 곳 주변으로 빛이 퍼짐 (끔 ~ 100%)."), phr_("곡면: 화면 가장자리를 둥글게 보이게 합니다.") };
-    desc(c, 324, 44, { fit(rs < 8 ? std::string(dd[rs]) : rs == 10 ? std::string("FPS / Speed: show frame rate and speed. Alt+F or pad SELECT+R1 in game.") : rs == 9 ? std::string(phr_("전체화면: 창과 전체화면을 오갑니다. Alt+Enter 로도 됩니다.")) : wd, 560) });
+    static const char * dd[] = { "desc_scope", "desc_ratio", "desc_filter", "desc_scan", "desc_mask", "desc_bleed", "desc_glow", "desc_curve" };
+    desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 10 ? dkey(phr_("desc_fps")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
     helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
 }
 inline Act Ui::k_screen_conf(UKey k, Act & a) {

@@ -46,5 +46,6 @@ inline void Ui::d_conf(Canvas & c) {
     std::string dt = dkey(phr_(dd[rs]));
     if (ind) dt = std::string(phr_("indiv_has")) + "  ·  " + dt;
     desc_mq(c, 328, 44, dt, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
-    helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
+    const bool ibk = own && (ovm[cur] & indiv_bit(S_CONF, rs));
+    helpline(c, ibk ? phr_("indiv_help") : phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
 }

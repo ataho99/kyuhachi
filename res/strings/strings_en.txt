@@ -883,3 +883,4 @@ shim_d2=How fast it swings.
 shim_d3=How much light spreads around bright dots.
 shim_d4=Base color of the menu text (white text only).
 shim_help=Up/Down:Select, Left/Right:Value, X:Back
+indiv_help=Up/Down:Select, Left/Right:Value, Tri:Line back to global, X:Back

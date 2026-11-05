@@ -35,6 +35,7 @@
 #include "ui/screens/set.h"
 #include "ui/screens/share.h"
 #include "ui/screens/shim.h"
+#include "ui/screens/indiv.h"
 #include "ui/screens/hot.h"
 #include "ui/screens/ext.h"
 #include "ui/screens/font.h"

@@ -39,10 +39,15 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     static std::string wd; wd = wb;
     static const char * dd[] = { "desc_scope", "desc_ratio", "desc_filter", "desc_scan", "desc_mask", "desc_bleed", "desc_glow", "desc_curve" };
     desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 12 ? dkey(phr_("desc_preset")) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 10 ? dkey(phr_("desc_fps")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
-    helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
+    const bool ibk = own && (ovm[cur] & indiv_bit(S_SCREEN, rs));
+    helpline(c, ibk ? phr_("indiv_help") : phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
 }
 inline Act Ui::k_screen_conf(UKey k, Act & a) {
     const Scr scr0 = scr; const std::vector<int> ri = rowids(scr0); const int sidx = sel; const int sid = (sidx >= 0 && sidx < (int)ri.size()) ? ri[sidx] : 0;
+    if (k == UK_TRI && scope == 1 && cur >= 0 && cur < MAXG) {   /* build 9: triangle on a marked line = that line back to the global value */
+        const unsigned ib = indiv_bit(scr0, sid);
+        if (ib && (ovm[cur] & ib)) { ov_set(cur, ovm[cur] & ~ib); sync_t(cur); dirty = true; a.t = A_APPLY; return a; }
+    }
     struct Gd { Ui & u; Scr s0; int sidx, sid, gi; bool have; Settings pre;   /* #587: 줄 위치 ↔ 실제 줄 번호 · 이 작품 범위에서 바뀐 줄만 개별 값으로 */
         ~Gd() { if (u.scr != s0) return; if (u.sel == sid) u.sel = sidx;
                 if (have && u.scope == 1 && u.cur == gi && gi >= 0 && gi < Ui::MAXG) { unsigned d = Ui::diff_bits(pre, u.t[gi]); if (d) u.ov_set(gi, u.ovm[gi] | d); u.sync_t(gi); } } } gd{ *this, scr0, sidx, sid, cur, false, Settings() };

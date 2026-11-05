@@ -80,6 +80,7 @@ struct Ui {
             r.push_back(10); if (scope == 1) r.push_back(11); }
         else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 1) r.push_back(14); }
         return r; }
+    static unsigned indiv_bit(Scr s, int id);   /* build 9: own-value bit of a settings line (0 = none) */
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
     Settings follow_base(int gi) const {   /* 전역 + 프로파일 값(화면 효과 키 제외). 개별 값은 overlay 가 얹는다 */
         Settings s = g; if (gi >= 0 && gi < (int)games.size()) { std::map<std::string, std::string> m = games[gi].ov; static const char * const fxk[] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "fx" }; for (const char * k : fxk) m.erase(k); apply_ov(s, m); }

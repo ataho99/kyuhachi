@@ -703,7 +703,7 @@ DOS 프롬프트=DOS prompt
 dos_why_nodisk=No bootable disk - opened at the DOS prompt
 dos_why_noboot=No disk in the boot drive - opened at the DOS prompt
 dos_why_data=Not a boot disk (data disk) - opened at the DOS prompt
-desc_scope=Global = applies to all games · Game·Follow = this game follows the global value · Game·Own = values set for this game only
+desc_scope=Global = every game. This game = only the lines you change are stored for this game (others follow global)
 desc_ratio=Screen shape. 4:3 = original PC-98 shape · 16:10 = stretched sideways to fit the device · Integer = exact 2x/3x dots (sharp, but with borders)
 desc_filter=sharp = smooth edges when enlarged · nearest = dots kept as squares (rough but original). Effects work with either filter.
 desc_scan=CRT horizontal stripes. Higher = darker lines and a darker screen (off to 100%).
@@ -728,5 +728,12 @@ desc_fontkr=Glyph shapes for Korean-patched games. Choose with {○}. Without a 
 desc_fontjp=Glyph shapes for original (Japanese) games. Choose with {○}.
 desc_lang=Language of the Kyuhachi menu text (한국어 / English / にほんご), unrelated to in-game text. Applies and saves immediately.
 scr_allglobal_on=Apply to all globally: ON ({○} turns off)
-scr_allglobal_off=Apply to all globally: OFF ({○} turns on)
+scr_allglobal_off={○}: reset every game's individual settings
 scr_follow=This game follows the global settings (switch to Game·Own for separate values)
+scope_this=This game
+indiv_reset=Reset individual settings
+indiv_has=● Has individual settings
+indiv_q1=This deletes all individual settings of this game.
+indiv_q2=Afterwards it follows the global settings. Continue?
+indiv_allq1=This deletes the individual settings of all games.
+desc_indiv_reset=Deletes every value changed for this game (●) so it follows the global settings. {○}: confirm

@@ -9,7 +9,7 @@ inline void Ui::d_pad(Canvas & c) {
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
     auto row = [&](int i) { return sel == i; };
     auto ry = [](int i) { return 44 + 24 * i; };
-    const char * sc[] = { phr_("전역"), phr_("작품·따름"), phr_("작품·전용") }; choices(c, 344, ry(0), sc, 3, scope3(), WH, row(0));
+    const char * sc[] = { phr_("전역"), phr_("scope_this") }; choices(c, 344, ry(0), sc, 2, scope, WH, row(0));
     const char * ly[] = { phr_("일본식(동쪽)"), phr_("서양식(남쪽)") }; choices(c, 344, ry(1), ly, 2, s.pad == 1 ? 1 : 0, WH, row(1));
     for (int i = 0; i < 7; i++) {
         bool fw = false, df = false; std::string v = pad_val(i, &fw, &df); std::string t = pad_show(v);
@@ -22,6 +22,8 @@ inline void Ui::d_pad(Canvas & c) {
     helpline(c, phr_("↑↓:선택, ←→:값, ○:키 고르기, ×:뒤로, △:출하 시 설정"));
 }
 inline void Ui::k_pad(UKey k, Act & a) {
+    struct Gp { Ui & u; bool have; Settings pre; int gi; ~Gp() { if (have && u.scope == 1 && u.cur == gi && gi >= 0 && gi < Ui::MAXG) { unsigned d = Ui::diff_bits(pre, u.t[gi]); if (d) u.ov_set(gi, u.ovm[gi] | d); u.sync_t(gi); } } } gp{ *this, false, Settings(), cur };   /* #587: 이 작품에서 바꾼 줄만 개별 값 */
+    if (scope == 1 && cur >= 0 && cur < MAXG) { sync_t(cur); gp.pre = t[cur]; gp.have = true; }
     auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
     do { {
             mv(sel, 9);
@@ -34,9 +36,9 @@ inline void Ui::k_pad(UKey k, Act & a) {
                 else if (sel == 1) { Settings & s = edit(); s.pad = s.pad == 1 ? 0 : 1; dirty = true; a.t = A_APPLY; }
             } else if (k == UK_TRI) {   /* 출하 시 설정: 이 범위의 버튼 줄을 모두 지움, 결정 방식은 일본식 */
                 if (scope == 0) { gpad.clear(); eff().pad = 0; }
-                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } edit().pad = g.pad; }
+                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } gp.have = false; ov_set(cur, ovm[cur] & ~(1u << 9)); sync_t(cur); }
                 dirty = true; a.t = A_APPLY;
-            } else if (k == UK_CANCEL) { go(S_CONF, 4); }
+            } else if (k == UK_CANCEL) { go(S_CONF, rowidx(S_CONF, 4)); }
             break; }
     } while (0);
 }

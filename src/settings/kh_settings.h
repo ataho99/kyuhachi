@@ -53,6 +53,25 @@ static void ini_put(FILE * f, const Settings & s) {
     fprintf(f, "fx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nbgm=%d\nse=%d\ndevice=%d\npad=%d\nbmult=%d\nbmode=%d\nboot=%d\nbosd=%d\nbsound=%d\nkbbtn=%d\nkbshader=%d\novbtn=%d\npadbtn=%d\n", s.ratio, (s.shader == 2 ? 2 : 0), s.curve, s.bleed, s.glow, s.scan, s.mask, s.bgm, s.se, s.device, s.pad, s.bmult, s.bmode, s.boot, s.bosd, s.bsound, s.kbbtn, s.kbshader, s.ovbtn, s.padbtn);
     fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다: 작품 구역은 전역 값을 먼저 복사하므로 줄이 없으면 전역 켬이 새어 든다 */
 }
+static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587: 작품 구역에는 바꾼 줄만 쓴다 (비트 = Ui::fbit_of 순서) */
+    if (m & (1u << 0)) fprintf(f, "ratio=%d\n", s.ratio);
+    if (m & (1u << 1)) fprintf(f, "shader=%d\n", s.shader == 2 ? 2 : 0);
+    if (m & (1u << 2)) fprintf(f, "curve=%d\n", s.curve);
+    if (m & (1u << 3)) fprintf(f, "bleed=%d\n", s.bleed);
+    if (m & (1u << 4)) fprintf(f, "glow=%d\n", s.glow);
+    if (m & (1u << 5)) fprintf(f, "scan=%d\n", s.scan);
+    if (m & (1u << 6)) fprintf(f, "mask=%d\n", s.mask);
+    if (m & (1u << 7)) fprintf(f, "bgm=%d\n", s.bgm);
+    if (m & (1u << 8)) fprintf(f, "se=%d\n", s.se);
+    if (m & (1u << 9)) fprintf(f, "pad=%d\n", s.pad);
+    if (m & (1u << 10)) fprintf(f, "bmult=%d\n", s.bmult);
+    if (m & (1u << 11)) fprintf(f, "bmode=%d\n", s.bmode);
+    if (m & (1u << 12)) fprintf(f, "boot=%d\n", s.boot);
+    if (m & (1u << 13)) fprintf(f, "bosd=%d\n", s.bosd);
+    if (m & (1u << 14)) fprintf(f, "bsound=%d\n", s.bsound);
+    if (m & (1u << 15)) fprintf(f, "ovbtn=%d\n", s.ovbtn);
+    if (m & (1u << 16)) fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다 (T252) */
+}
 static bool ini_set(Settings & s, const std::string & k, int v) {
     if (k == "fx") { s.lmode = false; }   /* t48c: 새 형식 표지. 이 구역의 화면 키는 새 범위로 읽는다 */
     else if (s.lmode && (k == "shader" || k == "curve" || k == "bleed" || k == "scan" || k == "mask")) { s.lseen = true; if (k == "shader") s.l_sh = v; else if (k == "curve") s.l_curve = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "bleed") s.l_bleed = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "scan") s.l_scan = v < 0 ? 0 : v > 10 ? 10 : v; else s.l_mask = v < 0 ? 0 : v > 3 ? 3 : v; }   /* 옛 형식: 구역이 끝날 때 fx_finish 가 옮긴다 */

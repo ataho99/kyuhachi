@@ -148,6 +148,9 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 7, "loadas:") == 0) {   /* clear like a fresh start, then read that file */
                 std::string sp = gApp.uitest_dir + "\\" + tk.substr(7); U.g = ui::Settings(); U.all_global = false; for (int gg = 0; gg < (int)ui::Ui::MAXG; gg++) { U.has_t[gg] = false; U.nofollow[gg] = false; }
                 ui::settings_load(U, sp); gh_log("uikeys: loaded %s", sp.c_str()); continue; }
+            if (tk.compare(0, 8, "cfgdump:") == 0) {   /* test only: individual-line mask, global vs effective */
+                const int ci = U.cur; const bool ok = ci >= 0 && ci < (int)ui::Ui::MAXG; const ui::Settings ef = U.effective(ci);
+                gh_log("uikeys: CFGDUMP %s scr=%d scope=%d ovm=%x g[ratio=%d scan=%d bgm=%d se=%d bmult=%d fps=%d] eff[ratio=%d scan=%d bgm=%d se=%d bmult=%d fps=%d]", tk.c_str() + 8, (int)U.scr, U.scope, ok ? U.ovm[ci] : 0u, U.g.ratio, U.g.scan, U.g.bgm, U.g.se, U.g.bmult, U.g.fpsd, ef.ratio, ef.scan, ef.bgm, ef.se, ef.bmult, ef.fpsd); continue; }
             if (tk == "save") { std::string sp = gApp.uitest_dir + "\\settings_uikeys.ini"; ui::settings_save(U, sp); gh_log("uikeys: 설정 저장 %s (bleed=%d)", sp.c_str(), U.g.bleed); continue; }   /* t42: 저장 시험 */
             if (tk == "ingame") { U.in_game = true; U.scr = ui::S_GAME; U.sel = 0; continue; }   /* t39ui4: 게임 중 메뉴로 진입 */
             if (tk.compare(0, 4, "tab:") == 0) { std::string t = tk.substr(4); int want = t == "ko" ? 0 : t == "jp" ? 1 : t == "un" ? 2 : 3; for (int gg = 0; gg < 5 && (int)U.tab != want; gg++) U.key(ui::UK_R); continue; }   /* t39ui4: 탭 맞추기 */
@@ -285,7 +288,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
         char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boost_osd.png", gApp.uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); gApp.boost_on = false; }
     { gh_logo_draw(c); char p[700]; snprintf(p, sizeof p, "%s\\ui_%02d_boot_logo.png", gApp.uitest_dir.c_str(), ++n); gh_png(p, buf, 640, 400); }   /* t52d (#129) */
     /* 설정 왕복: 전역 + 작품별 */
-    ui::Ui A; A.games = U.games; A.g.shader = 2; A.g.curve = 7; A.g.bgm = 3; A.g.bmult = 2; A.has_t[2] = true; A.t[2] = A.g; A.t[2].se = 5; A.t[2].scan = 9; A.cur = 2;
+    ui::Ui A; A.games = U.games; A.g.shader = 2; A.g.curve = 7; A.g.bgm = 3; A.g.bmult = 2; A.ov_set(2, (1u << 8) | (1u << 5)); A.t[2] = A.g; A.t[2].se = 5; A.t[2].scan = 9; A.cur = 2;
     std::string ip = gApp.uitest_dir + "\\settings_test.ini"; ui::settings_save(A, ip);
     ui::Ui B; B.games = U.games; ui::settings_load(B, ip);
     bool ok = B.g.shader == 2 && B.g.curve == 7 && B.g.bgm == 3 && B.g.bmult == 2 && B.has_t[2] && B.t[2].se == 5 && B.t[2].scan == 9 && !B.has_t[0] && B.effective(2).se == 5 && B.effective(0).se == 8 && B.cur == 2;

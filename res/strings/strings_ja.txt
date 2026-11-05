@@ -789,3 +789,9 @@ pad_decide_help=ゲームで決定として使うボタンです。反対側が�
 ext_add=+ ボタン登録
 ext_wait_title=登録する端末のボタンを押してください
 ext_wait_sub=キー・ボタンを1つ押す - タッチ = 取消
+kbp_title=キー選択
+kbp_help=↑↓←→:移動 ○:決定 ×:一覧へ
+kbp_used=(他のボタンで使用中)
+pk_help2=↑↓:選択 ○:決定 □:キー配列 ×:取消
+fn_boost_hold_s=倍速 押す
+fn_boost_toggle_s=倍速 切替

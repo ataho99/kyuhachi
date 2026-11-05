@@ -42,7 +42,9 @@ struct UiEnt {   /* 작품의 실행 방법 한 가지 */
 };
 struct UiFont { std::string name, group, path, why; bool ok = false; };   /* 글꼴 폴더의 bmp 한 개 */
 struct ValRow { std::string key, val, src, cov; };   /* t48a (#614 ③): 적용값 표 한 줄 = 키·최종값·출처·덮인 값 */
+struct KbCell { std::string label, name; int x4 = 0, w4 = 0, row = 0, rows = 1; };   /* build 5a-2c: one key of the PC-98 layout */
 struct Env {   /* 호스트(또는 하니스)가 채우는 입출력 */
+    std::function<std::vector<KbCell>()> kbcells;   /* all keys of the layout, in picker names */
     char sep = '/';
     std::function<std::vector<FileItem>(const std::string &)> list_dir;
     std::function<std::vector<std::string>()> roots;
@@ -84,6 +86,6 @@ struct UiGame {
     std::vector<UiEnt> ents;
 };
 
-enum Scr { S_MAIN, S_PICK, S_SCREEN, S_CONF, S_SAVE, S_EXTRA, S_QUIT, S_GAME, S_KEYS, S_HELP, S_START, S_SWAP, S_SWAPI, S_ABOUT, S_ADD, S_SORT, S_ENT, S_ENTMENU, S_TPL, S_EDIT, S_FILE, S_KEYSEQ, S_STEP, S_SWAPED, S_FONT, S_OSK, S_NAME, S_YN, S_HDDASK, S_LANG, S_VALS, S_PAD, S_PADKEY, S_EXEPICK, S_HOT, S_EXT };
+enum Scr { S_MAIN, S_PICK, S_SCREEN, S_CONF, S_SAVE, S_EXTRA, S_QUIT, S_GAME, S_KEYS, S_HELP, S_START, S_SWAP, S_SWAPI, S_ABOUT, S_ADD, S_SORT, S_ENT, S_ENTMENU, S_TPL, S_EDIT, S_FILE, S_KEYSEQ, S_STEP, S_SWAPED, S_FONT, S_OSK, S_NAME, S_YN, S_HDDASK, S_LANG, S_VALS, S_PAD, S_PADKEY, S_EXEPICK, S_HOT, S_EXT, S_KBPICK };
 
 }   /* namespace ui */

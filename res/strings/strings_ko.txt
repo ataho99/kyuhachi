@@ -788,3 +788,9 @@ pad_decide_help=게임에서 결정(확인)으로 쓸 버튼입니다. 반대쪽
 ext_add=+ 버튼 등록
 ext_wait_title=등록할 기기 버튼을 누르세요
 ext_wait_sub=키·버튼 하나를 누르면 등록 · 터치 = 취소
+kbp_title=키 고르기
+kbp_help=↑↓←→:이동, ○:정함, ×:목록으로
+kbp_used=(다른 버튼이 사용 중)
+pk_help2=↑↓:선택, ○:정함, □:키보드 배치, ×:취소
+fn_boost_hold_s=배속 누름
+fn_boost_toggle_s=배속 토글

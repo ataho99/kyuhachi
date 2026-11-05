@@ -13,11 +13,12 @@ inline void Ui::d_padkey(Canvas & c) {
     text(c, 340, 124, phr_("아무 것도 보내지 않음"), WH, K);
     text(c, 340, 154, phr_("마우스 왼/오른 = 게임 마우스 버튼"), WH, K);
     desc(c, 324, 44, { phr_("STOP COPY GRPH XFER NFER HELP 등 PC-98 키를 고를 수 있습니다.") });
-    helpline(c, phr_("↑↓:선택, ○:정함, ×:취소"));
+    helpline(c, phr_("pk_help2"));
 }
 inline void Ui::k_padkey(UKey k, Act & a) {
     auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
     do {
+            if (k == UK_SQ) { kb_open(); break; }
             mv(sel, (int)pk_opts.size());
             if (k == UK_OK && sel < (int)pk_opts.size()) {
                 const std::string o = pk_opts[sel]; std::string key = pad_key(pk_row);

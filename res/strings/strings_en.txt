@@ -789,3 +789,9 @@ pad_decide_help=The button used as Confirm in games. The opposite button is Canc
 ext_add=+ Register button
 ext_wait_title=Press the device button to register
 ext_wait_sub=Press one key or button - touch = cancel
+kbp_title=Pick key
+kbp_help=Arrows:Move, O:Pick, X:Back to list
+kbp_used=(used by another button)
+pk_help2=Up/Down:Select, O:Pick, Sq:Keyboard layout, X:Cancel
+fn_boost_hold_s=Boost hold
+fn_boost_toggle_s=Boost toggle

@@ -24,7 +24,7 @@ inline void Ui::d_pad(Canvas & c) {
         rbox(c, gx, 96, 140, 204, GY, NULL);
         for (int k = 0; k < 8; k++) {
             const int b = side ? RC[k] : LC[k]; bool fw, df; std::string v = val(b, fw, df);
-            const std::string t = std::string(fw ? "*" : "") + pad_tag(b) + " " + pad_show(v);
+            const std::string t = std::string(fw ? "*" : "") + pad_tag(b) + " " + pad_show_s(v);
             const int yy = 104 + k * 24; const bool on = sel == b + 2;
             if (on) c.rect(gx + 4, yy - 3, 132, 22, WH);
             c.clip(gx + 8, yy - 3, 126, 22); text(c, gx + 8, yy, t, on ? K : WH, on ? WH : K); c.unclip();

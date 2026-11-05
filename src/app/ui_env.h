@@ -138,6 +138,7 @@ static void gh_ui_env_setup(void) {
     E.raw_line = [](int i) -> std::string { if (i == -2) { std::string r = kh_xreg; kh_xreg.clear(); return r; } if (i < 0) return (kh_raw_exit || (kh_raw_on && SDL_GetTicks() - kh_raw_t0 > 180000u)) ? "EXIT" : ""; return i < 8 ? kh_raw_l[i] : std::string(); };
     E.pad_cap = [](int m, int & pb, bool & sel) -> int { if (m == 0) { kh_cap_begin(true); return 0; } if (m == 1) return kh_cap_poll(pb, sel); if (m == 2) { kh_cap_begin(false); return 0; } gh_hot_reload(); return 0; };
     E.padkeys = []() { return pn::picker_names(); };
+    E.kbcells = []() { std::vector<ui::KbCell> r; for (auto & e : pn::table()) { const kbt::Key & k = kbt::g_keys[e.idx]; ui::KbCell c; c.label = k.label; c.name = e.name; c.x4 = k.x4; c.w4 = k.w4; c.row = k.row; c.rows = k.rows; r.push_back(c); } return r; };
     E.hdd_make = [](int g, int mb, std::string & out) {
         std::string dir = gApp.ui_.imgdir_of(g), id = gApp.ui_.games[g].id; for (auto & ch : id) if (!(isalnum((unsigned char)ch) || ch == '_' || ch == '-')) ch = '_';
         for (int i = 1; i < 100; i++) { std::string nm = id + "_hdd_" + std::to_string(i) + ".hdi"; uint64_t sz, mt; if (aw::file_stat(aw::join(dir, nm), sz, mt)) continue;
@@ -520,6 +521,13 @@ static void gh_touch_feed(const SDL_Event & e) {
 static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
     if (kh_raw_event(e)) return ui::UK_NONE;   /* extra-buttons tab */
     if (kh_cap_event(e)) return ui::UK_NONE;   /* hotkey tab waiting for a combo */
+    if (gApp.ui_.scr == ui::S_PAD) {   /* pad tab: pressing L3 R3 L2 R2 jumps the cursor to that button (L1 R1 stay tab keys) */
+        int jb = -1;
+        if (e.type == SDL_CONTROLLERBUTTONDOWN) { if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) jb = PB_L3; else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSTICK) jb = PB_R3; }
+        else if (e.type == SDL_CONTROLLERAXISMOTION && (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)) {
+            static bool jon[2]; const int q = e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ? 1 : 0;
+            if (!jon[q] && e.caxis.value > 16000) { jon[q] = true; jb = q ? PB_R2 : PB_L2; } else if (jon[q] && e.caxis.value < 8000) jon[q] = false; }
+        if (jb >= 0) { gApp.ui_.pad_jump(jb); return ui::UK_NONE; } }
     using namespace ui;
     if (anykey) *anykey = (e.type == SDL_KEYDOWN && !e.key.repeat) || e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_MOUSEBUTTONDOWN;
     { int nd = -1; if (e.type == SDL_KEYDOWN && !e.key.repeat) nd = 1; else if (e.type == SDL_CONTROLLERBUTTONDOWN) nd = 0; else if (e.type == SDL_CONTROLLERAXISMOTION && (e.caxis.value > 16000 || e.caxis.value < -16000)) nd = 0;   /* t49a (#812): 마지막 입력 장치(마우스 제외) */

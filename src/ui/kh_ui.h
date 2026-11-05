@@ -204,6 +204,11 @@ struct Ui {
     std::string xb_get(int n) const { auto it = gpad.find(std::string("btn_xreg") + std::to_string(n)); return it == gpad.end() ? std::string() : it->second; }   /* build 5a-2b: registered extra button n = kind|code|name */
     std::string xb_name(int n) const { const std::string v = xb_get(n); const size_t a = v.find('|'), b = a == std::string::npos ? a : v.find('|', a + 1); return b == std::string::npos ? std::string("?") : v.substr(b + 1); }
     int xb_cnt() const; int xb_slot(int row) const;
+    std::vector<KbCell> kb_cells; int kb_sel = 0;   /* build 5a-2c: key picker on the PC-98 layout (screens/kbpick.h) */
+    bool kb_used(const std::string & nm) const; void kb_open(); void d_kbpick(Canvas & c); void k_kbpick(UKey k, Act & a);
+    void pad_jump(int pb) { if (scr == S_PAD && pb >= 0 && pb < PAD_N) sel = pb + 2; }   /* a pad press on L2 R2 L3 R3 moves the cursor to that button */
+    static std::string pad_show_s(const std::string & v) {   /* short label for the layout panel */
+        if (v == "fn:boost_hold") return phr_("fn_boost_hold_s"); if (v == "fn:boost_toggle") return phr_("fn_boost_toggle_s"); return pad_show(v); }
     enum { PAD_N = 16, PAD_FN_N = 10, HOT_N = 6 };   /* 빌드 5a: 배정 가능 버튼 = 16 (옛 7 + 북 · 십자 4 · L2 R2 · L3 R3) */
     static const char * pad_key(int i) { static const char * const K[PAD_N + 8] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick", "btn_ext0", "btn_ext1", "btn_ext2", "btn_ext3", "btn_ext4", "btn_ext5", "btn_ext6", "btn_ext7" }; return K[i < 0 ? 0 : i >= PAD_N + 8 ? PAD_N + 7 : i]; }
     static const char * pad_fn_name(int q) { static const char * const N[PAD_FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot", "next_disk", "fps" }; return N[q < 0 || q >= PAD_FN_N ? 0 : q]; }   /* kh_input12.h FN_* 순서와 같게 */
@@ -620,7 +625,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_EXEPICK: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -765,6 +770,7 @@ struct Ui {
         case S_PADKEY: k_padkey(k, a); break;
         case S_HOT: k_hot(k, a); break;
         case S_EXT: k_ext(k, a); break;
+        case S_KBPICK: k_kbpick(k, a); break;
         case S_OSK: k_osk(k, a); break;
         case S_NAME: k_name(k, a); break;
         case S_YN: k_yn(k, a); break;

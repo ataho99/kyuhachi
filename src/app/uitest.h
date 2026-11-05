@@ -141,6 +141,13 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "home") { U.in_game = false; U.scr = ui::S_MAIN; U.mainsel = 0; U.sel = 0; continue; }   /* t52i 시험 전용: 메인메뉴로 돌아가 맨 위 */
             if (tk == "startpick") { U.start_ret = ui::S_PICK; U.startsel = 1; U.scr = ui::S_START; U.sel = 1; continue; }   /* t52i 시험 전용: 작품 목록에서 연 시작 팝업 */
             if (tk == "valdump") { gh_log("uikeys: T52I VALDUMP bgm=%d se=%d bmult=%d bmode=%d dirty=%d scr=%d", U.g.bgm, U.g.se, U.g.bmult, U.g.bmode, U.dirty ? 1 : 0, (int)U.scr); continue; }   /* t52i 시험 전용: 동작 환경 값 기록 */
+            if (tk.compare(0, 8, "fpsdump:") == 0) {   /* FPS test only: value per scope */
+                const int ci = U.cur; const bool ok = ci >= 0 && ci < (int)ui::Ui::MAXG;
+                gh_log("uikeys: FPSDUMP %s scr=%d scope=%d sel=%d g=%d t=%d has_t=%d nofollow=%d eff=%d effective=%d all_global=%d", tk.c_str() + 8, (int)U.scr, U.scope, U.sel, U.g.fpsd, ok ? U.t[ci].fpsd : -1, ok && U.has_t[ci] ? 1 : 0, ok && U.nofollow[ci] ? 1 : 0, U.eff().fpsd, U.effective(ci).fpsd, U.all_global ? 1 : 0); continue; }
+            if (tk.compare(0, 7, "saveas:") == 0) { std::string sp = gApp.uitest_dir + "\\" + tk.substr(7); ui::settings_save(U, sp); gh_log("uikeys: saved %s", sp.c_str()); continue; }
+            if (tk.compare(0, 7, "loadas:") == 0) {   /* clear like a fresh start, then read that file */
+                std::string sp = gApp.uitest_dir + "\\" + tk.substr(7); U.g = ui::Settings(); U.all_global = false; for (int gg = 0; gg < (int)ui::Ui::MAXG; gg++) { U.has_t[gg] = false; U.nofollow[gg] = false; }
+                ui::settings_load(U, sp); gh_log("uikeys: loaded %s", sp.c_str()); continue; }
             if (tk == "save") { std::string sp = gApp.uitest_dir + "\\settings_uikeys.ini"; ui::settings_save(U, sp); gh_log("uikeys: 설정 저장 %s (bleed=%d)", sp.c_str(), U.g.bleed); continue; }   /* t42: 저장 시험 */
             if (tk == "ingame") { U.in_game = true; U.scr = ui::S_GAME; U.sel = 0; continue; }   /* t39ui4: 게임 중 메뉴로 진입 */
             if (tk.compare(0, 4, "tab:") == 0) { std::string t = tk.substr(4); int want = t == "ko" ? 0 : t == "jp" ? 1 : t == "un" ? 2 : 3; for (int gg = 0; gg < 5 && (int)U.tab != want; gg++) U.key(ui::UK_R); continue; }   /* t39ui4: 탭 맞추기 */

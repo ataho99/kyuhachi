@@ -53,7 +53,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
 #endif
         bool scr_s = scr == S_SCREEN; int nrow = scr_s ? 11 : 14;
         if (scr_s && sel == 9 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { a.t = A_FULLSCR; return a; }   /* t52i (B3): 전체화면 줄 — 좌우·○ 로 바로 오간다 */
-        if (scr_s && sel == 10 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { Settings & fs = edit(); fs.fpsd = fs.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }
+        if (scr_s && sel == 10 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { Settings & fs = eff(); fs.fpsd = fs.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }
         if (sel == 0 && k == UK_OK && scope == 0) { all_global = !all_global; dirty = true; a.t = A_APPLY; break; }   /* t147d: 전역 범위에서 ○ = 전역 일괄 적용 켬/끔 */
         Settings & s = (sel == 0) ? eff() : edit();
         if (k == UK_LEFT || k == UK_RIGHT) {

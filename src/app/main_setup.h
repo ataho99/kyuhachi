@@ -27,7 +27,7 @@ static void gh_main_input_init(std::string & id) {
     gh_ui_init_games();
     ui::settings_load(gApp.ui_, gApp.cfgpath);   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "after-start-load", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
 #if defined(__ANDROID__)
-    kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_cfg_load(); kha_perm_ask_once(); kha_lib_init();   /* t137 */
+    kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_seed_assets(); kha_cfg_load(); kha_perm_ask_once(); kha_lib_init();   /* t137 */
     gh_android_savedir();
     gh_android_fontdiag();
 #endif
@@ -127,10 +127,9 @@ static void gh_main_select(std::string & id, const bool & ui_mode, const bool & 
 }
 
 static void gh_main_prep(std::string & id, const std::string & exedir) {
-    if (gApp.uitest_dir.empty() && !gh_any_font_bmp(NULL)) {   /* t52b (#127): 글꼴 BMP 0개 — 메뉴 경로는 시작 전에 막지만 바로 실행(인자)·예외 경로의 마지막 방어. 죽지 말고 알리고 끝낸다 */
-        gh_log("ERROR: 글꼴 BMP(anex86 형식 524,350 B) 없음: %s\\res\\fonts -> 작품을 시작하지 않음", exedir.c_str());
-        if (!gApp.headless && !gApp.hidewin) gh_msgbox(phr_("res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요"));
-        gh_finish(1);
+    if (gApp.uitest_dir.empty() && !gh_any_font_bmp(NULL)) {   /* #500 (t52b #127 대체): 글꼴 BMP 0개여도 막지 않는다 — gh_default_font_path 가 빈 글꼴(res\.nofont.bin)을 건네고 화면 안내만 한다 */
+        gh_log("WARN: 글꼴 BMP(anex86 형식 524,350 B) 없음: %s\\res\\fonts -> 빈 글꼴로 시작", exedir.c_str());
+        gApp.osd = phr_("글꼴 없음: 기본 글꼴로 실행합니다 (글자가 안 보일 수 있음 — res/fonts 에 글꼴 BMP 를 넣으세요)"); gApp.osd_until = SDL_GetTicks() + 8000u;
     }
     gApp.pid = id;   /* t51a: 창 안 전환이 프로필을 다시 읽을 때 쓰는 작품 id */
     if (gApp.uitest_dir.empty()) {

@@ -67,8 +67,19 @@ static bool gh_any_font_bmp(std::string * which) {
       for (int q = 0; q < 4; q++) { std::string b = gApp.exedir + nm[q]; if (gh_font_bmp_ok(b)) { if (which) *which = b; return true; } } }
     return false;
 }
-static std::string gh_default_font_path(void) { std::string p = gh_res_font_path("kyuhachi_font"); if (gh_font_bmp_ok(p)) return p; std::string p0 = gh_res_font_path("pc98player_font"); if (gh_font_bmp_ok(p0)) return p0; std::string f; if (gh_any_font_bmp(&f)) return f; return p; }   /* t52g: 새 이름 → 옛 이름 → 아무 글꼴 */
-static bool gh_font_guard(void) { if (gh_any_font_bmp(NULL)) return true; gh_log("ERROR: 글꼴 BMP 없음 -> 시작 막음 (%s\\res\\fonts)", gApp.exedir.c_str()); gApp.note = phr_("res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요"); gApp.note_until = SDL_GetTicks() + 8000u; gh_osd(phr_("글꼴 BMP(kyuhachi_font.bmp)가 없어 시작할 수 없습니다 — res/fonts 에 넣어 주세요"), 8000); return false; }
+/* #500 (빌드 2a): 글꼴 BMP 가 하나도 없어도 게임을 막지 않는다. 글자 칸이 모두 비어 있는(잉크 0) anex86 형식 BMP(2048x2048 1bpp, 524,350 B)를 res\\.nofont.bin 으로 한 번 만들어 대신 쓴다(*.bmp 가 아니라서 진짜 글꼴을 나중에 넣으면 그쪽이 먼저 잡힌다). 글자는 안 보이지만 죽지 않고 시작한다. */
+static std::string gh_nofont_path(void) {
+    std::string d = gApp.exedir + "\\res", p = d + "\\.nofont.bin";
+    if (gh_font_bmp_ok(p)) return p;
+    plat::mkdir(d.c_str());
+    static const uint8_t hd[62] = { 0x42,0x4d,0x3e,0x00,0x08,0x00, 0,0,0,0, 0x3e,0,0,0, 0x28,0,0,0, 0,0x08,0,0, 0,0x08,0,0, 1,0, 1,0, 0,0,0,0, 0,0,0x08,0, 0xc4,0x0e,0,0, 0xc4,0x0e,0,0, 2,0,0,0, 2,0,0,0, 0,0,0,0, 0xff,0xff,0xff,0 };
+    FILE * f = fopen(p.c_str(), "wb"); if (!f) { gh_log("WARN: cannot create blank font file: %s", p.c_str()); return p; }
+    std::vector<uint8_t> z(65536, 0xff); bool ok = fwrite(hd, 1, 62, f) == 62; for (int i = 0; i < 8 && ok; i++) ok = fwrite(&z[0], 1, z.size(), f) == z.size();
+    if (fclose(f) != 0) ok = false; if (!ok) plat::remove_file(p.c_str()); else gh_log("blank font file created: %s", p.c_str());
+    return p;
+}
+static std::string gh_default_font_path(void) { std::string p = gh_res_font_path("kyuhachi_font"); if (gh_font_bmp_ok(p)) return p; std::string p0 = gh_res_font_path("pc98player_font"); if (gh_font_bmp_ok(p0)) return p0; std::string f; if (gh_any_font_bmp(&f)) return f; return gh_nofont_path(); }   /* t52g: 새 이름 → 옛 이름 → 아무 글꼴 */
+static bool gh_font_guard(void) { if (gh_any_font_bmp(NULL)) return true; gh_log("WARN: 글꼴 BMP 없음 -> 막지 않고 빈 글꼴로 시작 (%s\\res\\fonts) [#500]", gApp.exedir.c_str()); gApp.note = phr_("res/fonts 에 anex86 형식 글꼴 BMP 를 넣어 주세요"); gApp.note_until = SDL_GetTicks() + 8000u; return true; }   /* #500: 막는 건 디스크 이미지가 없을 때뿐 */
 static std::string gh_sha1_buf(const std::vector<uint8_t> & b) { prof::Sha1 s; if (!b.empty()) s.add(&b[0], b.size()); return s.hex(); }
 static bool gh_read_all(const std::string & p, std::vector<uint8_t> & out) {
     FILE * f = fopen(p.c_str(), "rb"); if (!f) return false; fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET); if (n < 0) { fclose(f); return false; }

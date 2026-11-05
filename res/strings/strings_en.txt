@@ -780,9 +780,12 @@ hot_tabpad=Pad buttons
 hot_none=Not assigned
 hot_save=Saved: global (settings.ini)
 tab_ext=Extra buttons
-ext_help=Press buttons - touch the screen to close - L: Hotkeys tab
-ext_desc=Press a device button to see the code the app received. Nothing shown = taken by the OS.
-ext_empty=(no input yet - press a button)
+ext_help=Up/Down:Select, O:Register/Assign, Tri:Delete, L:Hotkeys, X:Back
+ext_desc=Register a device button by pressing it, then assign a key. OS buttons are not seen
+ext_empty=(none registered - use + above)
 pad_btn=button
 pad_decide=Confirm button
 pad_decide_help=The button used as Confirm in games. The opposite button is Cancel.
+ext_add=+ Register button
+ext_wait_title=Press the device button to register
+ext_wait_sub=Press one key or button - touch = cancel

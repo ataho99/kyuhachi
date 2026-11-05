@@ -19,7 +19,7 @@
 bool gensei_lock = false;              /* true when -gensei: mapper hot keys (edit/config/etc.) blocked */
 static bool kh_padmouse = false;
 /* t48e: 버튼 배정표. 위치 기준(동=○ 남=× 서=□). 기본은 옛 t34 와 같다: 동 Space · 남 Esc · 서 CapsLock · START Enter · L1 R1 SELECT 없음 */
-enum { PB_EAST = 0, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3, PB_N };   /* 빌드 5a: 7 → 16 (옛 번호 0~6 그대로) */
+enum { PB_EAST = 0, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3, PB_X0, PB_X1, PB_X2, PB_X3, PB_X4, PB_X5, PB_X6, PB_X7, PB_N };   /* 빌드 5a: 7 → 16 (옛 번호 0~6 그대로) */
 enum { PBT_KEY = 0, PBT_NONE, PBT_ML, PBT_MR, PBT_FN };   /* 빌드 5a: PBT_FN = 큐하치 기능(fn) 배정 */
 enum { FN_MENU = 1, FN_BOOST_HOLD, FN_BOOST_TOG, FN_QSAVE, FN_QLOAD, FN_OSK, FN_SHOT, FN_NEXTDISK, FN_FPS, FN_N };   /* ui_env.h GH_PADFN · kh_ui.h pad_fn_name 과 같은 순서 */
 struct GPadBind { int type; KBD_KEYS key; int fn; };
@@ -205,7 +205,7 @@ static int kh_cap_poll(int & pb, bool & sel) {   /* 0 waiting - 1 got one - 2 en
     if (SDL_GetTicks() - kh_cap_t0 > 8000u) { kh_cap_on = false; return 2; }
     return 0;
 }
-static bool kh_raw_on = false, kh_raw_exit = false; static std::string kh_raw_l[8]; static int kh_raw_n = 0; static Uint32 kh_raw_t0 = 0;
+static bool kh_raw_on = false, kh_raw_exit = false, kh_xreg_wait = false; static std::string kh_xreg; static std::string kh_raw_l[8]; static int kh_raw_n = 0; static Uint32 kh_raw_t0 = 0;
 static void kh_raw_push(const std::string & s) {   /* newest first; the same line twice in a row is dropped */
     if (kh_raw_n > 0 && kh_raw_l[0] == s) return;
     for (int i = 7; i > 0; i--) kh_raw_l[i] = kh_raw_l[i - 1];
@@ -215,9 +215,13 @@ static bool kh_raw_event(const SDL_Event & e) {   /* extra-buttons tab: show wha
     if (!kh_raw_on) return false;
     char b[96];
     switch (e.type) {
-    case SDL_KEYDOWN: if (e.key.repeat) return true; snprintf(b, sizeof b, "KEY %s  sym=%d scan=%d", SDL_GetKeyName(e.key.keysym.sym), (int)e.key.keysym.sym, (int)e.key.keysym.scancode); kh_raw_push(b); return true;
+    case SDL_KEYDOWN: if (e.key.repeat) return true; snprintf(b, sizeof b, "KEY %s  sym=%d scan=%d", SDL_GetKeyName(e.key.keysym.sym), (int)e.key.keysym.sym, (int)e.key.keysym.scancode); kh_raw_push(b);
+        if (kh_xreg_wait) { kh_xreg = std::string("key|") + std::to_string((int)e.key.keysym.sym) + "|" + SDL_GetKeyName(e.key.keysym.sym); kh_xreg_wait = false; }
+        return true;
     case SDL_KEYUP: return true;
-    case SDL_JOYBUTTONDOWN: snprintf(b, sizeof b, "JOY button %d (dev %d)", (int)e.jbutton.button, (int)e.jbutton.which); kh_raw_push(b); return true;
+    case SDL_JOYBUTTONDOWN: snprintf(b, sizeof b, "JOY button %d (dev %d)", (int)e.jbutton.button, (int)e.jbutton.which); kh_raw_push(b);
+        if (kh_xreg_wait) { kh_xreg = std::string("joy|") + std::to_string((int)e.jbutton.button) + "|JOY " + std::to_string((int)e.jbutton.button); kh_xreg_wait = false; }
+        return true;
     case SDL_JOYBUTTONUP: return true;
     case SDL_CONTROLLERBUTTONDOWN: { const char * q = SDL_GameControllerGetStringForButton((SDL_GameControllerButton)e.cbutton.button); snprintf(b, sizeof b, "PAD %s", q ? q : "?"); kh_raw_push(b); return true; }
     case SDL_CONTROLLERBUTTONUP: return true;
@@ -335,6 +339,19 @@ static void kh_input_tick(void) {
 static void kh_push_cbtn(SDL_JoystickID id, Uint8 btn, bool down) {
     SDL_Event ev; SDL_zero(ev); ev.type = down ? SDL_CONTROLLERBUTTONDOWN : SDL_CONTROLLERBUTTONUP; ev.cbutton.which = id; ev.cbutton.button = btn; ev.cbutton.state = down ? SDL_PRESSED : SDL_RELEASED; SDL_PushEvent(&ev);
 }
+struct GXb { int kind; int code; };   /* registered extra device buttons: kind 1 = key code, 2 = joystick button */
+static GXb kh_xb[8];
+static bool kh_xb_event(const SDL_Event & e) {   /* a registered extra button fires its kh_pb[PB_X0+n] binding; true = consumed */
+    if (kh_raw_on) return false;
+    int kind = 0, code = 0; bool down = false, rep = false;
+    if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) { kind = 1; code = (int)e.key.keysym.sym; down = e.type == SDL_KEYDOWN; rep = e.key.repeat != 0; }
+    else if (e.type == SDL_JOYBUTTONDOWN || e.type == SDL_JOYBUTTONUP) { kind = 2; code = (int)e.jbutton.button; down = e.type == SDL_JOYBUTTONDOWN; }
+    else return false;
+    for (int n = 0; n < 8; n++) if (kh_xb[n].kind == kind && kh_xb[n].code == code) {
+        if (!rep) { char w[16]; snprintf(w, sizeof w, "XBTN%d", n); kh_bind_fire(PB_X0 + n, down, w); }
+        return true; }
+    return false;
+}
 static bool gensei_raw_event(const SDL_Event& e) {
     static const Uint8 MAP[10] = { SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B, SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_LEFTSTICK, SDL_CONTROLLER_BUTTON_RIGHTSTICK };
     switch (e.type) {
@@ -360,6 +377,7 @@ static bool gensei_raw_event(const SDL_Event& e) {
 
 /* returns true if the event was consumed */
 static bool gensei_input_event(const SDL_Event& e) {
+    if (kh_xb_event(e)) return true;
     switch (e.type) {
     case SDL_CONTROLLERDEVICEADDED:   GPLOG("DEVICE added idx=%d", (int)e.cdevice.which); gensei_open_pad(e.cdevice.which); return true;
     case SDL_CONTROLLERDEVICEREMOVED: {

@@ -91,7 +91,7 @@ inline void Ui::k_hot(UKey k, Act & a) {
     if (k == UK_UP) sel = (sel + n - 1) % n;
     else if (k == UK_DOWN) sel = (sel + 1) % n;
     else if (k == UK_L) { scr = S_PAD; sel = pad_sel_keep; }
-    else if (k == UK_R) { scr = S_EXT; sel = 0; if (env.raw_ctl) env.raw_ctl(1); }
+    else if (k == UK_R) { scr = S_EXT; sel = 0; ext_wait = false; }
     else if (k == UK_CANCEL) { go(S_CONF, rowidx(S_CONF, 4)); }
     else if (k == UK_OK && sel >= 1 && env.pad_cap) {
         int z = 0; bool zb = false; env.pad_cap(0, z, zb); hot_cap = true; hot_cap_t0 = ts_ms;

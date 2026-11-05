@@ -238,6 +238,7 @@ static bool gh_game_event(const SDL_Event & e) {
         return false; }   /* 빌드 5a: 트리거(L2·R2)는 입력 층(kh_trigger)이 배정표대로 처리 */
     case SDL_KEYDOWN: case SDL_KEYUP: {
         bool d = e.type == SDL_KEYDOWN; SDL_Keycode k = e.key.keysym.sym;
+        if (kh_xb_event(e)) return true;
         if (e.key.repeat) return true;
         if (k == SDLK_F12) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
         if (k == SDLK_PRINTSCREEN) { if (d && gApp.boot_tick) gApp.scr_req = true; return true; }

@@ -167,9 +167,9 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "hotscr") { U.scr = ui::S_HOT; U.sel = 0; continue; }   /* build 5a-2 test only: hotkey tab */
             if (tk.compare(0, 5, "kind:") == 0) { gensei_padkind_v = atoi(tk.c_str() + 5); continue; }   /* test only: pad kind (3 = Retroid) */
             if (tk.compare(0, 7, "hotcap:") == 0) { if (kh_cap_on) { kh_cap_pb = atoi(tk.c_str() + 7) & 31; kh_cap_sel = tk.back() == 's'; } else gh_log("uikeys: HOTCAP not waiting"); continue; }
-            if (tk == "extscr") { U.scr = ui::S_EXT; U.sel = 0; if (U.env.raw_ctl) U.env.raw_ctl(1); continue; }   /* test only: extra-buttons tab */
-            if (tk.compare(0, 8, "extfeed:") == 0) { std::string fs = tk.substr(8); for (auto & ch : fs) if (ch == '_') ch = ' '; kh_raw_push(fs); continue; }
-            if (tk == "extstate") { std::string xs; for (int xi = 0; xi < 8; xi++) { const std::string xl = U.env.raw_line ? U.env.raw_line(xi) : std::string(); if (!xl.empty()) xs += xl + " | "; } gh_log("uikeys: EXTSTATE scr=%d n=%d lines[%s]", (int)U.scr, kh_raw_n, xs.c_str()); continue; }
+            if (tk == "extscr") { U.scr = ui::S_EXT; U.sel = 0; U.ext_wait = false; continue; }   /* test only: extra-buttons tab */
+            if (tk.compare(0, 6, "xbadd:") == 0) { int fs = -1; for (int xi = 0; xi < 8 && fs < 0; xi++) if (U.xb_get(xi).empty()) fs = xi; if (fs >= 0) U.gpad[std::string("btn_xreg") + std::to_string(fs)] = tk.substr(6); if (U.env.pad_cap) { int z = 0; bool zb = false; U.env.pad_cap(3, z, zb); } continue; }   /* test only: register an extra button */
+            if (tk == "xbstate") { std::string xs, xr; for (int xi = 0; xi < 8; xi++) if (!U.xb_get(xi).empty()) xs += std::to_string(xi) + ":" + U.xb_get(xi) + "=" + U.pad_val(ui::Ui::PAD_N + xi) + " "; for (int xi = 0; xi < 8; xi++) xr += std::to_string(xi) + ":" + std::to_string(kh_xb[xi].kind) + "/" + std::to_string(kh_xb[xi].code) + " "; gh_log("uikeys: XBSTATE scr=%d sel=%d cnt=%d rows[%s] xb[%s]", (int)U.scr, U.sel, U.xb_cnt(), xs.c_str(), xr.c_str()); continue; }
             if (tk == "hotstate") {
                 std::string gp, tb, rw; for (auto & kv : U.gpad) if (kv.first.compare(0, 8, "btn_hot_") == 0) gp += kv.first + "=" + kv.second + " ";
                 for (int q = 1; q < FN_N; q++) tb += std::to_string(q) + ":" + std::to_string(kh_hot[q].btn) + (kh_hot[q].sel ? "s" : "") + " ";

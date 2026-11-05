@@ -780,9 +780,12 @@ hot_tabpad=パッドボタン
 hot_none=割り当てなし
 hot_save=保存: 全体 (settings.ini)
 tab_ext=追加ボタン
-ext_help=ボタンを押してください・画面タッチで閉じる・L:ホットキータブ
-ext_desc=端末のボタンを押すと、アプリが受け取ったコードが表示されます。何も出ないボタンはOSが使用中です。
-ext_empty=(入力なし - ボタンを押してください)
+ext_help=↑↓:選択 ○:登録・割当 △:削除 L:ホットキー ×:戻る
+ext_desc=ボタンを押して登録し、キー・機能を割り当てます。OS使用中のボタンは不可
+ext_empty=(登録なし - + で登録)
 pad_btn=ボタン
 pad_decide=決定ボタン
 pad_decide_help=ゲームで決定として使うボタンです。反対側が取消です。
+ext_add=+ ボタン登録
+ext_wait_title=登録する端末のボタンを押してください
+ext_wait_sub=キー・ボタンを1つ押す - タッチ = 取消

@@ -200,9 +200,12 @@ struct Ui {
     /* ---- t48e (#646/#651): 조작 설정 — 저장 키 이름은 SDL 표준 버튼 이름 하나(btn_b btn_a btn_x btn_start btn_leftshoulder btn_rightshoulder btn_back).
        전역 = settings.ini [global], 이 작품 = user.ini [pad] (작품이 이긴다) */
     std::map<std::string, std::string> gpad;   /* 전역 btn_* */
-    std::vector<std::string> pk_opts; int pk_row = 0, pad_sel_keep = 0; bool hot_cap = false; int hot_cap_t0 = 0;
+    std::vector<std::string> pk_opts; int pk_row = 0, pad_sel_keep = 0; bool hot_cap = false; int hot_cap_t0 = 0; bool ext_wait = false; int ext_t0 = 0;
+    std::string xb_get(int n) const { auto it = gpad.find(std::string("btn_xreg") + std::to_string(n)); return it == gpad.end() ? std::string() : it->second; }   /* build 5a-2b: registered extra button n = kind|code|name */
+    std::string xb_name(int n) const { const std::string v = xb_get(n); const size_t a = v.find('|'), b = a == std::string::npos ? a : v.find('|', a + 1); return b == std::string::npos ? std::string("?") : v.substr(b + 1); }
+    int xb_cnt() const; int xb_slot(int row) const;
     enum { PAD_N = 16, PAD_FN_N = 10, HOT_N = 6 };   /* 빌드 5a: 배정 가능 버튼 = 16 (옛 7 + 북 · 십자 4 · L2 R2 · L3 R3) */
-    static const char * pad_key(int i) { static const char * const K[PAD_N] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick" }; return K[i < 0 ? 0 : i >= PAD_N ? PAD_N - 1 : i]; }
+    static const char * pad_key(int i) { static const char * const K[PAD_N + 8] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick", "btn_ext0", "btn_ext1", "btn_ext2", "btn_ext3", "btn_ext4", "btn_ext5", "btn_ext6", "btn_ext7" }; return K[i < 0 ? 0 : i >= PAD_N + 8 ? PAD_N + 7 : i]; }
     static const char * pad_fn_name(int q) { static const char * const N[PAD_FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot", "next_disk", "fps" }; return N[q < 0 || q >= PAD_FN_N ? 0 : q]; }   /* kh_input12.h FN_* 순서와 같게 */
     static const char * pad_fn_key(int q) { static const char * const N[PAD_FN_N] = { "", "fn_menu", "fn_boost_hold", "fn_boost_toggle", "fn_quick_save", "fn_quick_load", "fn_osk", "fn_screenshot", "fn_next_disk", "fn_fps" }; return N[q < 0 || q >= PAD_FN_N ? 0 : q]; }
     std::string pad_row_name(int i) const {
@@ -210,6 +213,7 @@ struct Ui {
         static const char * const X[PAD_N] = { phr_("B 버튼"), phr_("A 버튼"), phr_("X 버튼"), "START", "LB", "RB", "BACK", phr_("pad_n_y"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "LT", "RT", "L-STICK", "R-STICK" };
         static const char * const P[PAD_N] = { "○", "×", "□", "START", "L1", "R1", "SELECT", phr_("pad_t_n"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
         static const char * const O[PAD_N] = { phr_("동쪽 버튼"), phr_("남쪽 버튼"), phr_("서쪽 버튼"), "START", phr_("왼쪽 어깨"), phr_("오른쪽 어깨"), "SELECT", phr_("pad_n_north"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
+        if (i >= PAD_N && i < PAD_N + 8) return xb_name(i - PAD_N);
         if (i < 0 || i >= PAD_N) i = 0;
         if ((kd == 0 || kd == 3) && (i == 0 || i == 1 || i == 2 || i == 7)) {   /* arrow = position on the pad, brackets = the name printed on it (Retroid) */
             static const char * const AR[PAD_N] = { "\xE2\x86\x92 ", "\xE2\x86\x93 ", "\xE2\x86\x90 ", "", "", "", "", "\xE2\x86\x91 ", "", "", "", "", "", "", "", "" };
@@ -239,14 +243,14 @@ struct Ui {
     }
     std::string pad_val(int i, bool * from_work = NULL, bool * is_def = NULL) {   /* 지금 이 범위에서 보이는 값 */
         std::string k = pad_key(i), v; if (from_work) *from_work = false; if (is_def) *is_def = false;
-        if (scope == 1 && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end() && !it->second.empty()) { if (from_work) *from_work = true; return it->second; } }
+        if (scope == 1 && i < PAD_N && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end() && !it->second.empty()) { if (from_work) *from_work = true; return it->second; } }
         auto g2 = gpad.find(k); if (g2 != gpad.end() && !g2->second.empty()) return g2->second;
         if (is_def) *is_def = true; return pad_default(i);
     }
     void open_padkey(int row) {
         pk_row = row; pad_sel_keep = sel; pk_opts.clear(); pk_opts.push_back(std::string()); pk_opts.push_back("none"); pk_opts.push_back("mouse_left"); pk_opts.push_back("mouse_right"); for (int q = 1; q < PAD_FN_N; q++) pk_opts.push_back(std::string("fn:") + pad_fn_name(q));   /* 빌드 5a: 큐하치 기능 */
         if (env.padkeys) for (auto & n : env.padkeys()) pk_opts.push_back(n);
-        std::string cv; { std::string k = pad_key(row); if (scope == 1 && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end()) cv = it->second; } else if (scope == 0) { auto it = gpad.find(k); if (it != gpad.end()) cv = it->second; } }
+        std::string cv; { std::string k = pad_key(row); if (scope == 1 && row < PAD_N && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end()) cv = it->second; } else if (scope == 0 || row >= PAD_N) { auto it = gpad.find(k); if (it != gpad.end()) cv = it->second; } }
         sel = 0; for (size_t i = 0; i < pk_opts.size(); i++) if (pk_opts[i] == cv) sel = (int)i; scr = S_PADKEY;
     }
     void d_pad(Canvas & c);

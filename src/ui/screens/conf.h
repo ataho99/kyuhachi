@@ -46,6 +46,23 @@ inline void Ui::d_conf(Canvas & c) {
     std::string dt = dkey(phr_(dd[rs]));
     if (ind) dt = std::string(phr_("indiv_has")) + "  ·  " + dt;
     desc_mq(c, 328, 44, dt, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
+    if (scope == 0 && (rs == 11 || rs == 12)) { const std::string & fl = font_now(); if (!fl.empty()) text(c, 344, 288, fit(fl, 270), CY, K); }   /* build 5b-3: font now applied to the current work */
     const bool ibk = own && (ovm[cur] & indiv_bit(S_CONF, rs));
     helpline(c, ibk ? phr_("indiv_help") : phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
+}
+/* build 5b-3: "now applied: <font> (source)" for the current work. priority: launch method (font=) > work language default (font_kind) > system. */
+inline const std::string & Ui::font_now() {
+    if (fnow_cur == cur && fnow_kr == font_kr && fnow_jp == font_jp) return fnow_line;
+    fnow_cur = cur; fnow_kr = font_kr; fnow_jp = font_jp; fnow_line.clear();
+    if (cur < 0 || cur >= (int)games.size() || !env.values) return fnow_line;
+    std::vector<ValRow> vr; if (!env.values(cur, vr)) return fnow_line;
+    std::string fv, kd;
+    for (auto & r : vr) { if (r.val.empty() || r.val[0] == '(') continue; if (r.key == "font") fv = r.val; else if (r.key == "font_kind") kd = r.val; }
+    std::string nm, src;
+    if (!fv.empty()) { nm = fv; src = phr_("fsrc_ent"); }
+    else if (kd == "jp") { nm = font_jp.empty() ? std::string("jp_default") : font_jp; src = phr_("fsrc_lang"); }
+    else if (kd == "kr") { nm = font_kr.empty() ? std::string("kyuhachi_font") : font_kr; src = phr_("fsrc_lang"); }
+    else { nm = font_kr.empty() ? std::string("kyuhachi_font") : font_kr; src = phr_("fsrc_sys"); }
+    fnow_line = std::string(phr_("font_now")) + " " + nm + " (" + src + ")";
+    return fnow_line;
 }

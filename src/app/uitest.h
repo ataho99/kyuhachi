@@ -138,6 +138,11 @@ static void gh_uitest(void) {
             if (tk == "reload") { gh_reload_games(); gh_log("uikeys: 목록 다시 만듦 (entry_req='%s')", prof::g_entry_req.c_str()); continue; }
             if (tk == "blkdump") { if (U.pick >= 0 && U.pick < (int)U.vis.size()) { int gi = U.vis[U.pick]; gh_log("uikeys: BLKDUMP row=%s row_old_games_gi_block='%s' row_by_id_block='%s' cur=%s cur_by_id_block='%s' cur_games_cur_block='%s' sel_entry='%s' scr=%d", U.games[gi].id.c_str(), U.games[gi].block.c_str(), U.blk_row(gi).c_str(), U.game() ? U.game()->id.c_str() : "", U.blk_cur().c_str(), U.game() ? U.game()->block.c_str() : "", U.sel_entry.c_str(), (int)U.scr); } continue; }
 if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block='%s'", gg.id.c_str(), gg.block.c_str()); continue; }
+            if (tk.compare(0, 5, "main:") == 0) { const std::string mn = tk.substr(5); U.in_game = false; U.scr = ui::S_MAIN; U.mainsel = mn == "start" ? 0 : mn == "pick" ? 1 : mn == "set" ? 2 : mn == "save" ? 3 : mn == "extra" ? 4 : mn == "quit" ? 5 : 0; continue; }   /* 5b-3: main row by name */
+            if (tk == "extraopen") { U.go(ui::S_EXTRA, 0); continue; }
+            if (tk == "extrastate") { std::string rs2; for (int id2 : U.extra_ids()) rs2 += std::to_string(id2) + " "; const int fb = U.base_of(U.cur); const int fav2 = (fb >= 0 && fb < (int)U.games.size()) ? (U.games[fb].fav ? 1 : 0) : -1;
+                gh_log("uikeys: EXTRASTATE scr=%d sub=%d sel=%d n=%d fav=%d ids[%s]", (int)U.scr, U.extra_sub, U.sel, U.nitems(), fav2, rs2.c_str()); continue; }
+            if (tk == "fontnow") { gh_log("uikeys: FONTNOW cur=%d line=[%s]", U.cur, U.font_now().c_str()); continue; }
             if (tk == "home") { U.in_game = false; U.scr = ui::S_MAIN; U.mainsel = 0; U.sel = 0; continue; }   /* t52i 시험 전용: 메인메뉴로 돌아가 맨 위 */
             if (tk == "startpick") { U.start_ret = ui::S_PICK; U.startsel = 1; U.scr = ui::S_START; U.sel = 1; continue; }   /* t52i 시험 전용: 작품 목록에서 연 시작 팝업 */
             if (tk == "valdump") { gh_log("uikeys: T52I VALDUMP bgm=%d se=%d bmult=%d bmode=%d dirty=%d scr=%d", U.g.bgm, U.g.se, U.g.bmult, U.g.bmode, U.dirty ? 1 : 0, (int)U.scr); continue; }   /* t52i 시험 전용: 동작 환경 값 기록 */
@@ -241,15 +246,15 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
     auto shotg = [&](const char * nm) { ov::sample_picture(c, 0, 0, 640, 400); shot(nm); };
     shot("main"); U.mainsel = 0; U.key(ui::UK_OK); shot("start"); U.key(ui::UK_CANCEL);
     U.mainsel = 1; U.key(ui::UK_OK); shot("pick"); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("main_after_pick"); U.cur = U.pick = 2; gApp.cur_game = 2;
-    U.mainsel = 2; U.key(ui::UK_OK); shot("screen_sharp"); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt"); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt_curve"); U.key(ui::UK_CANCEL);
-    U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); U.key(ui::UK_LEFT); shot("conf"); for (int i = 0; i < 7; i++) U.key(ui::UK_DOWN); shot("conf_bosd"); U.key(ui::UK_OK);
-    U.mainsel = 4; U.key(ui::UK_OK); shot("save"); U.key(ui::UK_CANCEL);
-    U.mainsel = 5; U.key(ui::UK_OK); shot("extra"); U.sel = 5; U.key(ui::UK_OK); shot("about"); U.key(ui::UK_CANCEL); U.sel = 0; U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("help"); U.key(ui::UK_CANCEL); U.key(ui::UK_CANCEL);
-    U.mainsel = 6; U.key(ui::UK_OK); shot("quit"); U.key(ui::UK_CANCEL);
+    U.scr_from = ui::S_MAIN; U.enter_screen_cfg(); U.go(ui::S_SCREEN, 0); shot("screen_sharp"); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt"); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt_curve"); U.key(ui::UK_CANCEL);
+    U.mainsel = ui::Ui::mi(ui::S_SET); U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); U.key(ui::UK_LEFT); shot("conf"); for (int i = 0; i < 7; i++) U.key(ui::UK_DOWN); shot("conf_bosd"); U.key(ui::UK_OK);
+    U.mainsel = ui::Ui::mi(ui::S_SAVE); U.key(ui::UK_OK); shot("save"); U.key(ui::UK_CANCEL);
+    U.mainsel = ui::Ui::mi(ui::S_EXTRA); U.key(ui::UK_OK); shot("extra"); U.sel = ui::Ui::extra_row(4); U.key(ui::UK_OK); shot("about"); U.key(ui::UK_CANCEL); U.sel = ui::Ui::extra_row(3); U.key(ui::UK_OK); shot("help"); U.key(ui::UK_CANCEL); U.key(ui::UK_CANCEL);
+    U.mainsel = ui::Ui::mi(ui::S_QUIT); U.key(ui::UK_OK); shot("quit"); U.key(ui::UK_CANCEL);
     U.in_game = true; U.scr = ui::S_GAME; U.sel = 1; shotg("ingame"); U.scr = ui::S_KEYS; U.sel = 0; shotg("keys");
     U.scr = ui::S_SWAP; U.swapdrv = 0; shotg("swap"); U.scr = ui::S_SWAPI; U.swapsel = 2; shotg("swap_pick"); U.scr = ui::S_QUIT; U.quitsel = 0; shotg("ingame_quit");
     /* t52f (#132): 동작 환경 설정의 새 행 「오버레이 버튼 표시」 */
-    { U.in_game = false; U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.sel = 10; int o0 = U.g.ovbtn; U.key(ui::UK_LEFT); int o1 = U.g.ovbtn; shotg("conf_ovbtn_off"); U.key(ui::UK_RIGHT); int o2 = U.g.ovbtn; U.sel = 12; shotg("conf_row_jpfont"); ui::Act ra = U.key(ui::UK_CANCEL); int o3 = U.g.ovbtn; gh_log("T52F conf ovbtn start=%d left=%d right=%d after_cancel=%d rows=%d -> %s", o0, o1, o2, o3, 13, (o0 == 1 && o1 == 0 && o2 == 1 && o3 == 1) ? "PASS" : "FAIL"); (void)ra; U.scr = ui::S_MAIN; U.in_game = false; }
+    { U.in_game = false; U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = ui::Ui::mi(ui::S_SET); U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.sel = 10; int o0 = U.g.ovbtn; U.key(ui::UK_LEFT); int o1 = U.g.ovbtn; shotg("conf_ovbtn_off"); U.key(ui::UK_RIGHT); int o2 = U.g.ovbtn; U.sel = 12; shotg("conf_row_jpfont"); ui::Act ra = U.key(ui::UK_CANCEL); int o3 = U.g.ovbtn; gh_log("T52F conf ovbtn start=%d left=%d right=%d after_cancel=%d rows=%d -> %s", o0, o1, o2, o3, 13, (o0 == 1 && o1 == 0 && o2 == 1 && o3 == 1) ? "PASS" : "FAIL"); (void)ra; U.scr = ui::S_MAIN; U.in_game = false; }
     /* t52g (#133): UI 언어 3종 — 언어마다 주요 화면을 찍고, 설정의 언어 행(←→ 순환)·문구 칸 즉시 교체·settings 저장/읽기를 검사 */
     { static const char * const lnm[3] = { "ko", "en", "ja" }; static const char * const want[3] = { "게임 시작", "Start game", "ゲーム スタート" };
       U.in_game = false; U.scope = 0; U.lang = 0; U.lang_chg = false; phr_set_lang(0); int bad = 0; char nm[48];
@@ -272,8 +277,8 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
     if (U.games.size() >= 3) { U.cur = U.pick = 2; gApp.cur_game = 2; } for (auto & gg0 : U.games) { gg0.slot[0].used = true; gg0.slot[0].stamp = "2026-11-02 07:00"; gg0.lastslot = 0; }
     U.in_game = true; U.scr = ui::S_GAME; U.sel = 6; U.key(ui::UK_OK); shotg("yn_mainmenu"); U.key(ui::UK_CANCEL); gh_log("T52E yn_mainmenu back scr=%d (S_GAME=%d)", (int)U.scr, (int)ui::S_GAME);
     U.in_game = false; U.scr = ui::S_SAVE; U.slotsel = 0; gh_log("T52E delslot pre cur=%d used=%d", U.cur, U.game() ? (int)U.game()->slot[0].used : -1); U.key(ui::UK_TRI); gh_log("T52E delslot after TRI scr=%d (S_YN=%d)", (int)U.scr, (int)ui::S_YN); shotg("yn_delslot"); U.key(ui::UK_CANCEL); gh_log("T52E yn_delslot back scr=%d (S_SAVE=%d)", (int)U.scr, (int)ui::S_SAVE);
-    U.scr = ui::S_EXTRA; U.sel = 6; U.key(ui::UK_OK); shotg("yn_diskreset"); U.key(ui::UK_CANCEL); gh_log("T52E yn_diskreset back scr=%d (S_EXTRA=%d)", (int)U.scr, (int)ui::S_EXTRA);
-    { U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); int b0 = U.g.bgm; U.key(b0 < 8 ? ui::UK_RIGHT : ui::UK_LEFT); int b1 = U.g.bgm; ui::Act ra = U.key(ui::UK_CANCEL); int b2 = U.g.bgm; gh_log("T52E conf_restore before=%d changed=%d after=%d act=%d -> %s", b0, b1, b2, (int)ra.t, (b0 != b1 && b0 == b2) ? "PASS" : "FAIL"); U.scr = ui::S_MAIN; U.in_game = false; }
+    U.scr = ui::S_EXTRA; U.sel = ui::Ui::extra_row(6); U.key(ui::UK_OK); shotg("yn_diskreset"); U.key(ui::UK_CANCEL); gh_log("T52E yn_diskreset back scr=%d (S_EXTRA=%d)", (int)U.scr, (int)ui::S_EXTRA);
+    { U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = ui::Ui::mi(ui::S_SET); U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); int b0 = U.g.bgm; U.key(b0 < 8 ? ui::UK_RIGHT : ui::UK_LEFT); int b1 = U.g.bgm; ui::Act ra = U.key(ui::UK_CANCEL); int b2 = U.g.bgm; gh_log("T52E conf_restore before=%d changed=%d after=%d act=%d -> %s", b0, b1, b2, (int)ra.t, (b0 != b1 && b0 == b2) ? "PASS" : "FAIL"); U.scr = ui::S_MAIN; U.in_game = false; }
     U.in_game = false; U.scr = ui::S_MAIN;
     { /* r017 화면: 회색 목록 · 판정 · 작품 추가 · 창 배율 · 배속 중 소리 */
         if (U.games.size() >= 4) {

@@ -22,7 +22,7 @@ inline void Ui::k_vals(UKey k, Act & a) {
             int n = (int)vals.size();
             if (k == UK_UP && sel > 0) sel--; else if (k == UK_DOWN && sel + 1 < n) sel++;
             else if (k == UK_L) sel = sel > 13 ? sel - 13 : 0; else if (k == UK_R) sel = sel + 13 < n ? sel + 13 : (n > 0 ? n - 1 : 0);
-            else if (k == UK_OK || k == UK_CANCEL) go(S_EXTRA, 7);
+            else if (k == UK_OK || k == UK_CANCEL) go(S_EXTRA, extra_row(7));
             break; }
     } while (0);
 }

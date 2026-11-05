@@ -27,7 +27,7 @@ inline void Ui::k_lang(UKey k, Act & a) {
             if (k == UK_OK || k == UK_RIGHT || k == UK_LEFT) {
                 int gi = (sel < (int)lang_gid.size()) ? gidx_of(lang_gid[sel]) : -1;
                 if (gi >= 0) { const std::string & cur = games[gi].lang_exp; int v0 = cur == "ko" ? 1 : cur == "jp" ? 2 : 0; int d = (k == UK_LEFT) ? 2 : 1; a.t = A_SETLANG; a.game = gi; a.arg = (v0 + d) % 3; dirty = true; }
-            } else if (k == UK_CANCEL) { scr = lang_ret; sel = (lang_ret == S_ENT) ? (int)std::max<size_t>(vents(entg).size(), 1) + 1 : (lang_ret == S_EXTRA) ? 8 : 5; }
+            } else if (k == UK_CANCEL) { scr = lang_ret; sel = (lang_ret == S_ENT) ? (int)std::max<size_t>(vents(entg).size(), 1) + 1 : (lang_ret == S_EXTRA) ? 0 : 5; }
             break; }
     } while (0);
 }

@@ -21,6 +21,7 @@ enum : uint32_t { K = 0x000000, WH = 0xFFFFFF, CY = 0x00FFFF, YL = 0xFFFF00, OR 
 
 struct ShimCfg { int mode = 0, amp = 4, spd = 3, glow = 6, col = 0, ms = 0; };
 static ShimCfg g_shim;
+static std::vector<uint8_t> g_shim_mask;   /* 1 = dot drawn by shimmered text this frame (glow source) */
 /* build 7: shimmer. Brightness of one lit dot; mode 1 = same phase for the whole glyph (origin ox,oy), mode 2 = every dot on its own. */
 static uint32_t shim_fg(uint32_t fg, int ox, int oy, int px, int py) {
     if (fg == K) return fg;
@@ -56,6 +57,13 @@ struct Canvas {
 };
 
 
+/* one lit dot of shimmered text; remembered in the mask so that only text glows, not solid areas */
+static void shim_put(Canvas & c, int px, int py, uint32_t fg, int ox, int oy) {
+    if (fg == K) { c.set(px, py, fg); return; }
+    c.set(px, py, shim_fg(fg, ox, oy, px, py));
+    if ((unsigned)px >= (unsigned)c.w || (unsigned)py >= (unsigned)c.h) return;
+    if (g_shim_mask.size() == (size_t)c.w * c.h) g_shim_mask[(size_t)py * c.w + px] = 1;
+}
 /* build 7: soft glow around bright dots (box blur of the bright part, added back) */
 static void shim_glow(Canvas & c) {
     const int w = c.w, h = c.h, R = 2; const double ga = g_shim.glow * 0.1;
@@ -68,7 +76,7 @@ static void shim_glow(Canvas & c) {
         const size_t i = (size_t)y * w + x; const uint32_t px = c.p[i];
         const int r = (px >> 16) & 255, g = (px >> 8) & 255, b = px & 255;
         const int lum = r > g ? (r > b ? r : b) : (g > b ? g : b);
-        if (lum < 140) continue;
+        if (lum < 140 || g_shim_mask.size() != n || !g_shim_mask[i]) continue;
         const float a = (float)(ga * (lum - 140) / 115.0);
         ch[0][i] = r * a; ch[1][i] = g * a; ch[2][i] = b * a; rowhas[(size_t)y] = 1; any = true;
     }
@@ -101,7 +109,7 @@ static void shim_glow(Canvas & c) {
 static void blit_glyph(Canvas & c, const uint8_t * g, int gw, int bpr, int x, int y, uint32_t fg, uint32_t bg) {
     for (int j = 0; j < 16; j++) for (int i = 0; i < gw; i++) {
         int on = (g[j * bpr + (i >> 3)] >> (7 - (i & 7))) & 1;
-        if (on) c.set(x + i, y + j, c.shim ? shim_fg(fg, x, y, x + i, y + j) : fg); else if (bg != NOBG) c.set(x + i, y + j, bg);
+        if (on) { if (c.shim) shim_put(c, x + i, y + j, fg, x, y); else c.set(x + i, y + j, fg); } else if (bg != NOBG) c.set(x + i, y + j, bg);
     }
 }
 /* 오른쪽 삼각형(▶) 직접 그리기: 16x16 칸 */
@@ -140,7 +148,7 @@ static int text_bmp(Canvas & c, const BmpFont & f, int x, int y, const std::stri
         uint32_t cp = u8next(s); if (!cp) break;
         if (cp < 0x80) { const uint8_t * g = g_sb.glyph(cp); if (g) blit_glyph(c, g, 8, 1, cx, y, fg, bg); cx += 8; continue; }
         int ku, ten; if (f.ok && bmp_cell(cp, ku, ten)) {
-            for (int j = 0; j < 16; j++) for (int i = 0; i < 16; i++) { if (f.ink(ku * 16 + i, (ten + 32) * 16 + j)) c.set(cx + i, y + j, c.shim ? shim_fg(fg, cx, y, cx + i, y + j) : fg); else if (bg != NOBG) c.set(cx + i, y + j, bg); }
+            for (int j = 0; j < 16; j++) for (int i = 0; i < 16; i++) { if (f.ink(ku * 16 + i, (ten + 32) * 16 + j)) { if (c.shim) shim_put(c, cx + i, y + j, fg, cx, y); else c.set(cx + i, y + j, fg); } else if (bg != NOBG) c.set(cx + i, y + j, bg); }
         } else if (bg != NOBG) c.rect(cx, y, 16, 16, bg);
         cx += 16;
     }

@@ -44,6 +44,7 @@
 inline void Ui::draw(Canvas & c) {
     c.shim = !in_game && g.shim != 0;
     g_shim.mode = g.shim; g_shim.amp = g.shim_amp; g_shim.spd = g.shim_spd; g_shim.glow = g.shim_glow; g_shim.col = g.shim_col; g_shim.ms = ts_ms;
+    if (c.shim) g_shim_mask.assign((size_t)c.w * c.h, 0);
     draw_body(c);
     if (c.shim) { shim_glow(c); c.shim = false; }
 }

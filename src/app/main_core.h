@@ -157,10 +157,20 @@ static void gh_main_devinit() {
                         gh_log("HDD 풀기 흐름(LHA 자기풀림): A: = %s (비어 있음, HDD) → %s", hd.c_str(), gApp.prof_.kv["dossfx"].c_str()); }
                     else { gApp.prof_.bootkeys.clear(); ae += "a:\n"; if (!dirp.empty()) ae += "cd \\" + dirp + "\n"; ae += (nrun == 1 ? run : std::string("dir /w")) + "\n"; gh_log("HDD 설치 끝난 폴더: 실행 파일 %d개 → %s", nrun, nrun == 1 ? run.c_str() : "목록"); }
                 } else {
+                std::string uexe = gApp.prof_.kv.count("dosexe") ? gApp.prof_.kv["dosexe"] : std::string(), uargs = gApp.prof_.kv.count("dosargs") ? gApp.prof_.kv["dosargs"] : std::string(); const std::string ea = uargs.empty() ? std::string() : " " + uargs;   /* 2b */
+                if (!uexe.empty()) {   /* 2b: 사용자가 고른 실행 파일 (실행 방법의 「실행 파일」) — "*" = DOS 프롬프트 */
+                    if (uexe == "*") { ae += dv + ":\n"; gh_log("exe: DOS prompt (user choice)"); }
+                    else if (uexe.size() >= 3 && uexe[1] == (char)58) {
+                        char L = (char)tolower((unsigned char)uexe[0]); std::string rel = uexe.substr(2), dn = (L == L1) ? d0 : d1, dp2 = dn.empty() ? std::string() : gh_workpath(dn); size_t sl = rel.find_last_of((char)92); std::string fdir = sl == std::string::npos ? std::string() : rel.substr(0, sl), fnm = sl == std::string::npos ? rel : rel.substr(sl + 1);
+                        if (!dp2.empty() && prof::dos_exists(dp2, rel)) { ae += std::string(1, L) + ":\n"; if (!fdir.empty()) ae += "cd \\" + fdir + "\n"; ae += fnm + ea + "\n"; gh_log("exe: user choice %s", uexe.c_str()); }
+                        else { ae += std::string(1, L) + ":\n"; ae += "echo Executable not found - pick one in the run method\n"; gApp.osd = phr_("실행 파일을 못 찾음 — 실행 방법에서 고르세요"); gApp.osd_until = SDL_GetTicks() + 8000u; gh_log("exe: user choice not found: %s", uexe.c_str()); }
+                    }
+                } else {
                 ae += dv + ":\n"; if (gApp.prof_.kv.count("dossub") && !gApp.prof_.kv["dossub"].empty()) ae += "cd \\" + gApp.prof_.kv["dossub"] + "\n";   /* t43s R2 */
                 std::vector<std::string> rl; { std::string cur, rs = gApp.prof_.kv.count("dosrun") ? gApp.prof_.kv["dosrun"] : std::string(); for (char ch : rs + ",") { if (ch == ',') { if (!cur.empty()) rl.push_back(cur); cur.clear(); } else cur += ch; } }
                 { std::string pk = gApp.prof_.kv.count("dospick") ? gApp.prof_.kv["dospick"] : std::string(); gh_log("DOS 루트 실행 후보(%d): %s | 선택: %s", (int)rl.size(), gApp.prof_.kv.count("dosrunsz") ? gApp.prof_.kv["dosrunsz"].c_str() : "-", pk.empty() ? (rl.size() == 1 ? rl[0].c_str() : "(목록)") : pk.c_str());   /* t43n (#343) */
-                  if (rl.size() == 1) ae += rl[0] + "\n"; else if (!pk.empty()) ae += pk + "\n"; else { ae += "dir /w\n"; if (gApp.prof_.kv.count("dosdata")) ae += "echo No executable on this disk (data disk? the main disk is needed)\n"; } }   /* t43s R5 */
+                  if (rl.size() == 1) ae += rl[0] + ea + "\n"; else if (!pk.empty()) ae += pk + ea + "\n"; else { ae += "dir /w\n"; if (gApp.prof_.kv.count("dosdata")) ae += "echo No executable on this disk (data disk? the main disk is needed)\n"; if (rl.empty()) { gApp.osd = phr_("실행 파일을 못 찾음 — 실행 방법에서 고르세요"); gApp.osd_until = SDL_GetTicks() + 8000u; } } }   /* t43s R5 */
+                }
                 }
             }
             { std::string ln; for (char ch : gApp.prof_.autoexec + "|") { if (ch == '|') { if (!ln.empty()) ae += ln + "\n"; ln.clear(); } else ln += ch; } }

@@ -410,6 +410,15 @@ struct Ui {
     void d_keyseq(Canvas & c);
     void d_step(Canvas & c);
     void d_swaped(Canvas & c);
+    void d_exepick(Canvas & c);
+    void k_exepick(UKey k, Act & a);
+    /* 2b: 실행 파일 고르기 — 이미지 안 폴더 보기 */
+    std::vector<FileItem> xp_items; std::string xp_dir, xp_dk[2]; int xp_drv = 0, xp_nd = 1; bool xp_err = false;
+    void xp_load() { xp_items.clear(); xp_err = !(env.exelist && !xp_dk[xp_drv].empty() && env.exelist(eg, xp_dk[xp_drv], xp_dir, xp_items)); }
+    void xp_open() {   /* A: = 첫 FD(디스크 A, 없으면 B), B: = 둘째 FD (둘 다 있을 때만) — 내장 DOS 장착 순서와 같다 */
+        std::string da = kv_get("disk_a"), db = kv_get("disk_b"); xp_dk[0] = da.empty() ? db : da; xp_dk[1] = (!da.empty() && !db.empty()) ? db : std::string();
+        xp_nd = xp_dk[1].empty() ? 1 : 2; xp_drv = 0; xp_dir.clear(); xp_load(); sel = 0; scr = S_EXEPICK;
+    }
     void d_font(Canvas & c);
     std::string fnt_default_name() const { if (fnt_mode == 1) return font_jp.empty() ? "jp_default" : font_jp; return font_kr.empty() ? "kyuhachi_font" : font_kr; }   /* t52g: 임시 이름 pc98player_font → kyuhachi_font */
     void jp_refresh() { const ov::BmpFont * bf = fnt_font(font_jp.empty() ? std::string("jp_default") : font_jp); ov::jp_set(lang == 2, bf); }   /* t52h (#134): 일본어 글꼴 BMP · 언어를 글자 그리기에 알림 */
@@ -544,7 +553,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -631,6 +640,7 @@ struct Ui {
         if (osk_hg) { hc.buf = osk_buf; hc.flush(); osk_buf = hc.buf; }   /* t48b: 조합 중 글자 확정 */
         if (osk_target == 0) { std::string n = ent::clean_name(osk_buf); if (!n.empty()) ed_name = ent::unique_name(n, ents_used(eg, en_orig)); sel = 0; }
         else if (osk_target == 3) { std::string t = osk_buf; while (!t.empty() && (unsigned char)t.back() <= 0x20) t.pop_back(); size_t b = 0; while (b < t.size() && (unsigned char)t[b] <= 0x20) b++; t = t.substr(b); if (!t.empty() && !nl_name.empty()) { for (auto & e : games[entg].ents) if (e.name == nl_name) { ent::Kv kv = e.kv; kv["next_label"] = t; std::string nm = e.name; bool ok = env.save && env.save(entg, nm, kv, std::string()); if (ok && env.reload) env.reload(entg); dirty = true; msg = ok ? phr_("메뉴 이름을 바꿨습니다.") : phr_("저장하지 못했습니다."); break; } } }
+        else if (osk_target == 4) { std::string t = osk_buf; while (!t.empty() && (unsigned char)t.back() <= 0x20) t.pop_back(); size_t b = 0; while (b < t.size() && (unsigned char)t[b] <= 0x20) b++; t = t.substr(b); kv_set("dosargs", t); sel = 13; }   /* 2b: 실행 인자 한 줄 */
         else if (osk_target == 2) { std::string t = osk_buf; while (!t.empty() && (unsigned char)t.back() <= 0x20) t.pop_back(); size_t b = 0; while (b < t.size() && (unsigned char)t[b] <= 0x20) b++; t = t.substr(b); std::string t2; for (char ch : t) if ((unsigned char)ch >= 0x20) t2 += ch; if (!t2.empty() && entg >= 0 && entg < (int)games.size()) { pend.t = A_SETTITLE; pend.game = entg; pend.entry = t2; dirty = true; } }
         else if (osk_target == 1 && stepi >= 0 && stepi < (int)ks.size()) { ks[stepi].val = osk_buf.empty() ? std::string("enter") : osk_buf; if (osk_buf.empty()) ks[stepi].type = false; sel = 2; }
         scr = osk_ret;
@@ -676,6 +686,7 @@ struct Ui {
         case S_KEYSEQ: k_keyseq(k, a); break;
         case S_STEP: k_step(k, a); break;
         case S_SWAPED: k_swaped(k, a); break;
+        case S_EXEPICK: k_exepick(k, a); break;
         case S_VALS: k_vals(k, a); break;   /* t48a (#614 ③) */
         case S_FONT: k_font(k, a); break;
         case S_PAD: k_pad(k, a); break;   /* t48e (#646): 조작 설정 */

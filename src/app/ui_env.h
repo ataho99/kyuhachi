@@ -126,8 +126,14 @@ static void gh_ui_env_setup(void) {
         static const char * K[4] = { "disk_a", "disk_b", "disk_c", "disk_d" };
         for (int i = 0; i < 4; i++) if (p.disk[i]) out[K[i]] = aw::acp_to_u8(p.disk[i]);
         out["boot"] = std::string(1, p.bootletter); { auto it = p.kv.find("cd"); if (it != p.kv.end() && !it->second.empty()) out["cd"] = it->second; }
-        for (const char * k : { "mouse", "font", "font_kind", "bootkeys", "autoexec" }) { auto it = p.kv.find(k); if (it != p.kv.end() && !it->second.empty()) out[k] = it->second; }
+        for (const char * k : { "mouse", "font", "font_kind", "bootkeys", "autoexec", "dosexe", "dosargs" }) { auto it = p.kv.find(k); if (it != p.kv.end() && !it->second.empty()) out[k] = it->second; }
         return true; };
+    E.exelist = [](int g, const std::string & dk, const std::string & dir, std::vector<ui::FileItem> & out) {   /* 2b: 이미지 안 파일 목록 */
+        out.clear(); if (g < 0 || g >= (int)gApp.ui_.games.size() || dk.empty()) return false;
+        std::string keep = prof::g_entry_req; prof::g_entry_req.clear(); GProfile p; bool ok = gh_profile(gApp.ui_.games[g].id, p); prof::g_entry_req = keep; if (!ok) return false;
+        std::string full = aw::u8_to_acp(dk); if (!(full.size() > 1 && (full[1] == (char)58 || full[0] == (char)47))) full = p.imgdir + "\\" + full;   /* 이름이면 작품 이미지 폴더 기준 */
+        std::vector<prof::DirEnt> v; if (!prof::dos_browse(full, dir, v)) return false;
+        for (auto & e : v) { ui::FileItem x; x.name = e.name; x.dir = e.dir; x.size = (long long)e.size; out.push_back(x); } return true; };
     E.reload = [](int g) { ulist::reload_one(gApp.ui_.games, g, &gApp.vlabel); int keep = gApp.ui_.cur; gApp.ui_.rebuild_vis(keep); };
     E.values = [](int g, std::vector<ui::ValRow> & out) {   /* t48a (#614 ③): 키별 최종값·출처·덮인 값(기본 항목 기준) */
         out.clear(); if (g < 0 || g >= (int)gApp.ui_.games.size()) return false;

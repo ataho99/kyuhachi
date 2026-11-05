@@ -330,6 +330,30 @@ inline std::vector<RunEnt> dos_runlist_sz(const ImgInfo & r0) { ImgInfo r = flat
     return out;
 }
 /* t43n (#343): 루트 실행 후보가 여럿일 때 실행 파일을 고른다. 우선순위 = 디스크의 AUTOEXEC.BAT(원래 부팅 절차) > 로더 이름 BAT(GAME·START·RUN·GO·PLAY·MAIN·BOOT·<라벨>) > 설치기·유틸이 아닌 BAT 가 딱 1개 > 로더 이름 EXE/COM(같은 이름들) > 가장 큰 EXE(없으면 가장 큰 COM). 설치기·유틸·드라이버는 후보에서 뺀다. 못 고르면 빈 문자열(= 목록). */
+/* 2b: FD(FAT12) 이미지 안 폴더 보기. dir = "" 이면 루트, 아니면 "A\B". 목록 = 하위 폴더 + 실행 파일(EXE/COM/BAT, COMMAND.COM 제외). */
+inline std::string up_s(std::string s) { for (auto & c : s) c = (char)toupper((unsigned char)c); return s; }
+inline bool dos_walk(const Fat12 & fx, const std::string & dir, uint32_t & cl_out) {
+    uint32_t cl = 0; std::string cur;
+    for (size_t i = 0; i <= dir.size(); i++) {
+        if (i == dir.size() || dir[i] == (char)92 || dir[i] == (char)47) {
+            if (!cur.empty()) { std::vector<DirEnt> v = cl ? fx.dir(cl) : fx.root(); bool ok = false; for (auto & e : v) if (e.dir && up_s(e.name) == up_s(cur)) { cl = e.cl; ok = true; break; } if (!ok) return false; cur.clear(); }
+        } else cur += dir[i];
+    }
+    cl_out = cl; return true;
+}
+inline bool dos_browse(const std::string & path, const std::string & dir, std::vector<DirEnt> & out) {
+    out.clear(); Fat12 fx; if (!fx.open(probe(path))) return false; uint32_t cl = 0; if (!dos_walk(fx, dir, cl)) return false;
+    std::vector<DirEnt> v = cl ? fx.dir(cl) : fx.root();
+    for (auto & e : v) if (e.dir || (is_exec_name(e.name) && up_s(e.name) != "COMMAND.COM")) out.push_back(e);
+    std::stable_sort(out.begin(), out.end(), [](const DirEnt & a, const DirEnt & b) { if (a.dir != b.dir) return a.dir; return up_s(a.name) < up_s(b.name); });
+    return true;
+}
+/* file = "폴더\이름.EXE" (대소문자 무시). 이미지를 못 읽으면 false. */
+inline bool dos_exists(const std::string & path, const std::string & file) {
+    size_t p = file.find_last_of("\\/"); std::string d = p == std::string::npos ? std::string() : file.substr(0, p), n = p == std::string::npos ? file : file.substr(p + 1);
+    std::vector<DirEnt> v; if (!dos_browse(path, d, v)) return false;
+    for (auto & e : v) if (!e.dir && up_s(e.name) == up_s(n)) return true; return false;
+}
 /* t43p (#344-3): LHA 자기풀림(SFX) EXE 판별 — 앞부분에 LHa 문구 + -lh 헤더 */
 inline bool is_lha_sfx(const std::string & t) { if (t.size() < 1000) return false; size_t n = t.size() < 200000 ? t.size() : 200000; std::string h = t.substr(0, n); bool lh = h.find("-lh") != std::string::npos; bool nm = h.find("SFX") != std::string::npos || h.find("LHa") != std::string::npos || h.find("LHA") != std::string::npos || h.find("lha") != std::string::npos; return (lh && nm) || h.find("LHa's SFX") != std::string::npos || h.find("LHA's SFX") != std::string::npos; }
 inline std::string dos_pick(const std::vector<RunEnt> & in, const std::string & label) {
@@ -628,7 +652,7 @@ inline bool apply_ini_section(Profile & p, const std::map<std::string, std::stri
     if (g.find("ignore") != g.end()) p.ignore = split_list(get("ignore"));
     if (!get("install_required").empty()) p.install_required = get("install_required") == "1";
     if (!get("note").empty()) p.note = get("note");
-    for (const char * k : { "cd", "bootkeys", "autoexec", "entry", "next", "next_label", "dosmode", "cycles", "font", "font_kind", "extra", "keys", "never_map", "mouse", "joystick", "sound", "order", "label_a", "label_b", "label_c", "label_d", "container_sha1", "demo", "label_demo", "company", "year", "genre", "patch", "devices", "auto", "grade", "judge", "metasrc", "srcdir", "nk_gid", "block", "jshort", "nk_flags", "nk_media", "sig", "auto_note", "curated", "label", "hide", "tpl", "base", "lang", "variant_of", "variant_label", "install", "hdd_mb", "hdd_name", "font_file", "swap_first", "entry_order", "short", "font_group", "fav_note" }) if (g.find(k) != g.end()) p.kv[k] = get(k);
+    for (const char * k : { "cd", "bootkeys", "autoexec", "entry", "next", "next_label", "dosmode", "cycles", "font", "font_kind", "extra", "keys", "never_map", "mouse", "joystick", "sound", "order", "label_a", "label_b", "label_c", "label_d", "container_sha1", "demo", "label_demo", "company", "year", "genre", "patch", "devices", "auto", "grade", "judge", "metasrc", "srcdir", "nk_gid", "block", "jshort", "nk_flags", "nk_media", "sig", "auto_note", "curated", "label", "hide", "tpl", "base", "lang", "variant_of", "variant_label", "install", "hdd_mb", "hdd_name", "font_file", "swap_first", "entry_order", "short", "font_group", "fav_note", "dosexe", "dosargs" }) if (g.find(k) != g.end()) p.kv[k] = get(k);
     { auto c = p.kv.find("cd"); if (c != p.kv.end() && c->second == "-") p.kv.erase(c); }
     return any;
 }
@@ -793,7 +817,7 @@ inline bool ini_write(const std::string & path, const Ini & ini, const std::vect
     if (backup) { FILE * t = fopen(path.c_str(), "rb"); if (t) { fclose(t); std::string bk = path + ".bak"; FILE * b = fopen(bk.c_str(), "rb"); if (b) fclose(b); else { FILE * in = fopen(path.c_str(), "rb"); FILE * out = fopen(bk.c_str(), "wb"); if (in && out) { char buf[4096]; size_t n; while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out); } if (in) fclose(in); if (out) fclose(out); } } }
     std::string tmp = path + ".tmp"; FILE * f = fopen(tmp.c_str(), "wb"); if (!f) return false;
     if (header && *header) fprintf(f, "%s\n", header);
-    static const char * const pk[] = { "label", "tpl", "base", "entry", "entry_order", "lang", "disk_a", "disk_b", "disk_c", "disk_d", "cd", "boot", "demo", "swap", "swap_first", "bootkeys", "autoexec", "install", "hdd_mb", "hdd_name", "font", "font_kind", "font_file", "mouse", "hide" };
+    static const char * const pk[] = { "label", "tpl", "base", "entry", "entry_order", "lang", "disk_a", "disk_b", "disk_c", "disk_d", "cd", "boot", "demo", "swap", "swap_first", "bootkeys", "autoexec", "install", "hdd_mb", "hdd_name", "font", "font_kind", "font_file", "mouse", "hide", "dosexe", "dosargs" };
     for (auto & sct : order) {
         auto it = ini.find(sct); if (it == ini.end()) continue;
         fprintf(f, "\n[%s]\n", sct.c_str()); std::set<std::string> done;

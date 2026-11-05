@@ -32,6 +32,7 @@
 #include "ui/screens/pad.h"
 #include "ui/screens/padkey.h"
 #include "ui/screens/kbpick.h"
+#include "ui/screens/set.h"
 #include "ui/screens/hot.h"
 #include "ui/screens/ext.h"
 #include "ui/screens/font.h"
@@ -62,7 +63,7 @@ inline void Ui::draw(Canvas & c) {
     case S_FILE: d_file(c); break; case S_KEYSEQ: d_keyseq(c); break; case S_STEP: d_step(c); break; case S_SWAPED: d_swaped(c); break; case S_FONT: d_font(c); break;
     case S_OSK: d_osk(c); break; case S_NAME: d_name(c); break; case S_YN: d_yn(c, yn_ret); break; case S_HDDASK: d_hddask(c); break; case S_LANG: d_lang(c); break; case S_VALS: d_vals(c); break;
     case S_EXEPICK: d_exepick(c); break;
-    case S_PAD: d_pad(c); break; case S_PADKEY: d_padkey(c); break; case S_HOT: d_hot(c); break; case S_EXT: d_ext(c); break; case S_KBPICK: d_kbpick(c); break;
+    case S_PAD: d_pad(c); break; case S_PADKEY: d_padkey(c); break; case S_HOT: d_hot(c); break; case S_EXT: d_ext(c); break; case S_KBPICK: d_kbpick(c); break; case S_SET: d_set(c); break; case S_GKB: d_gkb(c); break;
     }
 }
 

@@ -171,6 +171,8 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 8, "padjump:") == 0) { U.pad_jump(atoi(tk.c_str() + 8)); continue; }   /* test only: pad press jump */
             if (tk == "kbstate") { std::string us; for (auto & kc : U.kb_cells) if (U.kb_used(kc.name)) us += kc.name + " "; const std::string nm = U.kb_sel >= 0 && U.kb_sel < (int)U.kb_cells.size() ? U.kb_cells[U.kb_sel].name : std::string("-");
                 gh_log("uikeys: KBSTATE scr=%d sel=%d name=%s n=%d row=%d used[%s]", (int)U.scr, U.kb_sel, nm.c_str(), (int)U.kb_cells.size(), U.pk_row, us.c_str()); continue; }
+            if (tk == "scrstate") { std::string rr; if (U.scr == ui::S_CONF) for (int id : U.rowids(ui::S_CONF)) rr += std::to_string(id) + " ";
+                gh_log("uikeys: SCRSTATE scr=%d sel=%d grp=%d sm=%d ig=%d n=%d rows[%s]", (int)U.scr, U.sel, U.conf_grp, U.save_mode ? 1 : 0, U.in_game ? 1 : 0, U.nitems(), rr.c_str()); continue; }
             if (tk == "extscr") { U.scr = ui::S_EXT; U.sel = 0; U.ext_wait = false; continue; }   /* test only: extra-buttons tab */
             if (tk.compare(0, 6, "xbadd:") == 0) { int fs = -1; for (int xi = 0; xi < 8 && fs < 0; xi++) if (U.xb_get(xi).empty()) fs = xi; if (fs >= 0) U.gpad[std::string("btn_xreg") + std::to_string(fs)] = tk.substr(6); if (U.env.pad_cap) { int z = 0; bool zb = false; U.env.pad_cap(3, z, zb); } continue; }   /* test only: register an extra button */
             if (tk == "xbstate") { std::string xs, xr; for (int xi = 0; xi < 8; xi++) if (!U.xb_get(xi).empty()) xs += std::to_string(xi) + ":" + U.xb_get(xi) + "=" + U.pad_val(ui::Ui::PAD_N + xi) + " "; for (int xi = 0; xi < 8; xi++) xr += std::to_string(xi) + ":" + std::to_string(kh_xb[xi].kind) + "/" + std::to_string(kh_xb[xi].code) + " "; gh_log("uikeys: XBSTATE scr=%d sel=%d cnt=%d rows[%s] xb[%s]", (int)U.scr, U.sel, U.xb_cnt(), xs.c_str(), xr.c_str()); continue; }
@@ -212,14 +214,14 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
     shot("main"); U.mainsel = 0; U.key(ui::UK_OK); shot("start"); U.key(ui::UK_CANCEL);
     U.mainsel = 1; U.key(ui::UK_OK); shot("pick"); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("main_after_pick"); U.cur = U.pick = 2; gApp.cur_game = 2;
     U.mainsel = 2; U.key(ui::UK_OK); shot("screen_sharp"); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt"); U.key(ui::UK_DOWN); U.key(ui::UK_RIGHT); shot("screen_crt_curve"); U.key(ui::UK_CANCEL);
-    U.mainsel = 3; U.key(ui::UK_OK); U.key(ui::UK_DOWN); U.key(ui::UK_LEFT); shot("conf"); for (int i = 0; i < 7; i++) U.key(ui::UK_DOWN); shot("conf_bosd"); U.key(ui::UK_OK);
+    U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); U.key(ui::UK_LEFT); shot("conf"); for (int i = 0; i < 7; i++) U.key(ui::UK_DOWN); shot("conf_bosd"); U.key(ui::UK_OK);
     U.mainsel = 4; U.key(ui::UK_OK); shot("save"); U.key(ui::UK_CANCEL);
     U.mainsel = 5; U.key(ui::UK_OK); shot("extra"); U.sel = 5; U.key(ui::UK_OK); shot("about"); U.key(ui::UK_CANCEL); U.sel = 0; U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_DOWN); U.key(ui::UK_OK); shot("help"); U.key(ui::UK_CANCEL); U.key(ui::UK_CANCEL);
     U.mainsel = 6; U.key(ui::UK_OK); shot("quit"); U.key(ui::UK_CANCEL);
     U.in_game = true; U.scr = ui::S_GAME; U.sel = 1; shotg("ingame"); U.scr = ui::S_KEYS; U.sel = 0; shotg("keys");
     U.scr = ui::S_SWAP; U.swapdrv = 0; shotg("swap"); U.scr = ui::S_SWAPI; U.swapsel = 2; shotg("swap_pick"); U.scr = ui::S_QUIT; U.quitsel = 0; shotg("ingame_quit");
     /* t52f (#132): 동작 환경 설정의 새 행 「오버레이 버튼 표시」 */
-    { U.in_game = false; U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.sel = 10; int o0 = U.g.ovbtn; U.key(ui::UK_LEFT); int o1 = U.g.ovbtn; shotg("conf_ovbtn_off"); U.key(ui::UK_RIGHT); int o2 = U.g.ovbtn; U.sel = 12; shotg("conf_row_jpfont"); ui::Act ra = U.key(ui::UK_CANCEL); int o3 = U.g.ovbtn; gh_log("T52F conf ovbtn start=%d left=%d right=%d after_cancel=%d rows=%d -> %s", o0, o1, o2, o3, 13, (o0 == 1 && o1 == 0 && o2 == 1 && o3 == 1) ? "PASS" : "FAIL"); (void)ra; U.scr = ui::S_MAIN; U.in_game = false; }
+    { U.in_game = false; U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.sel = 10; int o0 = U.g.ovbtn; U.key(ui::UK_LEFT); int o1 = U.g.ovbtn; shotg("conf_ovbtn_off"); U.key(ui::UK_RIGHT); int o2 = U.g.ovbtn; U.sel = 12; shotg("conf_row_jpfont"); ui::Act ra = U.key(ui::UK_CANCEL); int o3 = U.g.ovbtn; gh_log("T52F conf ovbtn start=%d left=%d right=%d after_cancel=%d rows=%d -> %s", o0, o1, o2, o3, 13, (o0 == 1 && o1 == 0 && o2 == 1 && o3 == 1) ? "PASS" : "FAIL"); (void)ra; U.scr = ui::S_MAIN; U.in_game = false; }
     /* t52g (#133): UI 언어 3종 — 언어마다 주요 화면을 찍고, 설정의 언어 행(←→ 순환)·문구 칸 즉시 교체·settings 저장/읽기를 검사 */
     { static const char * const lnm[3] = { "ko", "en", "ja" }; static const char * const want[3] = { "게임 시작", "Start game", "ゲーム スタート" };
       U.in_game = false; U.scope = 0; U.lang = 0; U.lang_chg = false; phr_set_lang(0); int bad = 0; char nm[48];
@@ -240,10 +242,10 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
       gh_log("T52G lang cycle bad=%d flag=%d roundtrip=%d (phrases ko=%d) -> %s", bad, (int)flag_ok, (int)rt, phr_loaded_count, (bad == 0 && flag_ok && rt) ? "PASS" : "FAIL"); }
     /* t52e (#131): 확인창 3종 + 동작 환경 설정 × 복원 검사 */
     if (U.games.size() >= 3) { U.cur = U.pick = 2; gApp.cur_game = 2; } for (auto & gg0 : U.games) { gg0.slot[0].used = true; gg0.slot[0].stamp = "2026-11-02 07:00"; gg0.lastslot = 0; }
-    U.in_game = true; U.scr = ui::S_GAME; U.sel = 11; U.key(ui::UK_OK); shotg("yn_mainmenu"); U.key(ui::UK_CANCEL); gh_log("T52E yn_mainmenu back scr=%d (S_GAME=%d)", (int)U.scr, (int)ui::S_GAME);
+    U.in_game = true; U.scr = ui::S_GAME; U.sel = 6; U.key(ui::UK_OK); shotg("yn_mainmenu"); U.key(ui::UK_CANCEL); gh_log("T52E yn_mainmenu back scr=%d (S_GAME=%d)", (int)U.scr, (int)ui::S_GAME);
     U.in_game = false; U.scr = ui::S_SAVE; U.slotsel = 0; gh_log("T52E delslot pre cur=%d used=%d", U.cur, U.game() ? (int)U.game()->slot[0].used : -1); U.key(ui::UK_TRI); gh_log("T52E delslot after TRI scr=%d (S_YN=%d)", (int)U.scr, (int)ui::S_YN); shotg("yn_delslot"); U.key(ui::UK_CANCEL); gh_log("T52E yn_delslot back scr=%d (S_SAVE=%d)", (int)U.scr, (int)ui::S_SAVE);
     U.scr = ui::S_EXTRA; U.sel = 6; U.key(ui::UK_OK); shotg("yn_diskreset"); U.key(ui::UK_CANCEL); gh_log("T52E yn_diskreset back scr=%d (S_EXTRA=%d)", (int)U.scr, (int)ui::S_EXTRA);
-    { U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.key(ui::UK_DOWN); int b0 = U.g.bgm; U.key(b0 < 8 ? ui::UK_RIGHT : ui::UK_LEFT); int b1 = U.g.bgm; ui::Act ra = U.key(ui::UK_CANCEL); int b2 = U.g.bgm; gh_log("T52E conf_restore before=%d changed=%d after=%d act=%d -> %s", b0, b1, b2, (int)ra.t, (b0 != b1 && b0 == b2) ? "PASS" : "FAIL"); U.scr = ui::S_MAIN; U.in_game = false; }
+    { U.scr = ui::S_MAIN; U.scope = 0; U.mainsel = 3; U.key(ui::UK_OK); U.conf_grp = 0; U.go(ui::S_CONF, 0); U.key(ui::UK_DOWN); int b0 = U.g.bgm; U.key(b0 < 8 ? ui::UK_RIGHT : ui::UK_LEFT); int b1 = U.g.bgm; ui::Act ra = U.key(ui::UK_CANCEL); int b2 = U.g.bgm; gh_log("T52E conf_restore before=%d changed=%d after=%d act=%d -> %s", b0, b1, b2, (int)ra.t, (b0 != b1 && b0 == b2) ? "PASS" : "FAIL"); U.scr = ui::S_MAIN; U.in_game = false; }
     U.in_game = false; U.scr = ui::S_MAIN;
     { /* r017 화면: 회색 목록 · 판정 · 작품 추가 · 창 배율 · 배속 중 소리 */
         if (U.games.size() >= 4) {

@@ -24,10 +24,10 @@ inline void Ui::d_main(Canvas & c, int mode) {
 inline void Ui::k_main(UKey k, Act & a) {
     do {
             if (k == UK_OK) {
-                static const Scr to[7] = { S_START, S_PICK, S_SCREEN, S_CONF, S_SAVE, S_EXTRA, S_QUIT };
-                back = S_MAIN; if (to[mainsel] == S_SCREEN) enter_screen_cfg(); if (to[mainsel] == S_CONF) enter_conf_cfg(); if (to[mainsel] == S_PICK) { pick = pos_of(cur); reorder = false; } if (to[mainsel] == S_QUIT) quitsel = 0;
+                static const Scr to[7] = { S_START, S_PICK, S_SCREEN, S_SET, S_SAVE, S_EXTRA, S_QUIT };
+                back = S_MAIN; if (to[mainsel] == S_SCREEN) { scr_from = S_MAIN; enter_screen_cfg(); } if (to[mainsel] == S_SET) { conf_grp = 0; enter_conf_cfg(); } if (to[mainsel] == S_PICK) { pick = pos_of(cur); reorder = false; } if (to[mainsel] == S_QUIT) quitsel = 0;
                 if (to[mainsel] == S_START) { startsel = has_save(game()) ? 0 : 1; start_ret = S_MAIN; }
-                go(to[mainsel], 0); if (to[mainsel] == S_SAVE) slotsel = 0;
+                go(to[mainsel], 0); if (to[mainsel] == S_SAVE) { slotsel = 0; save_mode = false; }
             } else if (k == UK_CANCEL) { go(S_QUIT, 0); quitsel = 0; }
             else if (k == UK_SELECT) go(S_EXTRA, 0);
             break;

@@ -77,7 +77,7 @@ struct Ui {
             if (scope == 0) { r.push_back(8); r.push_back(9); }
 #endif
             r.push_back(10); if (scope == 1) r.push_back(11); }
-        else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; r.push_back(i); } if (scope == 1) r.push_back(14); }
+        else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 1) r.push_back(14); }
         return r; }
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
     Settings follow_base(int gi) const {   /* 전역 + 프로파일 값(화면 효과 키 제외). 개별 값은 overlay 가 얹는다 */
@@ -206,6 +206,15 @@ struct Ui {
     int xb_cnt() const; int xb_slot(int row) const;
     std::vector<KbCell> kb_cells; int kb_sel = 0;   /* build 5a-2c: key picker on the PC-98 layout (screens/kbpick.h) */
     bool kb_used(const std::string & nm) const; void kb_open(); void d_kbpick(Canvas & c); void k_kbpick(UKey k, Act & a);
+    int conf_grp = 0; bool save_mode = false; Scr scr_from = S_MAIN;   /* build 5b-1: settings group (0 all, 1 sound, 2 control, 3 system) */
+    void d_set(Canvas & c); void k_set(UKey k, Act & a); void d_gkb(Canvas & c); void k_gkb(UKey k, Act & a);
+    static int conf_grp_of(int i) { return (i >= 1 && i <= 3) ? 1 : (i == 8 || i >= 11) ? 3 : 2; }
+    void leave_cfg() {   /* leaving S_SCREEN / S_CONF: back to the settings hub when it was opened from there */
+        const bool sc = scr == S_SCREEN;
+        if (sc && scr_from == S_SET) go(S_SET, 0);
+        else if (!sc && conf_grp) go(S_SET, conf_grp);
+        else { go(in_game ? S_GAME : S_MAIN, in_game ? 4 : 0); if (!in_game) sel = 0; }
+    }
     void pad_jump(int pb) { if (scr == S_PAD && pb >= 0 && pb < PAD_N) sel = pb + 2; }   /* a pad press on L2 R2 L3 R3 moves the cursor to that button */
     static std::string pad_show_s(const std::string & v) {   /* short label for the layout panel */
         if (v == "fn:boost_hold") return phr_("fn_boost_hold_s"); if (v == "fn:boost_toggle") return phr_("fn_boost_toggle_s"); return pad_show(v); }
@@ -320,7 +329,7 @@ struct Ui {
         if (g && !g->thmb.empty()) blit_scaled(c, g->thmb.data(), g->tw_, g->th_, x, y, w, h);
         else { const char * m = phr_("저장 없음"); text(c, x + (w - tw(m)) / 2, y + h / 2 - 8, m, GY, K); }   /* r018: 표본 그림 대신 빈 칸 (나중에 타이틀 화면 캡처로 채움) */
     }
-    static void menu_names(std::vector<std::string> & v) { v = { phr_("게임 시작"), phr_("작품 선택"), phr_("화면 설정"), phr_("소리/패드/배속 설정"), phr_("세이브 관리"), phr_("부가"), phr_("끝내기") }; }
+    static void menu_names(std::vector<std::string> & v) { v = { phr_("게임 시작"), phr_("작품 선택"), phr_("화면 설정"), phr_("mm_settings"), phr_("세이브 관리"), phr_("부가"), phr_("끝내기") }; }
     static std::string play_str(int s) { char b[48]; if (s >= 3600) snprintf(b, sizeof b, "%d시간 %02d분", s / 3600, (s / 60) % 60); else snprintf(b, sizeof b, "%d분", s / 60); return b; }
     /* 확인 창: 화면 가운데, 뒤 화면 어둡게. 반환 = 창 왼쪽 위 x,y */
     void confirm_box(Canvas & c, int w, int h, const char * title, int & bx, int & by) {
@@ -625,7 +634,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_EXEPICK: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_SET: case S_GKB: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -771,6 +780,8 @@ struct Ui {
         case S_HOT: k_hot(k, a); break;
         case S_EXT: k_ext(k, a); break;
         case S_KBPICK: k_kbpick(k, a); break;
+        case S_SET: k_set(k, a); break;
+        case S_GKB: k_gkb(k, a); break;
         case S_OSK: k_osk(k, a); break;
         case S_NAME: k_name(k, a); break;
         case S_YN: k_yn(k, a); break;
@@ -794,7 +805,7 @@ struct Ui {
     std::string pre_name(int i) const { if (i < PRE_NB) { static const char * const KN[3] = { "preset_b0", "preset_b1", "preset_b2" }; return std::string(phr_(KN[i])); } if (i < PRE_NB + (int)presets.size()) return presets[(size_t)(i - PRE_NB)].name; return std::string(phr_("preset_new")); }
     void pre_add(const Settings & s) { if ((int)presets.size() >= PRE_MAX) return; std::string nm; for (int n = 1; n < 100; n++) { nm = std::string(phr_("preset_user")) + " " + std::to_string(n); bool dup = false; for (size_t q = 0; q < presets.size(); q++) if (presets[q].name == nm) dup = true; if (!dup) break; } Preset p; p.name = nm; pre_copy(p.st, s); presets.push_back(p); pre_i = PRE_NB + (int)presets.size() - 1; dirty = true; }
     int nitems() const {
-        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_EXTRA: return 9; case S_GAME: return 13 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 7; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_SET: return 4; case S_GKB: return 5; case S_EXTRA: return 9; case S_GAME: return 8 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; }

@@ -1,7 +1,7 @@
 #pragma once
 /* screens/conf.h -- S8b: S_CONF screen. #587: 범위 둘(전역/이 작품) · 이 작품에서는 전역 전용 줄(소리 버퍼·글꼴·언어)을 숨기고 맨 아래 「개별 설정 초기화」 · 개별 값 줄 앞 ● */
 inline void Ui::d_conf(Canvas & c) {
-    titlebar(c, phr_("소리/패드/배속 설정"));
+    titlebar(c, conf_grp == 1 ? phr_("set_sound") : conf_grp == 2 ? phr_("set_control") : conf_grp == 3 ? phr_("set_system") : phr_("소리/패드/배속 설정"));
     Settings & s = eff();
     rbox(c, 16, 24, 288, 296, WH, phr_("동작 환경 설정"));
     const std::vector<int> ri = rowids(S_CONF);
@@ -14,7 +14,7 @@ inline void Ui::d_conf(Canvas & c) {
     items(c, 40, 44, 256, n, sel, 19);
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
     auto row = [&](int i) { return rs == i; };
-    auto ry = [&](int id) { int k = 0; for (size_t i = 0; i < ri.size(); i++) if (ri[i] == id) k = (int)i; return 44 + 19 * k; };
+    auto ry = [&](int id) { int k = -1000; for (size_t i = 0; i < ri.size(); i++) if (ri[i] == id) k = (int)i; return 44 + 19 * k; };
     const char * sc[] = { phr_("전역"), phr_("scope_this") }; choices(c, 344, ry(0), sc, 2, scope, WH, row(0));
     char b[8];
     snprintf(b, sizeof b, "%d", s.bgm); barv(c, 340, ry(1), 232, s.bgm / 8.0, "OFF", phr_("최대"), WH, row(1)); text(c, 590, ry(1), b, WH, K);

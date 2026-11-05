@@ -7,7 +7,7 @@ inline void Ui::d_keys(Canvas & c) {
 }
 inline void Ui::k_keys(UKey k, Act & a) {
     do {
-        if (k == UK_OK) { a.t = A_SENDKEY; a.arg = sel; } else if (k == UK_CANCEL) go(S_GAME, 6);
+        if (k == UK_OK) { a.t = A_SENDKEY; a.arg = sel; } else if (k == UK_CANCEL) go(S_GKB, 0);
         break;
     } while (0);
 }

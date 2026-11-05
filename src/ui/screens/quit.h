@@ -9,6 +9,6 @@ inline void Ui::d_quit(Canvas & c) {
 }
 inline void Ui::k_quit(UKey k, Act & a) {
         if (k == UK_LEFT && quitsel > 0) quitsel--; if (k == UK_RIGHT && quitsel < 2) quitsel++;
-        if (k == UK_CANCEL) { if (in_game) go(S_GAME, 12); else scr = S_MAIN; }
-        if (k == UK_OK) { if (quitsel == 2) { if (in_game) go(S_GAME, 12); else scr = S_MAIN; } else { a.t = A_QUIT; a.arg = quitsel == 0 ? 1 : 0; } }
+        if (k == UK_CANCEL) { if (in_game) go(S_GAME, 7); else scr = S_MAIN; }
+        if (k == UK_OK) { if (quitsel == 2) { if (in_game) go(S_GAME, 7); else scr = S_MAIN; } else { a.t = A_QUIT; a.arg = quitsel == 0 ? 1 : 0; } }
 }

@@ -205,6 +205,28 @@ static int kh_cap_poll(int & pb, bool & sel) {   /* 0 waiting - 1 got one - 2 en
     if (SDL_GetTicks() - kh_cap_t0 > 8000u) { kh_cap_on = false; return 2; }
     return 0;
 }
+static bool kh_raw_on = false, kh_raw_exit = false; static std::string kh_raw_l[8]; static int kh_raw_n = 0; static Uint32 kh_raw_t0 = 0;
+static void kh_raw_push(const std::string & s) {   /* newest first; the same line twice in a row is dropped */
+    if (kh_raw_n > 0 && kh_raw_l[0] == s) return;
+    for (int i = 7; i > 0; i--) kh_raw_l[i] = kh_raw_l[i - 1];
+    kh_raw_l[0] = s; kh_raw_n++; GPLOG("RAW %s", s.c_str());
+}
+static bool kh_raw_event(const SDL_Event & e) {   /* extra-buttons tab: show what the app receives. true = swallowed (no menu navigation) */
+    if (!kh_raw_on) return false;
+    char b[96];
+    switch (e.type) {
+    case SDL_KEYDOWN: if (e.key.repeat) return true; snprintf(b, sizeof b, "KEY %s  sym=%d scan=%d", SDL_GetKeyName(e.key.keysym.sym), (int)e.key.keysym.sym, (int)e.key.keysym.scancode); kh_raw_push(b); return true;
+    case SDL_KEYUP: return true;
+    case SDL_JOYBUTTONDOWN: snprintf(b, sizeof b, "JOY button %d (dev %d)", (int)e.jbutton.button, (int)e.jbutton.which); kh_raw_push(b); return true;
+    case SDL_JOYBUTTONUP: return true;
+    case SDL_CONTROLLERBUTTONDOWN: { const char * q = SDL_GameControllerGetStringForButton((SDL_GameControllerButton)e.cbutton.button); snprintf(b, sizeof b, "PAD %s", q ? q : "?"); kh_raw_push(b); return true; }
+    case SDL_CONTROLLERBUTTONUP: return true;
+    case SDL_JOYHATMOTION: if (e.jhat.value) { snprintf(b, sizeof b, "HAT %d value=%d", (int)e.jhat.hat, (int)e.jhat.value); kh_raw_push(b); } return true;
+    case SDL_CONTROLLERAXISMOTION: if (e.caxis.value > 16000 || e.caxis.value < -16000) { const char * q = SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)e.caxis.axis); snprintf(b, sizeof b, "AXIS %s %s", q ? q : "?", e.caxis.value > 0 ? "+" : "-"); kh_raw_push(b); } return true;
+    case SDL_JOYAXISMOTION: case SDL_FINGERMOTION: case SDL_FINGERUP: case SDL_MOUSEBUTTONUP: case SDL_MOUSEMOTION: return true;
+    case SDL_FINGERDOWN: case SDL_MOUSEBUTTONDOWN: kh_raw_exit = true; return true;
+    default: return false; }
+}
 static bool kh_cap_event(const SDL_Event & e) {   /* swallow pad input while the hotkey screen waits for a combo */
     if (!kh_cap_on) return false;
     if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {

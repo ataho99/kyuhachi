@@ -167,6 +167,9 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "hotscr") { U.scr = ui::S_HOT; U.sel = 0; continue; }   /* build 5a-2 test only: hotkey tab */
             if (tk.compare(0, 5, "kind:") == 0) { gensei_padkind_v = atoi(tk.c_str() + 5); continue; }   /* test only: pad kind (3 = Retroid) */
             if (tk.compare(0, 7, "hotcap:") == 0) { if (kh_cap_on) { kh_cap_pb = atoi(tk.c_str() + 7) & 31; kh_cap_sel = tk.back() == 's'; } else gh_log("uikeys: HOTCAP not waiting"); continue; }
+            if (tk == "extscr") { U.scr = ui::S_EXT; U.sel = 0; if (U.env.raw_ctl) U.env.raw_ctl(1); continue; }   /* test only: extra-buttons tab */
+            if (tk.compare(0, 8, "extfeed:") == 0) { std::string fs = tk.substr(8); for (auto & ch : fs) if (ch == '_') ch = ' '; kh_raw_push(fs); continue; }
+            if (tk == "extstate") { std::string xs; for (int xi = 0; xi < 8; xi++) { const std::string xl = U.env.raw_line ? U.env.raw_line(xi) : std::string(); if (!xl.empty()) xs += xl + " | "; } gh_log("uikeys: EXTSTATE scr=%d n=%d lines[%s]", (int)U.scr, kh_raw_n, xs.c_str()); continue; }
             if (tk == "hotstate") {
                 std::string gp, tb, rw; for (auto & kv : U.gpad) if (kv.first.compare(0, 8, "btn_hot_") == 0) gp += kv.first + "=" + kv.second + " ";
                 for (int q = 1; q < FN_N; q++) tb += std::to_string(q) + ":" + std::to_string(kh_hot[q].btn) + (kh_hot[q].sel ? "s" : "") + " ";

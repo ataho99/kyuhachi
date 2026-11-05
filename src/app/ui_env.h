@@ -128,6 +128,8 @@ static void gh_ui_env_setup(void) {
     E.pad_get = [](int g, std::map<std::string, std::string> & m) { m.clear(); if (g >= 0 && g < (int)gApp.ui_.games.size()) prof::get_pad_keys(gApp.ui_.games[g].dir, m); };   /* t48e (#646): 이 작품 user.ini [pad] btn_* */
     E.pad_set = [](int g, const std::string & k, const std::string & v) { if (g < 0 || g >= (int)gApp.ui_.games.size()) return false; bool ok = prof::set_pad_key(gApp.ui_.games[g].dir, k, v); gh_log("pad_set: %s [pad] %s=%s -> %s", gApp.ui_.games[g].dir.c_str(), k.c_str(), v.c_str(), ok ? "OK" : "FAIL"); return ok; };
     E.padkind = []() { const int k = gensei_padkind(); return (k == 0 && gensei_pad_retro) ? 3 : k; };
+    E.raw_ctl = [](int m) { kh_raw_on = m != 0; kh_raw_exit = false; if (m) { kh_raw_n = 0; for (int i = 0; i < 8; i++) kh_raw_l[i].clear(); kh_raw_t0 = SDL_GetTicks(); } };
+    E.raw_line = [](int i) -> std::string { if (i < 0) return (kh_raw_exit || (kh_raw_on && SDL_GetTicks() - kh_raw_t0 > 180000u)) ? "EXIT" : ""; return i < 8 ? kh_raw_l[i] : std::string(); };
     E.pad_cap = [](int m, int & pb, bool & sel) -> int { if (m == 0) { kh_cap_begin(true); return 0; } if (m == 1) return kh_cap_poll(pb, sel); if (m == 2) { kh_cap_begin(false); return 0; } gh_hot_reload(); return 0; };
     E.padkeys = []() { return pn::picker_names(); };
     E.hdd_make = [](int g, int mb, std::string & out) {
@@ -510,6 +512,7 @@ static void gh_touch_feed(const SDL_Event & e) {
 }
 #endif
 static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
+    if (kh_raw_event(e)) return ui::UK_NONE;   /* extra-buttons tab */
     if (kh_cap_event(e)) return ui::UK_NONE;   /* hotkey tab waiting for a combo */
     using namespace ui;
     if (anykey) *anykey = (e.type == SDL_KEYDOWN && !e.key.repeat) || e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_MOUSEBUTTONDOWN;

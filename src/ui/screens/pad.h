@@ -10,13 +10,14 @@ inline void Ui::d_pad(Canvas & c) {
         auto g2 = gpad.find(k); if (g2 != gpad.end() && !g2->second.empty()) return g2->second;
         df = true; return pad_default(i); };
     rbox(c, 16, 24, 288, 296, WH, (std::string("[") + phr_("패드 버튼") + "] " + phr_("tab_hot") + " (R)").c_str());
-    std::vector<std::string> r = { phr_("적용 범위"), phr_("결정 방식") };
+    std::vector<std::string> r = { phr_("적용 범위"), phr_("pad_decide") };
     for (int i = 0; i < PAD_N; i++) { bool fw, df; val(i, fw, df); r.push_back(std::string(fw ? "* " : "  ") + fit(pad_row_name(i), 220)); }
     std::vector<uint32_t> col(r.size(), 0u);
     rowlist(c, 40, 44, 256, 11, r, sel, 24, &col);
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
     const char * sc[] = { phr_("전역"), phr_("scope_this") }; choices(c, 344, 44, sc, 2, scope, WH, sel == 0);
-    const char * ly[] = { phr_("일본식(동쪽)"), phr_("서양식(남쪽)") }; choices(c, 344, 68, ly, 2, s.pad == 1 ? 1 : 0, WH, sel == 1);
+    const std::string ly0 = std::string("\xE2\x86\x92") + (pad_tag(0).empty() ? "" : " (" + pad_tag(0) + ")"), ly1 = std::string("\xE2\x86\x93") + (pad_tag(1).empty() ? "" : " (" + pad_tag(1) + ")");
+    const char * ly[] = { ly0.c_str(), ly1.c_str() }; choices(c, 344, 68, ly, 2, s.pad == 1 ? 1 : 0, WH, sel == 1);
     static const int LC[8] = { 12, 4, 8, 10, 11, 9, 14, 6 }, RC[8] = { 13, 5, 7, 2, 0, 1, 15, 3 };   /* 패드 왼쪽 · 오른쪽 버튼 (위에서 아래로) */
     for (int side = 0; side < 2; side++) {
         const int gx = side ? 476 : 328;
@@ -31,7 +32,7 @@ inline void Ui::d_pad(Canvas & c) {
     }
     text(c, 332, 302, fit(phr_("pad_menu_fixed"), 284), CY, K);
     std::string ln;
-    if (sel < 2) ln = sel == 0 ? phr_("전역=모든 작품, 이 작품=이 작품만. 작품 값이 우선.") : phr_("결정 방식: 일본식=동쪽 버튼, 서양식=남쪽 버튼이 결정.");
+    if (sel < 2) ln = sel == 0 ? phr_("전역=모든 작품, 이 작품=이 작품만. 작품 값이 우선.") : phr_("pad_decide_help");
     else { bool fw, df; std::string v = val(sel - 2, fw, df); ln = pad_row_name(sel - 2) + " → " + pad_show(v) + ((scope == 1 && !fw) ? (df ? phr_(" (기본)") : phr_(" (전역)")) : (scope == 0 && df ? phr_(" (기본)") : ""));
         if (sel >= 10 && sel <= 13) ln += std::string("  ") + phr_("pad_stick_note"); }
     desc(c, 324, 44, { fit(dkey(ln), 560) });

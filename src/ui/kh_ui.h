@@ -211,9 +211,10 @@ struct Ui {
         static const char * const P[PAD_N] = { "○", "×", "□", "START", "L1", "R1", "SELECT", phr_("pad_t_n"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
         static const char * const O[PAD_N] = { phr_("동쪽 버튼"), phr_("남쪽 버튼"), phr_("서쪽 버튼"), "START", phr_("왼쪽 어깨"), phr_("오른쪽 어깨"), "SELECT", phr_("pad_n_north"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
         if (i < 0 || i >= PAD_N) i = 0;
-        if (kd == 3) {   /* Retroid (Nintendo layout): position + the name printed on the pad */
+        if ((kd == 0 || kd == 3) && (i == 0 || i == 1 || i == 2 || i == 7)) {   /* arrow = position on the pad, brackets = the name printed on it (Retroid) */
+            static const char * const AR[PAD_N] = { "\xE2\x86\x92 ", "\xE2\x86\x93 ", "\xE2\x86\x90 ", "", "", "", "", "\xE2\x86\x91 ", "", "", "", "", "", "", "", "" };
             static const char * const RN[PAD_N] = { " (A)", " (B)", " (Y)", "", "", "", "", " (X)", "", "", "", "", "", "", "", "" };
-            return std::string(O[i]) + RN[i]; }
+            return std::string(AR[i]) + phr_("pad_btn") + (kd == 3 ? RN[i] : ""); }
         return kd == 1 ? X[i] : kd == 2 ? P[i] : O[i];
     }
     std::string pad_tag(int i) const {   /* 빌드 5a: 배치 그림 칸의 짧은 이름 */
@@ -250,7 +251,7 @@ struct Ui {
     }
     void d_pad(Canvas & c);
     void d_padkey(Canvas & c);
-    void d_hot(Canvas & c); void k_hot(UKey k, Act & a); void hot_poll();   /* build 5a-2: hotkey tab (screens/hot.h) */
+    void d_hot(Canvas & c); void k_hot(UKey k, Act & a); void hot_poll(); void d_ext(Canvas & c); void k_ext(UKey k, Act & a);   /* build 5a-2: hotkey tab (screens/hot.h) */
     static int hot_fn(int k) { static const int F[HOT_N] = { 4, 5, 6, 7, 8, 9 }; return F[k < 0 || k >= HOT_N ? 0 : k]; }   /* pad_fn_name numbers: quick save/load, osk, screenshot, next disk, fps */
     static std::string hot_default(int q); std::string hot_val(int q, bool * custom = NULL); int hot_btn(const std::string & v, bool * sel);
     std::string hot_text(const std::string & v); bool hot_overlap(int q);
@@ -615,7 +616,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXEPICK: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -759,6 +760,7 @@ struct Ui {
         case S_PAD: k_pad(k, a); break;   /* t48e (#646): 조작 설정 */
         case S_PADKEY: k_padkey(k, a); break;
         case S_HOT: k_hot(k, a); break;
+        case S_EXT: k_ext(k, a); break;
         case S_OSK: k_osk(k, a); break;
         case S_NAME: k_name(k, a); break;
         case S_YN: k_yn(k, a); break;

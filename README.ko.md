@@ -2,8 +2,6 @@
 
 <img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
 
-<img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
-
 # 九八 · 큐하치 X (Kyuhachi X)
 
 ### 윈도우·안드로이드용 PC-98 게임 런처
@@ -16,8 +14,6 @@
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)
 
 [English](README.md) · 한국어
-
-**[⬇ v0.6.0 내려받기 (윈도 zip · 안드로이드 APK · 설명서)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 
 **[⬇ v0.6.0 내려받기 (윈도 zip · 안드로이드 APK · 설명서)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 

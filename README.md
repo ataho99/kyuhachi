@@ -2,8 +2,6 @@
 
 <img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
 
-<img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
-
 # 九八 · Kyuhachi X
 
 ### A PC-98 game launcher for Windows and Android
@@ -16,8 +14,6 @@
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)
 
 English · [한국어](README.ko.md)
-
-**[⬇ Download v0.6.0 (Windows zip · Android APK · manual)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 
 **[⬇ Download v0.6.0 (Windows zip · Android APK · manual)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 

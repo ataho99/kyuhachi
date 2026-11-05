@@ -14,6 +14,18 @@ static bool gh_copy_file(const std::string & from, const std::string & to) {
     fclose(a); if (fclose(b) != 0) ok = false; if (!ok) { plat::remove_file((to + ".tmp").c_str()); return false; }
     plat::remove_file(to.c_str()); return plat::move_file(to + ".tmp", to);
 }
+#if !defined(_WIN32)
+#include <sys/statvfs.h>
+#endif
+#include <time.h>
+static bool gh_free_bytes(const std::string & dir, uint64_t * out) {   /* 1b-2: free space of the volume holding dir */
+#if defined(_WIN32)
+    ULARGE_INTEGER fa, tb, tf; if (!GetDiskFreeSpaceExA(dir.c_str(), &fa, &tb, &tf)) return false; *out = (uint64_t)fa.QuadPart; return true;
+#else
+    std::string d = dir; for (size_t i = 0; i < d.size(); i++) if (d[i] == '\\') d[i] = '/';
+    struct statvfs sv; if (statvfs(d.c_str(), &sv) != 0) return false; *out = (uint64_t)sv.f_bavail * (uint64_t)sv.f_frsize; return true;
+#endif
+}
 static std::string gh_disk_dir(void) { return gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x") + "\\disk"; }
 static std::string gh_workpath(const std::string & name) {
     std::string orig = gApp.imgdir + "\\" + name, dd = gh_disk_dir(); std::string base = name; { size_t p = base.find_last_of("\\/"); if (p != std::string::npos) base = base.substr(p + 1); }
@@ -25,9 +37,11 @@ static std::string gh_workpath(const std::string & name) {
     }
     if (!hasorig) return orig;   /* 사본도 원본도 없음 → 여는 쪽이 「원본 이미지가 없습니다」 안내 */
     plat::mkdir(gApp.savedir.c_str()); plat::mkdir((gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x")).c_str()); plat::mkdir(dd.c_str());
+    { uint64_t fb = 0, need = (((uint64_t)ao.size_hi << 32) | ao.size_lo) + (1ull << 20);   /* 1b-2: space check before copying */
+      if (gh_free_bytes(dd, &fb) && fb < need) { gh_log("work copy skipped: free=%llu need=%llu -> original read-only: %s", (unsigned long long)fb, (unsigned long long)need, orig.c_str()); gApp.note = phr_("저장 공간이 부족해 작업 사본을 만들 수 없습니다 (원본을 읽기 전용으로 엽니다)"); gApp.note_until = SDL_GetTicks() + 8000u; return orig; } }
     if (!gh_copy_file(orig, wp)) { gh_log("work copy failed -> opening original read-only: %s", orig.c_str()); return orig; }
     gh_log("work copy made: %s", wp.c_str());
-    { FILE * oi = fopen((dd + "\\origin.ini").c_str(), "ab"); if (oi) { fprintf(oi, "%s\t%s\t%llu\n", base.c_str(), orig.c_str(), (unsigned long long)(((uint64_t)ao.size_hi << 32) | ao.size_lo)); fclose(oi); } }   /* t601: 이미지별 원본 경로·크기 기록 */
+    { FILE * oi = fopen((dd + "\\origin.ini").c_str(), "ab"); if (oi) { fprintf(oi, "%s\t%s\t%llu\t%s\t%lld\n", base.c_str(), orig.c_str(), (unsigned long long)(((uint64_t)ao.size_hi << 32) | ao.size_lo), prof::sha1_file(orig).c_str(), (long long)time(NULL)); fclose(oi); } }   /* t601: 이미지별 원본 경로·크기 기록 */
     return wp;
 }
 static int gh_reset_disks(const std::string & id) {   /* 「원본 디스크로 초기화」: 작품 저장폴더의 디스크 작업 사본을 지운다(다음 실행 때 원본에서 다시 만든다) */

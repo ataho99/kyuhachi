@@ -3,7 +3,9 @@
 /* t56a: Android save dir = <chosen game folder>\saves (same sub-layout as <exe>\saves on Windows) */
 static void gh_android_savedir(void) {
     if (gApp.ui_.gamefolder.empty()) return;
-    std::string sd = gApp.ui_.gamefolder + "\\saves"; plat::mkdir(sd);
+    std::string sd = gApp.ui_.gamefolder + "\\saves";
+    if (!plat::exists(sd) && gApp.ui_.gamefolder.compare(0, strlen(KHA_BASE), KHA_BASE) != 0) sd = std::string(KHA_BASE) + "\\saves";   /* 1b-2: new saves for an external (SD) game folder go to the app folder, not beside the originals; existing saves stay */
+    plat::mkdir(sd);
     bool ok = plat::exists(sd);
     gh_log("SAVEDIR folder=%s -> %s (%s)", gApp.ui_.gamefolder.c_str(), sd.c_str(), ok ? "ok" : "mkdir failed, keep app dir");
     if (ok) gApp.savedir = sd;

@@ -3,20 +3,21 @@
 inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효과 4줄 + 곡면. #587: 범위 둘(전역/이 작품) · 이 작품에서는 전역 전용 줄을 숨기고 맨 아래 「개별 설정 초기화」 · 개별 값 줄 앞 ● */
     titlebar(c, phr_("화면 설정"));
     Settings & s = eff();
-    rbox(c, 16, 24, 288, 212, WH, phr_("화면 설정"));
+    rbox(c, 16, 24, 288, 220, WH, phr_("화면 설정"));
     const std::vector<int> ri = rowids(S_SCREEN);
     const bool own = scope == 1 && cur >= 0 && cur < MAXG; const bool ind = own && ovm[cur] != 0u;
-    static const unsigned rb[12] = { 0u, 1u << 0, 1u << 1, 1u << 5, 1u << 6, 1u << 3, 1u << 4, 1u << 2, 0u, 0u, 1u << 16, 0u };
+    static const unsigned rb[13] = { 0u, 1u << 0, 1u << 1, 1u << 5, 1u << 6, 1u << 3, 1u << 4, 1u << 2, 0u, 0u, 1u << 16, 0u, 127u };
     std::vector<std::string> n;
-    { const std::string nm[12] = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면"), "FPS / Speed", phr_("indiv_reset") };
+    { const std::string nm[13] = { phr_("적용 범위"), phr_("비율"), phr_("필터"), phr_("주사선"), phr_("마스크"), phr_("RGB 번짐"), phr_("빛 번짐"), phr_("곡면"), phr_("창 배율"), phr_("전체화면"), "FPS / Speed", phr_("indiv_reset"), phr_("preset") };
       for (int id : ri) n.push_back((own && (ovm[cur] & rb[id])) ? std::string("● ") + nm[id] : nm[id]); }
     const int rs = (sel >= 0 && sel < (int)ri.size()) ? ri[sel] : 0;
-    items(c, 40, 44, 256, n, sel, 17);
-    rbox(c, 320, 24, 304, 212, WH, phr_("선택지"));
+    items(c, 40, 44, 256, n, sel, 16);
+    rbox(c, 320, 24, 304, 220, WH, phr_("선택지"));
     auto row = [&](int i) { return rs == i; };
-    const int PY = 17;
+    const int PY = 16;
     auto Y = [&](int id) { int k = 0; for (size_t i = 0; i < ri.size(); i++) if (ri[i] == id) k = (int)i; return 44 + k * PY; };
     const char * sc[] = { phr_("전역"), phr_("scope_this") }; choices(c, 344, Y(0), sc, 2, scope, WH, row(0));
+    { const int pp = pre_pos(); const int nb = PRE_NB + (int)presets.size(); const std::string pn = pp >= 0 ? pre_name(pp) : std::string(phr_("preset_custom")); (void)nb; text(c, 344, Y(12), std::string("< ") + pn + " >", row(12) ? CY : WH, K); }   /* 빌드 6: 프리셋 줄 */
     const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, Y(1), rt, 3, s.ratio, WH, row(1));
     const char * sh[] = { "sharp", "nearest" }; choices(c, 344, Y(2), sh, 2, s.shader == 2 ? 1 : 0, WH, row(2));
     char b[16]; const int fxv[4] = { s.scan, s.mask, s.bleed, s.glow };
@@ -28,16 +29,16 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
       const char * fsc[] = { phr_("창 모드"), phr_("전체화면") }; choices(c, 344, Y(9), fsc, 2, fs_now ? 1 : 0, WH, row(9)); }   /* t52i (B3) */
 #endif
     { const char * fp[] = { "OFF", "ON" }; choices(c, 344, Y(10), fp, 2, s.fpsd ? 1 : 0, WH, row(10)); }
-    rbox(c, 16, 240, 608, 82, WH, phr_("미리보기"));
-    thumb(c, game(), 40, 258, 96, 60);
+    rbox(c, 16, 248, 608, 82, WH, phr_("미리보기"));
+    thumb(c, game(), 40, 266, 96, 60);
     const UiGame * gm = game();
-    { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 258, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
-    text(c, 156, 278, rs == 0 && scope == 0 ? dkey(phr_("scr_allglobal_off")) : (ind ? std::string(phr_("indiv_has")) : std::string(phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."))), WH, K);
-    text(c, 156, 298, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
+    { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 266, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
+    text(c, 156, 286, rs == 0 && scope == 0 ? dkey(phr_("scr_allglobal_off")) : (ind ? std::string(phr_("indiv_has")) : std::string(phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."))), WH, K);
+    text(c, 156, 306, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
     char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
     static std::string wd; wd = wb;
     static const char * dd[] = { "desc_scope", "desc_ratio", "desc_filter", "desc_scan", "desc_mask", "desc_bleed", "desc_glow", "desc_curve" };
-    desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 10 ? dkey(phr_("desc_fps")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
+    desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 12 ? dkey(phr_("desc_preset")) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 10 ? dkey(phr_("desc_fps")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
     helpline(c, phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
 }
 inline Act Ui::k_screen_conf(UKey k, Act & a) {
@@ -57,6 +58,16 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
 #endif
         bool scr_s = scr == S_SCREEN; int nrow = scr_s ? 11 : 14;
         if (scr_s && sel == 9 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { a.t = A_FULLSCR; return a; }   /* t52i (B3): 전체화면 줄 — 좌우·○ 로 바로 오간다 */
+        if (scr_s && sel == 12 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) {   /* 빌드 6: 프리셋 — ←→ 고르면 바로 적용(즉시 미리보기), ○ = 저장 칸에서 저장 · 내 프리셋에서 삭제 확인 */
+            const int np = (int)presets.size(), tot = pre_total(); int p = pre_pos();
+            if (k == UK_OK) {
+                if (p >= PRE_NB && p < PRE_NB + np) { sel = sidx; yn_open(scr0, YN_PREDEL, phr_("preset_q1"), phr_("preset_q2"), std::string(), p); }
+                else if (p == PRE_NB + np && np < PRE_MAX) { pre_add(eff()); }
+                break; }
+            if (p < 0) p = (k == UK_RIGHT) ? tot - 1 : 0;
+            p = (p + (k == UK_RIGHT ? 1 : tot - 1)) % tot; pre_i = p;
+            if (p < PRE_NB + np) { pre_copy(eff(), pre_get(p)); a.t = A_APPLY; dirty = true; }
+            return a; }
         if (scr_s && sel == 10 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { Settings & fs = eff(); fs.fpsd = fs.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }
         if (sel == 0 && k == UK_OK && scope == 0) { sel = sidx; yn_open(scr0, YN_INDIVALL, phr_("indiv_allq1"), phr_("indiv_q2")); break; }   /* t147d: 전역 범위에서 ○ = 전역 일괄 적용 켬/끔 */
         Settings & s = (sel == 0) ? eff() : edit();

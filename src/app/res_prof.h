@@ -250,13 +250,25 @@ static bool gh_disk_guard(const std::string & id) {
     for (auto & sw : p.swap) need.push_back(dir + "\\" + sw);
     if (!p.cd.empty()) need.push_back(p.cd);
     for (auto & path : need) {
+        size_t b0 = path.find_last_of("\\/"); std::string nm0 = b0 == std::string::npos ? path : path.substr(b0 + 1);
+        { FILE * wf = fopen((gApp.savedir + "\\" + id + "\\disk\\" + nm0).c_str(), "rb"); if (wf) { fclose(wf); continue; } }   /* t601: 작업 사본이 있으면 원본이 없어도 시작(사본 우선) */
         FILE * f = fopen(path.c_str(), "rb"); if (f) { fclose(f); continue; }
-        int e = errno; size_t b = path.find_last_of("\\/"); std::string nm = b == std::string::npos ? path : path.substr(b + 1);
+        int e = errno; std::string nm = nm0;
         std::string why = e == ENOENT ? T("파일이 없습니다") : (e == EACCES ? T("열 권한이 없습니다") : T("열지 못했습니다"));
         gh_log("ERROR: disk preflight failed -> start blocked: %s (errno=%d)", path.c_str(), e);
-        std::string msg = std::string(T("디스크를 열 수 없습니다: ")) + aw::acp_to_u8(nm) + " (" + why + ")";
+        std::string msg = e == ENOENT ? std::string(T("원본 이미지가 없습니다: ")) + aw::acp_to_u8(path) : std::string(T("디스크를 열 수 없습니다: ")) + aw::acp_to_u8(nm) + " (" + why + ")";
         gApp.note = msg; gApp.note_until = SDL_GetTicks() + 8000u; gh_osd(msg, 8000); return false;
     }
+    return true;
+}
+/* t601 (#544): 「원본 디스크로 초기화」는 원본이 있어야 한다 — 없으면 사본을 건드리지 않고 없는 경로를 돌려준다 */
+static bool gh_orig_present(const std::string & id, std::string & missing) {
+    GProfile p; if (id.empty() || !gh_profile(id, p, true)) return true;
+    std::string dir = gApp.imgdir_given ? gApp.imgdir : (p.imgdir.empty() ? gApp.imgdir : p.imgdir);
+    std::vector<std::string> need;
+    for (int i = 0; i < 4; i++) if (p.disk[i]) need.push_back(dir + "\\" + p.disk[i]);
+    for (auto & sw : p.swap) need.push_back(dir + "\\" + sw);
+    for (auto & path : need) { FILE * f = fopen(path.c_str(), "rb"); if (f) { fclose(f); continue; } missing = path; return false; }
     return true;
 }
 

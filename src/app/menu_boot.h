@@ -63,7 +63,8 @@ static void gh_boot_frame(int stage, bool cells) {
 /* true = 건너뜀. 아무 버튼이나 누르면 건너뛴다. */
 static bool gh_boot_seq(bool full) {
     if (gApp.headless || !gApp.use_gl) return false;
-    if (full) {   /* t52d (#129): 시작 로고 1.4초 — 아무 키·클릭이면 부팅 연출 전체를 건너뜀 */
+    static const bool KH_LOGO_ON = false;   /* t601 (#550·#551): 시작 로고 그리기 기본 끔(코드·그림은 남김). t148 개명 때 새 로고와 함께 true 로 */
+    if (full && KH_LOGO_ON) {   /* t52d (#129): 시작 로고 1.4초 — 아무 키·클릭이면 부팅 연출 전체를 건너뜀 */
         unsigned tl = SDL_GetTicks(); bool sk = false;
         for (;;) { if (SDL_GetTicks() - tl >= 1400u) break; SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { GH_QUITSET(); sk = true; } if (ak) sk = true; } if (sk) return true; gh_logo_frame(); SDL_Delay(16); }
     }

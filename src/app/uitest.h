@@ -69,7 +69,8 @@ static bool gh_ui_main_(std::string & out_id) {
                 if (a.arg == 1) gh_launch_note(U, a);
                 if (a.arg == 1) { gApp.noB = true; gApp.resume_slot = 0; U.cur = gApp.cur_game = a.game; out_id = U.games[a.game].id; ui::settings_save(U, gApp.cfgpath); return true; }
                 if (a.arg == 2) { gh_boot_seq(true); }
-                if (a.arg == 6) { std::string rid = U.games[a.game].id; int nn = gh_reset_disks(rid); gApp.note = nn > 0 ? phr_("원본 디스크로 초기화했습니다 (사본 ") + std::to_string(nn) + phr_("개 삭제)") : phr_("초기화할 디스크 사본이 없습니다 (원본 그대로)"); gApp.note_until = SDL_GetTicks() + 3000u; }
+                if (a.arg == 6) { std::string rid = U.games[a.game].id, miss; if (!gh_orig_present(rid, miss)) { gApp.note = std::string(phr_("원본 이미지가 없습니다: ")) + aw::acp_to_u8(miss); gApp.note_until = SDL_GetTicks() + 6000u; break; }   /* t601: 원본이 없으면 초기화 막음(사본 보존) */
+                    int nn = gh_reset_disks(rid); gApp.note = nn > 0 ? phr_("원본 디스크로 초기화했습니다 (사본 ") + std::to_string(nn) + phr_("개 삭제)") : phr_("초기화할 디스크 사본이 없습니다 (원본 그대로)"); gApp.note_until = SDL_GetTicks() + 3000u; }
                 break;
             case ui::A_QUIT: if (a.arg) ui::settings_save(U, gApp.cfgpath); return false;
             default: break; }

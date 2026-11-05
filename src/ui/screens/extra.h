@@ -16,7 +16,7 @@ inline void Ui::k_extra(UKey k, Act & a) {
             else if (k == UK_OK && sel == 4) go(S_ABOUT, 0);   /* t49a (#814③): 「오프닝 보기」 삭제로 5번 이후 한 칸씩 당김 */
             else if (k == UK_OK && sel == 7) open_vals();   /* t48a (#614 ③) */
             else if (k == UK_OK && sel == 5) { int keep = cur, b = base_of(cur); if (b >= 0 && b < (int)games.size()) { games[b].fav = !games[b].fav; dirty = true; rebuild_vis(keep); } }
-            else if (k == UK_OK && sel == 6) yn_open(S_EXTRA, YN_DISKRESET, phr_("이 작품의 디스크 사본을 지우고"), phr_("원본 디스크 상태로 되돌립니다."), phr_("계속할까요?"));   /* t52e (#131 ②) */
+            else if (k == UK_OK && sel == 6) yn_open(S_EXTRA, YN_DISKRESET, phr_("게임 안 세이브가 지워지고 디스크가"), phr_("원본 상태로 돌아갑니다 (이전 사본은 .bak)."), phr_("계속할까요?"));   /* t52e (#131 ②) */
             else if (k == UK_OK) { a.t = A_EXTRA; a.arg = sel; a.game = cur; }
             else if (k == UK_CANCEL) go(back == S_PICK ? S_PICK : S_MAIN, 0);
             break;

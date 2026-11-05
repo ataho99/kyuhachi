@@ -18,16 +18,25 @@ static std::string gh_disk_dir(void) { return gApp.savedir + "\\" + std::string(
 static std::string gh_workpath(const std::string & name) {
     std::string orig = gApp.imgdir + "\\" + name, dd = gh_disk_dir(); std::string base = name; { size_t p = base.find_last_of("\\/"); if (p != std::string::npos) base = base.substr(p + 1); }
     std::string wp = dd + "\\" + base;
-    plat::FileInfo ao, aw; if (!plat::stat_file(orig, ao)) return orig;
-    bool have = plat::stat_file(wp, aw) && aw.size_hi == ao.size_hi && aw.size_lo == ao.size_lo;
-    if (!have) { plat::mkdir(gApp.savedir.c_str()); plat::mkdir((gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x")).c_str()); plat::mkdir(dd.c_str());
-        if (!gh_copy_file(orig, wp)) { gh_log("작업 사본 만들기 실패 -> 원본을 읽기 전용으로 연다: %s", orig.c_str()); return orig; } gh_log("작업 사본 만듦: %s", wp.c_str()); }
+    plat::FileInfo ao, aw; bool hasorig = plat::stat_file(orig, ao), hascopy = plat::stat_file(wp, aw);
+    if (hascopy) {   /* t601 (#544·#557): 사본 우선 — 원본이 없어도·바뀌어도 사본 그대로 구동하고 자동 재복사(= 게임 안 세이브 덮어쓰기)는 하지 않는다. 바뀜은 안내만 */
+        if (hasorig && (aw.size_hi != ao.size_hi || aw.size_lo != ao.size_lo)) { gh_log("origin size differs from work copy (kept copy): %s", orig.c_str()); gApp.note = phr_("원본 이미지가 바뀌었습니다 (사본으로 계속합니다)"); gApp.note_until = SDL_GetTicks() + 6000u; }
+        return wp;
+    }
+    if (!hasorig) return orig;   /* 사본도 원본도 없음 → 여는 쪽이 「원본 이미지가 없습니다」 안내 */
+    plat::mkdir(gApp.savedir.c_str()); plat::mkdir((gApp.savedir + "\\" + std::string(gApp.prof_.id ? gApp.prof_.id : "x")).c_str()); plat::mkdir(dd.c_str());
+    if (!gh_copy_file(orig, wp)) { gh_log("work copy failed -> opening original read-only: %s", orig.c_str()); return orig; }
+    gh_log("work copy made: %s", wp.c_str());
+    { FILE * oi = fopen((dd + "\\origin.ini").c_str(), "ab"); if (oi) { fprintf(oi, "%s\t%s\t%llu\n", base.c_str(), orig.c_str(), (unsigned long long)(((uint64_t)ao.size_hi << 32) | ao.size_lo)); fclose(oi); } }   /* t601: 이미지별 원본 경로·크기 기록 */
     return wp;
 }
 static int gh_reset_disks(const std::string & id) {   /* 「원본 디스크로 초기화」: 작품 저장폴더의 디스크 작업 사본을 지운다(다음 실행 때 원본에서 다시 만든다) */
-    std::string dd = gApp.savedir + "\\" + id + "\\disk"; int n = 0;
-    plat::find_a(dd + "\\*", [&](const plat::DirEnt & fd) { if (fd.is_dir) return true; if (plat::remove_file(dd + "\\" + fd.name)) n++; return true; });
-    plat::remove_dir(dd); gh_log("원본 디스크로 초기화: %s 사본 %d개 삭제", id.c_str(), n); return n;
+    std::string dd = gApp.savedir + "\\" + id + "\\disk"; int n = 0; std::vector<std::string> names;
+    plat::find_a(dd + "\\*", [&](const plat::DirEnt & fd) { if (fd.is_dir) return true; std::string nm = fd.name; if (nm == "origin.ini" || (nm.size() > 4 && nm.compare(nm.size() - 4, 4, ".bak") == 0)) return true; names.push_back(nm); return true; });
+    for (auto & nm : names) {   /* t601 (#544): 직전 사본 1개는 .bak 로 남긴다(이전 .bak 는 덮어씀). 옮기지 못하면 그냥 지운다 */
+        std::string f = dd + "\\" + nm, b = f + ".bak"; plat::remove_file(b);
+        if (plat::move_file(f, b) || plat::remove_file(f)) n++; }
+    plat::remove_file(dd + "\\origin.ini"); gh_log("reset disks: %s copies=%d (previous kept as .bak)", id.c_str(), n); return n;
 }
 static bool gh_attach(int idx, const char * name, bool replace = false) {
     std::string orig_path = gApp.imgdir + "\\" + name, path = gh_workpath(name); bool iscopy = path != orig_path;   /* t43h: 쓰기는 작업 사본에만 */

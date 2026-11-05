@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
+
 # 九八 · 큐하치 X (Kyuhachi X)
 
 ### 윈도우·안드로이드용 PC-98 게임 런처
@@ -12,6 +14,8 @@
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)
 
 [English](README.md) · 한국어
+
+**[⬇ v0.6.0 내려받기 (윈도 zip · 안드로이드 APK · 설명서)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 
 </div>
 
@@ -28,14 +32,14 @@
 | 기기 | 비고 |
 |---|---|
 | 윈도우 10 / 11 (x64) | `KyuhachiX.exe`, 폴더 하나로 동작하는 포터블. 레지스트리에 쓰지 않음 |
-| 안드로이드 | `kyuhachi_*.apk` (패키지 `io.github.ataho99.kyuhachix`). 레트로이드 포켓 노바에 맞춰 다듬었고 다른 패드 기기에서도 동작 |
+| 안드로이드 | `KyuhachiX-v0.6.0-android.apk` (패키지 `io.github.ataho99.kyuhachix`). 레트로이드 포켓 노바에 맞춰 다듬었고 다른 패드 기기에서도 동작 |
 
 ## 설치
 
 **윈도우**
 
 1. 원하는 곳에 압축을 풉니다(한글·일본어 경로 가능).
-2. 게임 디스크 이미지를 `Kyuhachi\games` 에 넣습니다(작품마다 폴더 하나).
+2. 게임 디스크 이미지를 `KyuhachiX.exe` 옆 `KyuhachiX\games` 에 넣습니다(작품마다 폴더 하나).
 3. `KyuhachiX.exe` 를 실행합니다.
 
 옛 *큐하치*(v0.5.x)에서 올리는 경우: 처음 실행할 때 세이브가 새 `saves` 폴더로 한 번 복사되고, 옛 폴더는 그대로 남습니다.
@@ -56,7 +60,7 @@
 - **한글 대응** — 한글패치용으로 Neodgm 기반 내장 글꼴. 메뉴는 영·일·한(`strings_en.txt`, `strings_ja.txt`, `strings_ko.txt`)이며 메모장으로 고칠 수 있습니다.
 - **리듬 음원** — `res/rhythm/` 에 YM2608 리듬 WAV 를 넣으면 드럼이 납니다(저작권상 동봉하지 않음).
 
-안드로이드 사용법은 [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) 를 보세요.
+안드로이드 사용법은 [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) 를 보세요(릴리스 페이지의 `KyuhachiX-v0.6.0-manual-ko.zip` 에도 있음).
 
 ## 소스에서 빌드
 

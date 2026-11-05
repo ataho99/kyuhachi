@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/kyuhachi_x_logo.png" alt="Kyuhachi X" width="480">
+
 # 九八 · Kyuhachi X
 
 ### A PC-98 game launcher for Windows and Android
@@ -12,6 +14,8 @@
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)
 
 English · [한국어](README.ko.md)
+
+**[⬇ Download v0.6.0 (Windows zip · Android APK · manual)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 
 </div>
 
@@ -28,14 +32,14 @@ Kyuhachi X takes the DOSBox-X PC-98 core, cuts it down to what PC-98 games need,
 | Device | Notes |
 |---|---|
 | Windows 10 / 11 (x64) | `KyuhachiX.exe`, portable folder, nothing written to the registry |
-| Android | `kyuhachi_*.apk` (package `io.github.ataho99.kyuhachix`); tuned for the Retroid Pocket Nova, works with other gamepad devices |
+| Android | `KyuhachiX-v0.6.0-android.apk` (package `io.github.ataho99.kyuhachix`); tuned for the Retroid Pocket Nova, works with other gamepad devices |
 
 ## Install
 
 **Windows**
 
 1. Unzip the package anywhere (Korean/Japanese paths are fine).
-2. Put your game disk images in `Kyuhachi\games` (one folder per game).
+2. Put your game disk images in `KyuhachiX\games` next to `KyuhachiX.exe` (one folder per game).
 3. Run `KyuhachiX.exe`.
 
 Upgrading from the old *Kyuhachi* (v0.5.x): on first run your saves are copied to the new `saves` folder once; the old folder is left untouched.
@@ -56,7 +60,7 @@ Upgrading from the old *Kyuhachi* (v0.5.x): on first run your saves are copied t
 - **Hangul-ready** — built-in font derived from Neodgm for Korean fan translations; menus in English, Japanese and Korean (`strings_en.txt`, `strings_ja.txt`, `strings_ko.txt` — edit them in any text editor).
 - **Rhythm samples** — optional YM2608 rhythm WAVs in `res/rhythm/` (not bundled).
 
-Android usage is covered in [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) (Korean).
+Android usage is covered in [`docs/안드로이드_사용설명서.md`](docs/안드로이드_사용설명서.md) (Korean; also as `KyuhachiX-v0.6.0-manual-ko.zip` on the Releases page).
 
 ## Build from source
 

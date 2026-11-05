@@ -171,6 +171,30 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 8, "padjump:") == 0) { U.pad_jump(atoi(tk.c_str() + 8)); continue; }   /* test only: pad press jump */
             if (tk == "kbstate") { std::string us; for (auto & kc : U.kb_cells) if (U.kb_used(kc.name)) us += kc.name + " "; const std::string nm = U.kb_sel >= 0 && U.kb_sel < (int)U.kb_cells.size() ? U.kb_cells[U.kb_sel].name : std::string("-");
                 gh_log("uikeys: KBSTATE scr=%d sel=%d name=%s n=%d row=%d used[%s]", (int)U.scr, U.kb_sel, nm.c_str(), (int)U.kb_cells.size(), U.pk_row, us.c_str()); continue; }
+            if (tk == "shtest") {
+                std::map<std::string, std::string> fk = { { "a.hdm", std::string(40, 'a') }, { "b.hdm", std::string(40, 'b') }, { "c.hdm", std::string(40, 'c') } };
+                ent::Kv kv; kv["label"] = "T"; kv["tpl"] = "T4"; kv["boot"] = "A"; kv["disk_a"] = "a.hdm"; kv["disk_b"] = "b.hdm"; kv["swap"] = "a.hdm,b.hdm,c.hdm";
+                kv["autoexec"] = "d:|"; kv["bootkeys"] = "3000:enter,5000:type=hi"; kv["font_kind"] = "jp"; kv["dosexe"] = "GAME.EXE";
+                const std::string ttl = "\xEB\x82\x98\xEB\x94\x94 X";
+                auto sha = [&](const std::string & n) { auto q = fk.find(n); return q == fk.end() ? std::string() : q->second; };
+                const std::string code = share::encode(ttl, kv, sha);
+                std::map<std::string, std::string> inv; for (auto & q : fk) inv[q.second.substr(0, 12)] = q.first;
+                auto find = [&](const std::string & s) { auto q = inv.find(s); return q == inv.end() ? std::string() : q->second; };
+                share::Decoded d = share::decode(code); std::vector<std::string> ms; const int fnd = share::resolve(d, find, ms);
+                const bool syn = d.status == 0 && d.title == ttl && d.kv == kv && fnd == 5 && ms.empty();
+                std::string bad = code; bad[6] = bad[6] == 'A' ? 'B' : 'A';
+                const int s_crc = share::decode(bad).status, s_tr = share::decode(code.substr(0, code.size() / 2)).status, s_ver = share::decode("KHX9-" + code.substr(5)).status;
+                auto find2 = [&](const std::string & s) { return s == std::string(12, 'b') ? std::string() : find(s); };
+                share::Decoded d2 = share::decode(code); std::vector<std::string> ms2; share::resolve(d2, find2, ms2);
+                gh_log("uikeys: SHTEST syn=%s crc=%d trunc=%d ver=%d len=%d miss=%d swap=%s", syn ? "PASS" : "FAIL", s_crc, s_tr, s_ver, (int)code.size(), (int)ms2.size(), d2.kv["swap"].c_str());
+                continue; }
+            if (tk == "shmake") { U.shr_open_make(U.cur, 0); continue; }
+            if (tk == "shprev") { U.shr_preview(U.sh_code); continue; }
+            if (tk == "tplscr") { U.entg = U.cur; U.scr = ui::S_TPL; U.sel = 9; continue; }
+            if (tk == "shstate") {
+                gh_log("uikeys: SHSTATE scr=%d code=%d found=%d total=%d miss=%d nents=%d nreal=%d", (int)U.scr, (int)U.sh_code.size(), U.sh_found, U.sh_total,
+                       (int)U.sh_missing.size(), U.entg >= 0 ? (int)U.games[U.entg].ents.size() : -1,
+                       [&]{ int n = 0; if (U.entg >= 0) for (auto & e9 : U.games[U.entg].ents) if (!e9.pseudo) n++; return n; }()); continue; }
             if (tk == "scrstate") { std::string rr; if (U.scr == ui::S_CONF) for (int id : U.rowids(ui::S_CONF)) rr += std::to_string(id) + " ";
                 gh_log("uikeys: SCRSTATE scr=%d sel=%d grp=%d sm=%d ig=%d n=%d rows[%s]", (int)U.scr, U.sel, U.conf_grp, U.save_mode ? 1 : 0, U.in_game ? 1 : 0, U.nitems(), rr.c_str()); continue; }
             if (tk == "extscr") { U.scr = ui::S_EXT; U.sel = 0; U.ext_wait = false; continue; }   /* test only: extra-buttons tab */

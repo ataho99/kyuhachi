@@ -21,6 +21,7 @@
 #include "text/kh_hangul_t48.h"   /* t48b: 한글 조합기 */
 
 #include "ui/kh_ui_types.h"   /* S7: ui data types */
+#include "settings/kh_share.h"   /* build 5b-2: share code */
 namespace ui {
 using namespace ov;
 
@@ -208,6 +209,10 @@ struct Ui {
     bool kb_used(const std::string & nm) const; void kb_open(); void d_kbpick(Canvas & c); void k_kbpick(UKey k, Act & a);
     int conf_grp = 0; bool save_mode = false; Scr scr_from = S_MAIN;   /* build 5b-1: settings group (0 all, 1 sound, 2 control, 3 system) */
     void d_set(Canvas & c); void k_set(UKey k, Act & a); void d_gkb(Canvas & c); void k_gkb(UKey k, Act & a);
+    std::string sh_code, sh_ename, sh_msg; share::Decoded sh_dec; std::vector<std::string> sh_missing, sh_files; int sh_found = 0, sh_total = 0;
+    void shr_open_make(int g, int menu_i); void shr_open_import(); void shr_preview(const std::string & code);
+    void d_share(Canvas & c); void k_share(UKey k, Act & a); void d_shimp(Canvas & c); void k_shimp(UKey k, Act & a);
+    void d_shprev(Canvas & c); void k_shprev(UKey k, Act & a);
     static int conf_grp_of(int i) { return (i >= 1 && i <= 3) ? 1 : (i == 8 || i >= 11) ? 3 : 2; }
     void leave_cfg() {   /* leaving S_SCREEN / S_CONF: back to the settings hub when it was opened from there */
         const bool sc = scr == S_SCREEN;
@@ -474,7 +479,7 @@ struct Ui {
         for (auto & e : g.ents) if (e.name == it->second) return e.label.empty() ? e.name : e.label; return it->second;
     }
     std::vector<bool> menu_dim() const {
-        std::vector<bool> dm(8, false); std::vector<int> v = vents(entg); int ei = (menu_ent >= 0 && menu_ent < (int)v.size()) ? v[menu_ent] : -1; const UiGame & g = games[entg];
+        std::vector<bool> dm(9, false); std::vector<int> v = vents(entg); int ei = (menu_ent >= 0 && menu_ent < (int)v.size()) ? v[menu_ent] : -1; const UiGame & g = games[entg];
         if (ei < 0 || g.ents[ei].pseudo || g.ents[ei].vgi >= 0) { for (auto x : { 0, 2, 3, 4, 5, 6, 7 }) dm[x] = true; if (ei < 0 || g.ents[ei].pseudo) dm[1] = true; }
         else if (g.ents[ei].tag == "자동") { for (auto x : { 0, 2, 3, 4, 5 }) dm[x] = true; }
         else { if (g.ents[ei].tag != "수정됨") dm[3] = true; }
@@ -634,7 +639,7 @@ struct Ui {
     void d_keys(Canvas & c);
 
     /* ================================================================ t39: 새 화면 입력 */
-    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_SET: case S_GKB: case S_EXEPICK: return true; default: return false; } }
+    bool new_scr() const { switch (scr) { case S_SORT: case S_ENT: case S_ENTMENU: case S_TPL: case S_EDIT: case S_FILE: case S_KEYSEQ: case S_STEP: case S_SWAPED: case S_FONT: case S_OSK: case S_NAME: case S_YN: case S_HDDASK: case S_LANG: case S_VALS: case S_PAD: case S_PADKEY: case S_HOT: case S_EXT: case S_KBPICK: case S_SET: case S_GKB: case S_SHARE: case S_SHIMP: case S_SHPREV: case S_EXEPICK: return true; default: return false; } }
     static std::string parent_of(const std::string & p) { size_t d = p.find_last_of("\\/"); return d == std::string::npos || d == 0 ? std::string() : p.substr(0, d); }
     static std::vector<std::string> split_commas(const std::string & s) { std::vector<std::string> r; size_t p = 0; while (p <= s.size() && !s.empty()) { size_t e = s.find(',', p); if (e == std::string::npos) e = s.size(); if (e > p) r.push_back(s.substr(p, e - p)); p = e + 1; } return r; }
     static std::string join_commas(const std::vector<std::string> & v) { std::string o; for (auto & x : v) { if (!o.empty()) o += ","; o += x; } return o; }
@@ -782,6 +787,9 @@ struct Ui {
         case S_KBPICK: k_kbpick(k, a); break;
         case S_SET: k_set(k, a); break;
         case S_GKB: k_gkb(k, a); break;
+        case S_SHARE: k_share(k, a); break;
+        case S_SHIMP: k_shimp(k, a); break;
+        case S_SHPREV: k_shprev(k, a); break;
         case S_OSK: k_osk(k, a); break;
         case S_NAME: k_name(k, a); break;
         case S_YN: k_yn(k, a); break;

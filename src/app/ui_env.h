@@ -129,6 +129,36 @@ static void gh_ui_env_setup(void) {
         bool abs = (pa.size() > 1 && pa[1] == ':') || pa[0] == '\\' || pa[0] == '/'; std::string full = abs ? pa : aw::join(gApp.ui_.imgdir_of(g), pa);
         uint64_t sz = 0, mt = 0; return aw::file_stat(full, sz, mt); };
     E.save = [](int g, const std::string & name, const ent::Kv & kv, const std::string & setdef) { return prof::save_entry(gApp.ui_.games[g].dir, name, kv, setdef); };
+    E.sha_of = [](int g, const std::string & n) {
+        if (n.empty() || g < 0 || g >= (int)gApp.ui_.games.size()) return std::string();
+        const std::string pa = aw::sys_from_ini(n);
+        const bool abs = (pa.size() > 1 && pa[1] == ':') || pa[0] == '\\' || pa[0] == '/';
+        return gApp.shacache.sha1(abs ? pa : aw::join(gApp.ui_.imgdir_of(g), pa)); };
+    E.find_sha = [](int g, const std::string & pfx) {
+        auto scan = [&](int gi, bool own) {
+            const std::string dir = gApp.ui_.imgdir_of(gi); std::vector<std::string> fs, ds; aw::list_dir(dir, fs, &ds);
+            for (auto & f : fs) {
+                if (ent::img_kind(f) == 0) continue;
+                const std::string h = gApp.shacache.sha1(aw::join(dir, f));
+                if (h.size() >= pfx.size() && h.compare(0, pfx.size(), pfx) == 0) return aw::acp_to_u8(own ? f : aw::join(dir, f));
+            }
+            return std::string(); };
+        std::string r = (g >= 0 && g < (int)gApp.ui_.games.size()) ? scan(g, true) : std::string();
+        for (int gi = 0; r.empty() && gi < (int)gApp.ui_.games.size(); gi++) if (gi != g) r = scan(gi, false);
+        return r; };
+    E.clip_get = []() { char * t = SDL_GetClipboardText(); std::string s = t ? t : ""; if (t) SDL_free(t); return s; };
+    E.clip_set = [](const std::string & s) { SDL_SetClipboardText(s.c_str()); };
+    E.khx_write = [](int g, const std::string & name, const std::string & text) {
+        std::string fn = ent::clean_name(name); for (auto & ch : fn) if (strchr("\\/:*?\"<>|", ch)) ch = '_';
+        FILE * f = fopen(aw::join(gApp.ui_.games[g].dir, aw::u8_to_acp(fn) + ".khx").c_str(), "wb"); if (!f) return false;
+        fwrite(text.data(), 1, text.size(), f); fputc('\n', f); fclose(f); return true; };
+    E.khx_list = [](int g) {
+        std::vector<std::string> r, fs, ds; aw::list_dir(gApp.ui_.games[g].dir, fs, &ds); std::sort(fs.begin(), fs.end());
+        for (auto & f : fs) if (ent::ext_of(f) == "khx") r.push_back(aw::acp_to_u8(f));
+        return r; };
+    E.khx_read = [](int g, const std::string & n) {
+        FILE * f = fopen(aw::join(gApp.ui_.games[g].dir, aw::u8_to_acp(n)).c_str(), "rb"); if (!f) return std::string();
+        char b[65536]; size_t m = fread(b, 1, sizeof b, f); fclose(f); return std::string(b, m); };
     E.del = [](int g, const std::string & name, bool reset) { return prof::delete_entry(gApp.ui_.games[g].dir, name, reset); };
     E.setkey = [](int g, const std::string & k, const std::string & v) { return prof::set_game_key(gApp.ui_.games[g].dir, k, v); };
     E.pad_get = [](int g, std::map<std::string, std::string> & m) { m.clear(); if (g >= 0 && g < (int)gApp.ui_.games.size()) prof::get_pad_keys(gApp.ui_.games[g].dir, m); };   /* t48e (#646): 이 작품 user.ini [pad] btn_* */

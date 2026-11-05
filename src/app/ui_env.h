@@ -28,8 +28,20 @@ static KBD_KEYS gh_keyname_pad(const std::string & n) {
     return pn::lookup(n, gh_kb_ibm());
 }
 static const char * const GH_PADBTN[PB_N] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick" };   /* 빌드 5a: SDL 표준 버튼 이름 */
-static const char * const GH_PADFN[FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot" };   /* 값 "fn:<이름>" */
+static const char * const GH_PADFN[FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot", "next_disk", "fps" };   /* 값 "fn:<이름>" */
 static const int GH_PADIDX[PB_N] = { PB_EAST, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3 };
+static void gh_hot_reload(void) {   /* build 5a-2: hotkey table = defaults + global btn_hot_<fn> (sel+<button> | <button> | none) */
+    kh_hot_defaults();
+    for (int q = 2; q < FN_N; q++) {
+        if (q == FN_BOOST_HOLD || q == FN_BOOST_TOG) continue;
+        auto it = gApp.ui_.gpad.find(std::string("btn_hot_") + GH_PADFN[q]); if (it == gApp.ui_.gpad.end() || it->second.empty()) continue;
+        std::string s = it->second; bool sl = false; if (s.compare(0, 4, "sel+") == 0) { sl = true; s = s.substr(4); }
+        int b = -1; if (s != "none") for (int i = 0; i < PB_N; i++) if (std::string(GH_PADBTN[i]).compare(4, std::string::npos, s) == 0) b = GH_PADIDX[i];
+        if (s != "none" && b < 0) { gh_log("pad: hotkey %s=%s unknown name, ignored", GH_PADFN[q], it->second.c_str()); continue; }
+        if (b == PB_START || b == PB_BACK) continue;
+        kh_hot[q].btn = b; kh_hot[q].sel = sl; }
+    GPLOG("HOTKEYS qs=%d/%d ql=%d/%d osk=%d/%d shot=%d/%d disk=%d/%d fps=%d/%d", kh_hot[FN_QSAVE].btn, (int)kh_hot[FN_QSAVE].sel, kh_hot[FN_QLOAD].btn, (int)kh_hot[FN_QLOAD].sel, kh_hot[FN_OSK].btn, (int)kh_hot[FN_OSK].sel, kh_hot[FN_SHOT].btn, (int)kh_hot[FN_SHOT].sel, kh_hot[FN_NEXTDISK].btn, (int)kh_hot[FN_NEXTDISK].sel, kh_hot[FN_FPS].btn, (int)kh_hot[FN_FPS].sel);
+}
 static bool gh_pad_parse(const std::string & v, GPadBind & b) {   /* none / mouse_left / mouse_right / 키 이름 */
     std::string s = v; for (auto & c : s) c = (char)tolower((unsigned char)c);
     b.fn = 0;
@@ -54,6 +66,7 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
         for (auto it = pad.begin(); it != pad.end();) { if (it->first.compare(0, 4, "btn_") == 0) it = pad.erase(it); else ++it; }
         std::map<std::string, std::string> m; prof::get_pad_keys(gApp.ui_.games[gApp.cur_game].dir, m); for (auto & kv : m) pad[kv.first] = kv.second;
     }
+    gh_hot_reload();
     /* 1) 전역 btn_* */
     for (int i = 0; i < PB_N; i++) { auto it = gApp.ui_.gpad.find(GH_PADBTN[i]); if (it != gApp.ui_.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
     /* 2) 프로필 옛 이름 o/x/sq — 옛 gh_keyname 으로 지금과 똑같이 */
@@ -114,7 +127,8 @@ static void gh_ui_env_setup(void) {
     E.setkey = [](int g, const std::string & k, const std::string & v) { return prof::set_game_key(gApp.ui_.games[g].dir, k, v); };
     E.pad_get = [](int g, std::map<std::string, std::string> & m) { m.clear(); if (g >= 0 && g < (int)gApp.ui_.games.size()) prof::get_pad_keys(gApp.ui_.games[g].dir, m); };   /* t48e (#646): 이 작품 user.ini [pad] btn_* */
     E.pad_set = [](int g, const std::string & k, const std::string & v) { if (g < 0 || g >= (int)gApp.ui_.games.size()) return false; bool ok = prof::set_pad_key(gApp.ui_.games[g].dir, k, v); gh_log("pad_set: %s [pad] %s=%s -> %s", gApp.ui_.games[g].dir.c_str(), k.c_str(), v.c_str(), ok ? "OK" : "FAIL"); return ok; };
-    E.padkind = []() { return gensei_padkind(); };
+    E.padkind = []() { const int k = gensei_padkind(); return (k == 0 && gensei_pad_retro) ? 3 : k; };
+    E.pad_cap = [](int m, int & pb, bool & sel) -> int { if (m == 0) { kh_cap_begin(true); return 0; } if (m == 1) return kh_cap_poll(pb, sel); if (m == 2) { kh_cap_begin(false); return 0; } gh_hot_reload(); return 0; };
     E.padkeys = []() { return pn::picker_names(); };
     E.hdd_make = [](int g, int mb, std::string & out) {
         std::string dir = gApp.ui_.imgdir_of(g), id = gApp.ui_.games[g].id; for (auto & ch : id) if (!(isalnum((unsigned char)ch) || ch == '_' || ch == '-')) ch = '_';
@@ -496,6 +510,7 @@ static void gh_touch_feed(const SDL_Event & e) {
 }
 #endif
 static ui::UKey gh_ev2uk(const SDL_Event & e, bool * anykey) {
+    if (kh_cap_event(e)) return ui::UK_NONE;   /* hotkey tab waiting for a combo */
     using namespace ui;
     if (anykey) *anykey = (e.type == SDL_KEYDOWN && !e.key.repeat) || e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_MOUSEBUTTONDOWN;
     { int nd = -1; if (e.type == SDL_KEYDOWN && !e.key.repeat) nd = 1; else if (e.type == SDL_CONTROLLERBUTTONDOWN) nd = 0; else if (e.type == SDL_CONTROLLERAXISMOTION && (e.caxis.value > 16000 || e.caxis.value < -16000)) nd = 0;   /* t49a (#812): 마지막 입력 장치(마우스 제외) */

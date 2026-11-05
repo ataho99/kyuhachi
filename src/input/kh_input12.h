@@ -21,7 +21,7 @@ static bool kh_padmouse = false;
 /* t48e: 버튼 배정표. 위치 기준(동=○ 남=× 서=□). 기본은 옛 t34 와 같다: 동 Space · 남 Esc · 서 CapsLock · START Enter · L1 R1 SELECT 없음 */
 enum { PB_EAST = 0, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3, PB_N };   /* 빌드 5a: 7 → 16 (옛 번호 0~6 그대로) */
 enum { PBT_KEY = 0, PBT_NONE, PBT_ML, PBT_MR, PBT_FN };   /* 빌드 5a: PBT_FN = 큐하치 기능(fn) 배정 */
-enum { FN_MENU = 1, FN_BOOST_HOLD, FN_BOOST_TOG, FN_QSAVE, FN_QLOAD, FN_OSK, FN_SHOT, FN_N };   /* ui_env.h GH_PADFN · kh_ui.h pad_fn_name 과 같은 순서 */
+enum { FN_MENU = 1, FN_BOOST_HOLD, FN_BOOST_TOG, FN_QSAVE, FN_QLOAD, FN_OSK, FN_SHOT, FN_NEXTDISK, FN_FPS, FN_N };   /* ui_env.h GH_PADFN · kh_ui.h pad_fn_name 과 같은 순서 */
 struct GPadBind { int type; KBD_KEYS key; int fn; };
 static GPadBind kh_pb[PB_N];
 static bool kh_western = false;    /* t48e (#651 4): 서양식 = 남쪽 버튼이 결정. settings.ini pad=1 */
@@ -46,12 +46,25 @@ static void kh_pb_defaults(void) {
 static bool kh_pb_init_done = (kh_pb_defaults(), true);
 static void (*kh_fn_hook)(int fn, bool down) = NULL;   /* 빌드 5a: 호스트(kbd_event.h gh_pad_fn)가 채운다 */
 static bool kh_trig_on[2];                              /* L2·R2 눌림(히스테리시스 켜짐 > 16000 · 꺼짐 < 8000) */
-static bool kh_sel_dn, kh_st_dn, kh_sw_sel, kh_sw_st;   /* SELECT+START 메뉴 조합(고정) */
+static bool kh_sel_dn, kh_st_dn, kh_sw_sel, kh_sw_st;
+struct GHot { int btn; bool sel; };   /* hotkey = button (+ SELECT held). btn -1 = none. Menu (SELECT+START) is fixed and not in this table */
+static GHot kh_hot[FN_N]; static bool kh_hot_sw[PB_N];
+static void kh_hot_defaults(void) {
+    for (int q = 0; q < FN_N; q++) { kh_hot[q].btn = -1; kh_hot[q].sel = false; }
+    kh_hot[FN_QSAVE].btn = PB_R1;  kh_hot[FN_QSAVE].sel = true;
+    kh_hot[FN_QLOAD].btn = PB_L1;  kh_hot[FN_QLOAD].sel = true;
+    kh_hot[FN_OSK].btn = PB_NORTH; kh_hot[FN_OSK].sel = true;
+    kh_hot[FN_SHOT].btn = PB_R3;   kh_hot[FN_SHOT].sel = true;
+    kh_hot[FN_NEXTDISK].btn = PB_R2; kh_hot[FN_NEXTDISK].sel = true;
+}
+static bool kh_hot_init_done = (kh_hot_defaults(), true);
+static bool kh_cap_on = false, kh_cap_sel = false, kh_cap_selheld = false; static int kh_cap_pb = -1; static Uint32 kh_cap_t0 = 0;   /* combo capture (menu open) */   /* SELECT+START 메뉴 조합(고정) */
 static bool kh_never[256];   /* #237 never_map: 패드·단축키에 절대 보내지 않는 키(KBD_KEYS 값) */   /* env GENSEI_PADMOUSE=1 : D-pad moves the cursor, A/B = L/R click */
 static std::map<SDL_JoystickID, SDL_GameController*> kh_pads;
 static std::map<SDL_JoystickID, SDL_Joystick*> kh_rawpads;   /* t48e: 표(매핑)에 없는 패드 — 원시 번호 폴백 */
 static std::map<SDL_JoystickID, int> kh_rawhat;               /* 폴백 패드의 십자 상태(SDL_HAT_* 비트) */
-static int gensei_padkind_v = 0;       /* 0 그 밖 1 Xbox 2 PlayStation (첫 번째로 열린 패드의 이름으로 판정) */
+static int gensei_padkind_v = 0;
+static bool gensei_pad_retro = false;   /* Retroid / Nintendo layout: east=A south=B west=Y north=X */       /* 0 그 밖 1 Xbox 2 PlayStation (첫 번째로 열린 패드의 이름으로 판정) */
 static FILE* kh_plog = NULL;
 static bool kh_axis_dir[2][4];     /* [pad-slot][L,R,U,D] stick->arrow state (pad 0 only used) */
 static int  kh_dpad_mouse[4];      /* L,R,U,D held (padmouse mode) */
@@ -89,6 +102,10 @@ static int gensei_padkind_of(const char* nm) {
     return 0;
 }
 static int gensei_padkind(void) { return gensei_padkind_v; }
+static bool gensei_is_retro(const char* nm) {
+    if (!nm) return false; std::string s = nm; for (auto & c : s) c = (char)tolower((unsigned char)c);
+    return s.find("retroid") != std::string::npos || s.find("nintendo") != std::string::npos;
+}
 
 static int kh_pad_opens = 0, kh_pad_closes = 0;   /* t49a (#823): 같은 장치 재연결 시 열림/닫힘 횟수 로그 */
 static void (*kh_hotplug_hook)(bool added, const char * name) = NULL;   /* 호스트가 채움: 연결/해제 알림·입력 장치 표기 */
@@ -116,7 +133,7 @@ static void gensei_open_pad(int idx) {
     char* mp = SDL_GameControllerMapping(gc);
     GPLOG("PAD opened idx=%d id=%d name='%s' guid=%s -> SDL GameController 표준 배치 (매핑 %.70s%s)", idx, (int)id, nm ? nm : "?", gs, mp ? mp : "?", (mp && strlen(mp) > 70) ? "..." : "");
     if (mp) SDL_free(mp);
-    if (kh_pads.size() == 1 || !gensei_padkind_v) gensei_padkind_v = gensei_padkind_of(nm);
+    if (kh_pads.size() == 1 || !gensei_padkind_v) { gensei_padkind_v = gensei_padkind_of(nm); gensei_pad_retro = gensei_is_retro(nm); }
     GPLOG("PADKIND %d (0 그 밖 1 Xbox 2 PlayStation)", gensei_padkind_v);
     GPLOG("PADCOUNT open=%d close=%d live=%d", kh_pad_opens, kh_pad_closes, (int)kh_pads.size());
     if (kh_hotplug_hook) kh_hotplug_hook(true, nm ? nm : "?");
@@ -170,7 +187,50 @@ static void kh_key(KBD_KEYS k, bool down, const char* why) {
 }
 
 /* t48e: 배정표대로 한 버튼을 실행 */
+static int kh_pb_of_sdl(Uint8 b) {
+    switch (b) {
+    case SDL_CONTROLLER_BUTTON_B: return PB_EAST;  case SDL_CONTROLLER_BUTTON_A: return PB_SOUTH;
+    case SDL_CONTROLLER_BUTTON_X: return PB_WEST;  case SDL_CONTROLLER_BUTTON_Y: return PB_NORTH;
+    case SDL_CONTROLLER_BUTTON_START: return PB_START; case SDL_CONTROLLER_BUTTON_BACK: return PB_BACK;
+    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return PB_L1; case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return PB_R1;
+    case SDL_CONTROLLER_BUTTON_LEFTSTICK: return PB_L3; case SDL_CONTROLLER_BUTTON_RIGHTSTICK: return PB_R3;
+    case SDL_CONTROLLER_BUTTON_DPAD_UP: return PB_DUP; case SDL_CONTROLLER_BUTTON_DPAD_DOWN: return PB_DDOWN;
+    case SDL_CONTROLLER_BUTTON_DPAD_LEFT: return PB_DLEFT; case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return PB_DRIGHT;
+    default: return -1; }
+}
+static void kh_cap_begin(bool on) { kh_cap_on = on; kh_cap_pb = -1; kh_cap_selheld = false; kh_cap_t0 = SDL_GetTicks(); }
+static int kh_cap_poll(int & pb, bool & sel) {   /* 0 waiting - 1 got one - 2 ended (timeout 8 s) */
+    if (!kh_cap_on) return 2;
+    if (kh_cap_pb >= 0) { pb = kh_cap_pb; sel = kh_cap_sel; kh_cap_pb = -1; kh_cap_on = false; return 1; }
+    if (SDL_GetTicks() - kh_cap_t0 > 8000u) { kh_cap_on = false; return 2; }
+    return 0;
+}
+static bool kh_cap_event(const SDL_Event & e) {   /* swallow pad input while the hotkey screen waits for a combo */
+    if (!kh_cap_on) return false;
+    if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {
+        const int pb = kh_pb_of_sdl(e.cbutton.button); const bool dn = e.type == SDL_CONTROLLERBUTTONDOWN;
+        if (pb == PB_BACK) { kh_cap_selheld = dn; return true; }
+        if (dn && pb >= 0 && pb != PB_START) { kh_cap_pb = pb; kh_cap_sel = kh_cap_selheld; GPLOG("CAPTURE pb=%d sel=%d", pb, (int)kh_cap_sel); }
+        return true; }
+    if (e.type == SDL_CONTROLLERAXISMOTION && (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)) {
+        static bool on[2]; const int q = e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ? 1 : 0;
+        if (!on[q] && e.caxis.value > 16000) { on[q] = true; kh_cap_pb = q ? PB_R2 : PB_L2; kh_cap_sel = kh_cap_selheld; GPLOG("CAPTURE pb=%d sel=%d", kh_cap_pb, (int)kh_cap_sel); }
+        else if (on[q] && e.caxis.value < 8000) on[q] = false;
+        return true; }
+    return false;
+}
+static bool kh_hot_try(int i, bool down) {   /* SELECT held + button (or a single button) = hotkey; the button is swallowed */
+    if (i == PB_BACK || i == PB_START) return false;
+    if (down) {
+        for (int q = 1; q < FN_N; q++) if (kh_hot[q].btn == i && kh_hot[q].sel == kh_sel_dn) {
+            kh_hot_sw[i] = true; GPLOG("  HOTKEY %s%d -> fn %d", kh_sel_dn ? "SEL+" : "", i, q); if (kh_fn_hook) kh_fn_hook(q, true); return true; }
+        return false; }
+    if (kh_hot_sw[i]) { kh_hot_sw[i] = false; return true; }
+    return false;
+}
 static void kh_bind_fire(int i, bool down, const char* why) {
+    if (kh_cap_on) return;
+    if (kh_hot_try(i, down)) return;
     const GPadBind& b = kh_pb[i];
     switch (b.type) {
     case PBT_KEY:  kh_key(b.key, down, why); break;
@@ -235,7 +295,7 @@ static void kh_release_all(void) {
     for (Uint8 b : B) kh_button(b, false);
     kh_button(SDL_CONTROLLER_BUTTON_LEFTSTICK, false); kh_button(SDL_CONTROLLER_BUTTON_RIGHTSTICK, false);
     for (int q = 0; q < 2; q++) if (kh_trig_on[q]) { kh_trig_on[q] = false; kh_bind_fire(q ? PB_R2 : PB_L2, false, "TRIGGER release"); }
-    kh_sel_dn = kh_st_dn = kh_sw_sel = kh_sw_st = false;
+    kh_sel_dn = kh_st_dn = kh_sw_sel = kh_sw_st = false; memset(kh_hot_sw, 0, sizeof kh_hot_sw);
     kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0);
     for (int q = 0; q < 4; q++) kh_dpad_mouse[q] = false;
     GPLOG("RELEASE ALL (패드 제거)");

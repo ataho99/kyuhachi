@@ -58,7 +58,8 @@ struct Env {   /* 호스트(또는 하니스)가 채우는 입출력 */
     std::function<bool(int, std::vector<ValRow> &)> values;   /* t48a (#614 ③): 작품의 적용값 표 */
     std::function<void(int, std::map<std::string, std::string> &)> pad_get;   /* t48e (#646): 작품 user.ini [pad] 의 btn_* */
     std::function<bool(int, const std::string &, const std::string &)> pad_set;   /* (작품, btn_ 키, 값; 빈 값 = 지움) */
-    std::function<int()> padkind;   /* 0 그 밖 1 Xbox 2 PlayStation */
+    std::function<int(int, int &, bool &)> pad_cap;   /* hotkey combo capture: 0 begin - 1 poll (0 wait 1 got 2 ended) - 2 end - 3 reload the input-layer table */
+    std::function<int()> padkind;   /* 0 그 밖 1 Xbox 2 PlayStation 3 Retroid(닌텐도 배치) */
     std::function<bool(int, const std::string &, const std::string &, std::vector<FileItem> &)> exelist;   /* 2b: (작품, 디스크 이름·경로, 이미지 안 폴더, 목록 = 하위 폴더 + 실행 파일) */
     std::function<std::vector<std::string>()> padkeys;   /* 고를 수 있는 키 이름(저장용, 소문자) */
 };
@@ -81,6 +82,6 @@ struct UiGame {
     std::vector<UiEnt> ents;
 };
 
-enum Scr { S_MAIN, S_PICK, S_SCREEN, S_CONF, S_SAVE, S_EXTRA, S_QUIT, S_GAME, S_KEYS, S_HELP, S_START, S_SWAP, S_SWAPI, S_ABOUT, S_ADD, S_SORT, S_ENT, S_ENTMENU, S_TPL, S_EDIT, S_FILE, S_KEYSEQ, S_STEP, S_SWAPED, S_FONT, S_OSK, S_NAME, S_YN, S_HDDASK, S_LANG, S_VALS, S_PAD, S_PADKEY, S_EXEPICK };
+enum Scr { S_MAIN, S_PICK, S_SCREEN, S_CONF, S_SAVE, S_EXTRA, S_QUIT, S_GAME, S_KEYS, S_HELP, S_START, S_SWAP, S_SWAPI, S_ABOUT, S_ADD, S_SORT, S_ENT, S_ENTMENU, S_TPL, S_EDIT, S_FILE, S_KEYSEQ, S_STEP, S_SWAPED, S_FONT, S_OSK, S_NAME, S_YN, S_HDDASK, S_LANG, S_VALS, S_PAD, S_PADKEY, S_EXEPICK, S_HOT };
 
 }   /* namespace ui */

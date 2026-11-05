@@ -762,3 +762,20 @@ pad_t_w=□
 pad_t_n=△
 pad_menu_fixed=SELECT+START = メニューを開く(固定)
 pad_stick_note=(左スティックもこの割り当てに従う)
+tab_hot=ホットキー
+hot_help=↑↓:選択 ○:ボタン取得 △:初期値 L:パッドボタンタブ ×:戻る
+hot_cap_title=押すボタン(組み合わせ)を押してください
+hot_cap_sub=SELECTを押したままボタン = 組み合わせ。取消 = ×(8秒で自動)
+hot_fixed=固定
+hot_overlap=重複
+hot_desc=SELECTを押したままボタン = ホットキー(ゲームのボタンはそのまま)
+fn_next_disk=次のディスクへ交換
+fn_fps=FPS表示 オン/オフ
+pad_nodisk=交換できるディスクがありません
+
+pad_drv=ドライブ :
+pad_swapfail=ディスク交換に失敗しました
+hot_title=操作設定
+hot_tabpad=パッドボタン
+hot_none=割り当てなし
+hot_save=保存: 全体 (settings.ini)

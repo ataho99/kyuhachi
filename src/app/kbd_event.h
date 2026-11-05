@@ -56,8 +56,21 @@ static void gh_kb_cursor(void) {   /* 키보드가 보이는 동안은 커서를
 }
 static void gh_kb_toggle(void) { kbov::set_visible(!kbov::g_vis); gh_kb_cursor(); gh_osd(kbov::g_vis ? phr_("화면 키보드 켜짐 (Alt+K 로 끔)") : phr_("화면 키보드 꺼짐"), 1500); }
 /* 빌드 5a: 패드 버튼에 배정한 큐하치 기능 (kh_input12 가 부른다). 메뉴가 열려 있거나 부팅 전이면 무시, 배속 누름의 놓기는 항상 받는다 */
+static void gh_next_disk(void) {   /* build 5a-2: next disk of the swap list (drive B if it holds a disk, else A) */
+    ui::Ui & U = gApp.ui_; const int gi = gApp.cur_game;
+    if (gi < 0 || gi >= (int)U.games.size()) return;
+    auto fit = gApp.fdfiles.find(U.games[gi].id);
+    if (fit == gApp.fdfiles.end() || fit->second.size() < 2) { gh_osd(phr_("pad_nodisk"), 2500); return; }
+    const int slot = U.games[gi].cur_fd[1].empty() ? 0 : 1; const int n = (int)fit->second.size(); int idx = -1;
+    for (int i = 0; i < n && i < (int)U.games[gi].fds.size(); i++) if (U.games[gi].fds[i] == U.games[gi].cur_fd[slot]) idx = i;
+    const int nx = (idx + 1) % n;
+    const bool ok = gh_attach(slot, fit->second[nx].c_str(), true);
+    if (ok && nx < (int)U.games[gi].fds.size()) U.games[gi].cur_fd[slot] = U.games[gi].fds[nx];
+    gh_log("DISKSWAP(pad) drive=%c idx=%d %s", slot ? 'B' : 'A', nx, ok ? "OK" : "FAIL");
+    gh_osd(ok ? std::string(slot ? "B" : "A") + std::string(" ") + phr_("pad_drv") + std::string(" ") + (nx < (int)U.games[gi].fds.size() ? U.games[gi].fds[nx] : std::string()) : std::string(phr_("pad_swapfail")), 3000);
+}
 static void gh_pad_fn(int fn, bool d) {
-    static const char * const NM[FN_N] = { "-", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot" };
+    static const char * const NM[FN_N] = { "-", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot", "next_disk", "fps" };
     gh_log("PADFN %s %s", fn > 0 && fn < FN_N ? NM[fn] : "?", d ? "down" : "up");
     if (fn == FN_BOOST_HOLD) { if (d && (gApp.menu_open || !gApp.boot_tick)) return; gApp.boost_hold = d; gh_boost_update(); return; }
     if (!d || gApp.menu_open || !gApp.boot_tick) return;
@@ -68,6 +81,8 @@ static void gh_pad_fn(int fn, bool d) {
     case FN_QLOAD: gh_ov_act(3); break;
     case FN_OSK: gh_kb_toggle(); break;
     case FN_SHOT: gApp.scr_req = true; break;
+    case FN_NEXTDISK: gh_next_disk(); break;
+    case FN_FPS: gh_fps_toggle(); break;
     default: break;
     }
 }

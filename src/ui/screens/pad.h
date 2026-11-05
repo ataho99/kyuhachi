@@ -9,7 +9,7 @@ inline void Ui::d_pad(Canvas & c) {
         auto it = wm.find(k); if (it != wm.end() && !it->second.empty()) { fw = true; return it->second; }
         auto g2 = gpad.find(k); if (g2 != gpad.end() && !g2->second.empty()) return g2->second;
         df = true; return pad_default(i); };
-    rbox(c, 16, 24, 288, 296, WH, phr_("패드 버튼"));
+    rbox(c, 16, 24, 288, 296, WH, (std::string("[") + phr_("패드 버튼") + "] " + phr_("tab_hot") + " (R)").c_str());
     std::vector<std::string> r = { phr_("적용 범위"), phr_("결정 방식") };
     for (int i = 0; i < PAD_N; i++) { bool fw, df; val(i, fw, df); r.push_back(std::string(fw ? "* " : "  ") + fit(pad_row_name(i), 220)); }
     std::vector<uint32_t> col(r.size(), 0u);
@@ -42,6 +42,7 @@ inline void Ui::k_pad(UKey k, Act & a) {
     if (scope == 1 && cur >= 0 && cur < MAXG) { sync_t(cur); gp.pre = t[cur]; gp.have = true; }
     auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
     do { {
+            if (k == UK_R) { pad_sel_keep = sel; scr = S_HOT; sel = 0; hot_cap = false; break; }
             mv(sel, PAD_N + 2);
             if (k == UK_LEFT || k == UK_RIGHT) {
                 int d = (k == UK_RIGHT) ? 1 : -1;

@@ -163,7 +163,15 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 7, "addnew:") == 0) { U.add_new.push_back(tk.substr(7)); U.add_new_why.push_back("시험: 자동 판정 근거 줄"); continue; }   /* t44c: 방금 추가한 작품 목록 */
             if (tk == "addscr") { U.scr = ui::S_ADD; U.sel = 0; continue; }
             if (tk.compare(0, 4, "cur:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(4)) { U.cur = (int)i; U.entg = (int)i; gApp.cur_game = (int)i; } continue; }   /* t48e2 시험 전용: 현재 작품 지정 */
-            if (tk == "padscr") { U.scr = ui::S_PAD; U.sel = 0; continue; }   /* t48e 시험 전용: 조작 설정 화면으로 */
+            if (tk == "padscr") { U.scr = ui::S_PAD; U.sel = 0; continue; }
+            if (tk == "hotscr") { U.scr = ui::S_HOT; U.sel = 0; continue; }   /* build 5a-2 test only: hotkey tab */
+            if (tk.compare(0, 5, "kind:") == 0) { gensei_padkind_v = atoi(tk.c_str() + 5); continue; }   /* test only: pad kind (3 = Retroid) */
+            if (tk.compare(0, 7, "hotcap:") == 0) { if (kh_cap_on) { kh_cap_pb = atoi(tk.c_str() + 7) & 31; kh_cap_sel = tk.back() == 's'; } else gh_log("uikeys: HOTCAP not waiting"); continue; }
+            if (tk == "hotstate") {
+                std::string gp, tb, rw; for (auto & kv : U.gpad) if (kv.first.compare(0, 8, "btn_hot_") == 0) gp += kv.first + "=" + kv.second + " ";
+                for (int q = 1; q < FN_N; q++) tb += std::to_string(q) + ":" + std::to_string(kh_hot[q].btn) + (kh_hot[q].sel ? "s" : "") + " ";
+                for (int k2 = 0; k2 < ui::Ui::HOT_N; k2++) { const int q = ui::Ui::hot_fn(k2); rw += std::string(ui::Ui::pad_fn_name(q)) + "=" + U.hot_text(U.hot_val(q)) + (U.hot_overlap(q) ? "(OVERLAP)" : "") + " "; }
+                gh_log("uikeys: HOTSTATE scr=%d sel=%d cap=%d gpad[%s] table[%s] rows[%s]", (int)U.scr, U.sel, U.hot_cap ? 1 : 0, gp.c_str(), tb.c_str(), rw.c_str()); continue; }   /* t48e 시험 전용: 조작 설정 화면으로 */
             if (tk.compare(0, 4, "scr:") == 0) { U.scr = (ui::Scr)atoi(tk.c_str() + 4); U.sel = 0; continue; }   /* t50a 시험 전용 (#877): 화면 번호로 직접 이동 — 안 닿던 화면의 도움말 폭 실측용 */
             if (tk == "lang") { std::vector<std::string> ids, why; for (auto & gg : U.games) ids.push_back(gg.id); U.open_lang(ids, why, ui::S_MAIN); continue; }   /* t50a 시험 전용: 언어 화면 */
             if (tk.compare(0, 7, "padkey:") == 0) { U.open_padkey(atoi(tk.c_str() + 7)); continue; }   /* t50a 시험 전용: 패드 키 고르기 화면 */

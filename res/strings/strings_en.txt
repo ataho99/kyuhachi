@@ -762,3 +762,20 @@ pad_t_w=□
 pad_t_n=△
 pad_menu_fixed=SELECT+START = Open menu (fixed)
 pad_stick_note=(left stick follows this)
+tab_hot=Hotkeys
+hot_help=↑↓:Select, ○:Capture button, △:Default, L:Pad buttons tab, ×:Back
+hot_cap_title=Press the button (combo) now
+hot_cap_sub=Hold SELECT + button = combo. Cancel = × (auto in 8 s)
+hot_fixed=Fixed
+hot_overlap=Overlap
+hot_desc=Hold SELECT + button = hotkey combo (game buttons stay as they are)
+fn_next_disk=Swap to next disk
+fn_fps=FPS display on/off
+pad_nodisk=No disk to swap to
+
+pad_drv=Drive :
+pad_swapfail=Disk swap failed
+hot_title=Controls
+hot_tabpad=Pad buttons
+hot_none=Not assigned
+hot_save=Saved: global (settings.ini)

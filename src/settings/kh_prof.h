@@ -527,7 +527,12 @@ inline Profile auto_profile(std::vector<ImgInfo> imgs, const std::string & id) {
         p.disk[2] = hd[0]->base; if (hd.size() > 1) p.disk[3] = hd[1]->base;
         p.bootletter = 'C';
         p.reason = "HDD 있음 → C 부팅" + dupnote;
-        if (!fd.empty()) p.reason += " (FD " + std::to_string(fd.size()) + "개는 무시/보조)";
+        if (!fd.empty()) {   /* 2c: HDD+FD auto bundle: best FD -> A only, all FDs -> swap list, boot stays C */
+            auto sc = [](ImgInfo * a, ImgInfo * b) { int x = sys_score(*a), y = sys_score(*b); return x != y ? x > y : a->base < b->base; };
+            std::sort(fd.begin(), fd.end(), sc); p.disk[0] = fd[0]->base;
+            if (fd.size() > 1) for (auto * x : fd) p.swap.push_back(x->base);
+            p.reason += " + FD " + std::to_string(fd.size()) + "개 (A 부착" + (fd.size() > 1 ? ", 전부 교체 목록" : "") + ")";
+        }
         return p;
     }
     if (!fd.empty()) {

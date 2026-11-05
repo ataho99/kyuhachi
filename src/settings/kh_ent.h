@@ -51,7 +51,9 @@ inline void autofill(Kv & k, const std::vector<std::string> & files) {
     std::vector<std::string> fd, hd, cd; for (auto & f : files) { int t = img_kind(f); if (t == 1) fd.push_back(f); else if (t == 2) hd.push_back(f); else if (t == 3) cd.push_back(f); }
     std::string tpl = k.count("tpl") ? k["tpl"] : std::string();
     if ((tpl == "T1" || tpl == "T2") && hd.size() == 1 && !k.count("disk_c")) k["disk_c"] = hd[0];
-    if (tpl == "T2" && fd.size() == 1 && !k.count("disk_a")) k["disk_a"] = fd[0];
+    if (tpl == "T2" && fd.size() >= 1 && !k.count("disk_a")) k["disk_a"] = fd[0];
+    if ((tpl == "T2" || tpl == "T3" || tpl == "T6") && fd.size() > 1 && !k.count("swap")) {
+        std::string sw; for (auto & f : fd) { if (!sw.empty()) sw += ","; sw += f; } k["swap"] = sw; }
     if ((tpl == "T3" || tpl == "T4" || tpl == "T6" || tpl == "T7") && fd.size() >= 1 && !k.count("disk_a") && tpl != "T7") k["disk_a"] = fd[0];
     if (tpl == "T4") { if (fd.size() >= 2 && !k.count("disk_b")) k["disk_b"] = fd[1]; std::string sw; for (auto & f : fd) { if (!sw.empty()) sw += ","; sw += f; } if (fd.size() > 1) k["swap"] = sw; }
     if (tpl == "T5" && cd.size() == 1 && !k.count("cd")) k["cd"] = cd[0];

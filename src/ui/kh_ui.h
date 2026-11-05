@@ -2,7 +2,7 @@
  * 호스트가 UiGame 표(제목·디스크명·THMB·슬롯 정보)를 채워 넣고, ui_key() 의 반환 Act 를 처리한다. */
 #pragma once
 #ifndef KH_PRODUCT   /* t49a (#810/#811): 제품명·부제 상수 — 화면/창/문서 표기는 여기서만 */
-#define KH_PRODUCT "Kyuhachi"
+#define KH_PRODUCT "Kyuhachi X"
 #define KH_SUBTITLE "PC-98 BOOTLOADER"
 #include "kh_version.h"   /* t52a (#53): 버전 단일 소스 */
 #define KH_FULLNAME KH_PRODUCT " v" KH_VERSION " - " KH_SUBTITLE

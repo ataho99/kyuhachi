@@ -60,7 +60,36 @@ static void gh_main_tests(const std::string & exedir) {
     if (!gApp.uitest_dir.empty()) { gh_font_init(exedir); gh_uitest(); gh_finish(0); }
 }
 
+#ifdef _WIN32
+/* build 11 (rename): first start in a renamed folder without saves -> copy the sibling "Kyuhachi\saves" tree (never overwrite, never delete) */
+static int kh_copy_tree(const std::wstring & a, const std::wstring & b) {
+    int n = 0; CreateDirectoryW(b.c_str(), NULL); WIN32_FIND_DATAW fd;
+    HANDLE hf = FindFirstFileW((a + L"\\*").c_str(), &fd); if (hf == INVALID_HANDLE_VALUE) return 0;
+    do { const std::wstring nm = fd.cFileName; if (nm == L"." || nm == L"..") continue;
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) n += kh_copy_tree(a + L"\\" + nm, b + L"\\" + nm);
+        else if (CopyFileW((a + L"\\" + nm).c_str(), (b + L"\\" + nm).c_str(), TRUE)) n++;
+    } while (FindNextFileW(hf, &fd));
+    FindClose(hf); return n;
+}
+static void kh_migrate_saves(const std::string & exedir) {
+    wchar_t full[1024]; const DWORD fl = GetModuleFileNameW(NULL, full, 1024); if (fl == 0 || fl >= 1024) { gh_log("MIGRATE skip: module path fail exedir=%s", exedir.c_str()); return; }
+    std::wstring w(full, fl); const size_t q = w.find_last_of(L"\\/"); if (q == std::wstring::npos) return; w.resize(q);
+    while (!w.empty() && (w.back() == L'\\' || w.back() == L'/')) w.pop_back();
+    const size_t p = w.find_last_of(L"\\/"); if (p == std::wstring::npos) { gh_log("MIGRATE skip: no parent exedir=%s", exedir.c_str()); return; }
+    if (w.substr(p + 1) == L"Kyuhachi") return;
+    const std::wstring dst = w + L"\\saves", src = w.substr(0, p) + L"\\Kyuhachi\\saves", mark = dst + L"\\.migrated";
+    if (GetFileAttributesW(mark.c_str()) != INVALID_FILE_ATTRIBUTES) return;
+    if (GetFileAttributesW(src.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        const DWORD ec = GetLastError(); char u8[1200]; u8[0] = 0; WideCharToMultiByte(CP_UTF8, 0, src.c_str(), -1, u8, (int)sizeof(u8) - 1, NULL, NULL);
+        gh_log("MIGRATE skip: no old saves err=%lu src=%s", (unsigned long)ec, u8); return; }
+    const int n = kh_copy_tree(src, dst); gh_log("MIGRATE saves: %d files copied from the old Kyuhachi folder (old kept)", n);
+    { HANDLE hm = CreateFileW(mark.c_str(), GENERIC_WRITE, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL); if (hm != INVALID_HANDLE_VALUE) CloseHandle(hm); }
+}
+#else
+static void kh_migrate_saves(const std::string &) {}
+#endif
 static void gh_main_window(const std::string & exedir) {
+    kh_migrate_saves(exedir);
     if (!gApp.headless) {
         if (gApp.shaderdir.empty()) gApp.shaderdir = gh_exists(exedir + "\\res\\shaders") ? exedir + "\\res\\shaders" : exedir + "\\shaders";
         gh_font_init(exedir);

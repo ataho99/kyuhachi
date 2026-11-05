@@ -61,7 +61,7 @@ inline int wchar_to_cp(unsigned codepage, wchar_t wc, char * mb, int cap, bool *
 /* 메시지 창(UTF-8 본문). icon 0 = 안내, 1 = 오류. cap = 변환 칸 수(넘으면 창을 띄우지 않는다 — 예전 동작) */
 inline void msgbox_utf8(const char * text, int icon, int cap) {
     std::vector<wchar_t> w((size_t)cap); int n = MultiByteToWideChar(CP_UTF8, 0, text, -1, &w[0], cap); if (n <= 0) return;
-    MessageBoxW(NULL, &w[0], L"Kyuhachi - PC-98 BOOTLOADER", MB_OK | (icon ? MB_ICONERROR : MB_ICONINFORMATION) | MB_TOPMOST | MB_SETFOREGROUND);
+    MessageBoxW(NULL, &w[0], L"Kyuhachi X - PC-98 BOOTLOADER", MB_OK | (icon ? MB_ICONERROR : MB_ICONINFORMATION) | MB_TOPMOST | MB_SETFOREGROUND);
 }
 #else
 inline std::string acp_to_u8(const std::string & s) { return s; }

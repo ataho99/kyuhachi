@@ -14,6 +14,21 @@ static void gh_beep(float se_gain) {
 }
 static void gh_beep_close(void) { if (gApp.beep_dev) { SDL_CloseAudioDevice(gApp.beep_dev); gApp.beep_dev = 0; } }
 /* t52d (#129): 시작 로고 — boot_logo_160.txt 1~18줄(160칸 × 4×8 픽셀: # 꽉 참 · + 체크무늬 50% · . 25% 점) + 아래 가운데 KYUHACHI(비트맵 글자). 검정 바탕 흰색 */
+#include "boot_logo_x1.h"
+#include "boot_logo_x2.h"
+static unsigned char kh_logox_raw[64000]; static bool kh_logox_ok = false;
+static bool kh_logox_load(void) {   /* build 11: base64 -> 640x400 2bpp indices (once) */
+    if (kh_logox_ok) return true;
+    static signed char dec[256]; for (int i = 0; i < 256; i++) dec[i] = -1;
+    const char * al = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; for (int i = 0; i < 64; i++) dec[(unsigned char)al[i]] = (signed char)i;
+    size_t o = 0; unsigned acc = 0; int bits = 0;
+    const char * const * parts[2] = { KH_LOGOX_A, KH_LOGOX_B };
+    const size_t cnt[2] = { sizeof KH_LOGOX_A / sizeof KH_LOGOX_A[0], sizeof KH_LOGOX_B / sizeof KH_LOGOX_B[0] };
+    for (int p = 0; p < 2; p++) for (size_t i = 0; i < cnt[p]; i++) for (const char * s = parts[p][i]; *s; s++) {
+        int v = dec[(unsigned char)*s]; if (v < 0) continue; acc = (acc << 6) | (unsigned)v; bits += 6;
+        if (bits >= 8) { bits -= 8; if (o < sizeof kh_logox_raw) kh_logox_raw[o++] = (unsigned char)((acc >> bits) & 255); } }
+    kh_logox_ok = (o == sizeof kh_logox_raw); return kh_logox_ok;
+}
 static const char * const KH_LOGO[18] = {
     "                                                                                                                                                                ",
     "                                                                                                                                                                ",
@@ -35,7 +50,7 @@ static const char * const KH_LOGO[18] = {
     "                 ++######+...                        ...............   +##+..                                   +##..                                           "
 };
 
-static void gh_logo_draw(ov::Canvas & c) {
+static void gh_logo_draw_old(ov::Canvas & c) {
     c.rect(0, 0, 640, 400, ov::K);
     const int y0 = (400 - 197) / 2;
     for (int r = 0; r < 18; r++) {
@@ -52,6 +67,11 @@ static void gh_logo_draw(ov::Canvas & c) {
         if (tb[sy * 64 + i * 8 + sx] == ov::K) continue;
         int dy0 = (sy * 3) / 2, dy1 = ((sy + 1) * 3) / 2; c.rect(tx + i * 24 + sx * 2, ty + dy0, 2, dy1 - dy0, ov::WH); }
 }
+static void gh_logo_draw(ov::Canvas & c) {   /* build 11: embedded 4-color logo; old two-tone drawing only if decoding fails */
+    if (!kh_logox_load()) { gh_logo_draw_old(c); return; }
+    for (int y = 0; y < 400; y++) for (int x = 0; x < 640; x++) {
+        const unsigned char b = kh_logox_raw[y * 160 + (x >> 2)]; c.set(x, y, KH_LOGOX_PAL[(b >> (6 - 2 * (x & 3))) & 3]); }
+}
 static void gh_logo_frame(void) { static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; gh_logo_draw(c); gh_publish(buf, 640, 400); }
 static void gh_boot_frame(int stage, bool cells) {
     static uint32_t buf[640 * 400]; ov::Canvas c = { buf, 640, 400 }; c.rect(0, 0, 640, 400, ov::K);
@@ -63,7 +83,7 @@ static void gh_boot_frame(int stage, bool cells) {
 /* true = 건너뜀. 아무 버튼이나 누르면 건너뛴다. */
 static bool gh_boot_seq(bool full) {
     if (gApp.headless || !gApp.use_gl) return false;
-    static const bool KH_LOGO_ON = false;   /* t601 (#550·#551): 시작 로고 그리기 기본 끔(코드·그림은 남김). t148 개명 때 새 로고와 함께 true 로 */
+    static const bool KH_LOGO_ON = true;    /* t601 (#550·#551): 시작 로고 그리기 기본 끔(코드·그림은 남김). t148 개명 때 새 로고와 함께 true 로 */
     if (full && KH_LOGO_ON) {   /* t52d (#129): 시작 로고 1.4초 — 아무 키·클릭이면 부팅 연출 전체를 건너뜀 */
         unsigned tl = SDL_GetTicks(); bool sk = false;
         for (;;) { if (SDL_GetTicks() - tl >= 1400u) break; SDL_Event e; while (SDL_PollEvent(&e)) { bool ak = false; gh_ev2uk(e, &ak); if (e.type == SDL_QUIT) { GH_QUITSET(); sk = true; } if (ak) sk = true; } if (sk) return true; gh_logo_frame(); SDL_Delay(16); }

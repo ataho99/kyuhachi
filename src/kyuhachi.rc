@@ -13,12 +13,12 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "ProductName", "Kyuhachi"
-      VALUE "FileDescription", "Kyuhachi - PC-98 BOOTLOADER"
+      VALUE "ProductName", "Kyuhachi X"
+      VALUE "FileDescription", "Kyuhachi X - PC-98 BOOTLOADER"
       VALUE "ProductVersion", KH_VERSION ""
       VALUE "FileVersion", KH_VERSION ""
-      VALUE "OriginalFilename", "Kyuhachi.exe"
-      VALUE "InternalName", "Kyuhachi"
+      VALUE "OriginalFilename", "KyuhachiX.exe"
+      VALUE "InternalName", "KyuhachiX"
       VALUE "LegalCopyright", "GNU GPL v2 or later (includes DOSBox-X components)"
     END
   END

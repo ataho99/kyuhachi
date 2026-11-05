@@ -68,7 +68,7 @@ struct UiGame {
     int play_s = 0; bool has_demo = false;   /* 플레이 시간(초) · 오프닝(데모) 디스크 유무 */
     std::vector<std::string> fds; std::string cur_fd[2];   /* 디스크 교체 목록(표시 이름) · 지금 A/B 에 들어 있는 것 */ std::map<std::string, std::string> ov; std::string src;
     std::vector<uint32_t> thmb; int tw_ = 0, th_ = 0;  /* 마지막 저장 THMB (0x00RRGGBB) */
-    SlotInfo slot[8]; int lastslot = -1;
+    SlotInfo slot[5]; int lastslot = -1;   /* 1b: 5칸 = 0 자동 · 1 퀵 · 2~4 일반 1~3 */
     /* r017: 판정·출처·실행 불가 */
     char grade = '-'; std::string judge, metasrc, block, jshort; bool autoreg = false;
     std::string title_db, title_user;   /* t49a (#809): DB·game.ini 제목 / 사용자 지정 표시 제목(user.ini [game] title_user=, 비면 없음) */

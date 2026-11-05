@@ -3,7 +3,7 @@
 inline void Ui::d_game(Canvas & c) {
     /* 배경은 호스트가 게임 화면을 깔아 둔다(draw 가 지우지 않도록 호스트가 호출 순서 관리) */
     int exr = stage_next_label.empty() ? 0 : 22; c.rect(120, 16, 400, 336 + exr, K); rbox(c, 128, 24, 384, 320 + exr, WH, phr_("일시정지"));
-    std::vector<std::string> a = { phr_("이어하기"), phr_("저장  슬롯 ") + std::to_string(slotsel + 1), phr_("불러오기"), phr_("디스크 교체"), phr_("화면 설정"), phr_("소리/패드/배속 설정"), phr_("PC-98 키 보내기"), std::string(phr_("화면 키보드  ")) + (kb_vis ? phr_("켜짐") : phr_("꺼짐")), std::string(phr_("키보드 버튼  ")) + (kb_btn ? phr_("표시") : phr_("숨김")), std::string(phr_("키보드·배속 셰이더  ")) + (kb_sh ? phr_("적용") : phr_("안 함")), phr_("스크린샷"), phr_("메인 메뉴로"), phr_("끝내기") }; if (!stage_next_label.empty()) a.push_back(fit(stage_next_label, 280));
+    std::vector<std::string> a = { phr_("이어하기"), phr_("저장  슬롯 ") + slot_lbl(slotsel), phr_("불러오기"), phr_("디스크 교체"), phr_("화면 설정"), phr_("소리/패드/배속 설정"), phr_("PC-98 키 보내기"), std::string(phr_("화면 키보드  ")) + (kb_vis ? phr_("켜짐") : phr_("꺼짐")), std::string(phr_("키보드 버튼  ")) + (kb_btn ? phr_("표시") : phr_("숨김")), std::string(phr_("키보드·배속 셰이더  ")) + (kb_sh ? phr_("적용") : phr_("안 함")), phr_("스크린샷"), phr_("메인 메뉴로"), phr_("끝내기") }; if (!stage_next_label.empty()) a.push_back(fit(stage_next_label, 280));
     items(c, 160, 44, 330, a, sel, 22);
 
     c.rect(0, 376, 640, 24, K);
@@ -11,7 +11,7 @@ inline void Ui::d_game(Canvas & c) {
 }
 inline void Ui::k_game(UKey k, Act & a) {
     do {
-        if (k == UK_LEFT && sel == 1) slotsel = (slotsel + 7) % 8; if (k == UK_RIGHT && sel == 1) slotsel = (slotsel + 1) % 8;
+        if (k == UK_LEFT && sel == 1) slotsel = (slotsel + 4) % 5; if (k == UK_RIGHT && sel == 1) slotsel = (slotsel + 1) % 5;
         if (k == UK_CANCEL) a.t = A_RESUME;
         else if (k == UK_OK) {
             switch (sel) {

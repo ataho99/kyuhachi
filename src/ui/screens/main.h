@@ -14,7 +14,7 @@ inline void Ui::d_main(Canvas & c, int mode) {
         const UiGame * gm = game(); bool hs = has_save(gm); int bx, by; confirm_box(c, 400, 196, phr_("게임 시작"), bx, by);
         bool blk = gm && !blk_cur().empty();
         text(c, bx + 24, by + 24, gm ? ttl_fit(*gm, 352) : std::string(), blk ? GY : CY, K);
-        std::vector<std::string> a = { hs ? phr_("이어하기   슬롯 ") + std::to_string(gm->lastslot + 1) + "  " + gm->slot[gm->lastslot].stamp : std::string(phr_("이어하기   (저장 없음)")), phr_("처음부터"), phr_("시스템 디스크만 부팅") };
+        std::vector<std::string> a = { hs ? phr_("이어하기   슬롯 ") + slot_lbl(gm->lastslot) + "  " + gm->slot[gm->lastslot].stamp : std::string(phr_("이어하기   (저장 없음)")), phr_("처음부터"), phr_("시스템 디스크만 부팅") };
         std::vector<bool> dm = { !hs || blk, blk, blk }; items(c, bx + 30, by + 60, 340, a, startsel, 26, &dm);
         if (blk) { text(c, bx + 24, by + 154, fit(phr_("실행 불가: ") + blk_cur(), 352), OR, K); }
         helpline(c, phr_("↑↓:선택, ○:결정, ×:취소"));

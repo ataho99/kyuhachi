@@ -8,11 +8,11 @@ static bool gh_png_decode(const std::vector<uint8_t> & png, std::vector<uint32_t
 }
 static void gh_refresh_game_slots(int gi) {
     ui::UiGame & G = gApp.ui_.games[gi]; G.lastslot = -1; G.thmb.clear(); unsigned long long best = 0;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 5; i++) {
         ui::SlotInfo & s = G.slot[i]; s = ui::SlotInfo();
         std::string p = gh_slot_n(gi, i); plat::FileInfo fa;
         if (!plat::stat_file(p, fa)) continue;
-        s.used = true; s.bytes = (int)fa.size_lo;
+        s.used = true; s.bytes = (int)fa.size_lo; { plat::FileInfo fd_; if (plat::stat_file(p + ".dsk", fd_)) s.bytes += (int)fd_.size_lo; }   /* 1b: 디스크 압축본 포함 */
         plat::LocalTime st = plat::local_from_filetime(fa.mtime_ft);
         char b[32]; snprintf(b, sizeof b, "%02d-%02d %02d:%02d", st.month, st.day, st.hour, st.minute); s.stamp = b;
         unsigned long long t = fa.mtime_ft;
@@ -147,7 +147,7 @@ static void gh_ui_env_setup(void) {
         return true; };
     E.font_group = [](const std::string & nm) { for (auto & f : gApp.ui_.fonts) if (f.name == nm) return f.group; return std::string(); };
 }
-static void gh_delete_slot(int gi, int slot) { plat::remove_file(gh_slot_n(gi, slot).c_str()); gh_refresh_game_slots(gi); }   /* S3 retro-test token */
+static void gh_delete_slot(int gi, int slot) { plat::remove_file(gh_slot_n(gi, slot).c_str()); plat::remove_file((gh_slot_n(gi, slot) + ".dsk").c_str()); gh_refresh_game_slots(gi); }   /* S3 retro-test token */
 static void gh_spawn_test(const std::string & id, const std::string & entry, int secs) {
     std::string exe = plat::exe_path(); std::string td = gApp.exedir + "\\logs\\_test";
     std::string cmd = "\"" + exe + "\" \"" + id + "\" --entry \"" + aw::u8_to_acp(entry) + "\" --userini \"" + td + "\\user.ini\" --sec " + std::to_string(secs > 0 ? secs : 20) + " --bkosd 1 --savedir \"" + td + "\\saves\" --windowed --noboot --out \"" + td + "\"";

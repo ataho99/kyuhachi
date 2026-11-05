@@ -42,8 +42,8 @@ static void gh_ov_act(int a) {
     if (a == 5) { gh_osd(phr_("길게 누르세요"), 1500); gh_log("OVBTN load 짧게 누름 -> 동작 안 함 (「길게 누르세요」 표시)"); return; }
     if (!gApp.boot_tick) { gh_log("OVBTN act=%d 무시 (아직 부팅 전)", a); return; }
     if (a == 1) { gApp.menu_req = true; gh_log("OVBTN menu -> g_menu_req"); }
-    else if (a == 2) { std::string p = gh_slot_path(); bool ok = gh_do_save(p, false); gh_log("OVBTN save slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 에 저장했습니다") : phr_("저장에 실패했습니다"), 2000); }
-    else if (a == 3) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("OVBTN load slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); }
+    else if (a == 2) { std::string p = gh_slot_path(); bool ok = gh_do_save(p, false); gh_log("OVBTN save quick %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("퀵 슬롯에 저장했습니다") : phr_("저장에 실패했습니다"), 2000); }
+    else if (a == 3) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("OVBTN load quick %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("퀵 슬롯을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); }
     else if (a == 4) { gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); gh_log("OVBTN boost toggle -> tog=%d on=%d", (int)gApp.boost_tog, (int)gApp.boost_on); }
 }
 static bool gh_ov_boostlit(void) { return gApp.boost_on; }

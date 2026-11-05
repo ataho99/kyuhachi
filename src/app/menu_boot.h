@@ -165,9 +165,9 @@ static void gh_menu_run(void) {
             case ui::A_RESUME: done = true; break;
             case ui::A_NEXTSTAGE: if (!gApp.stage_next.empty()) { gh_log("STAGE F12 menu '%s' -> %s", U.stage_next_label.c_str(), gApp.stage_next.c_str()); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) { gApp.inwin_req = 1; gApp.inwin_target = gApp.stage_next; } else gApp.stage_go = true; GH_QUITSET(); done = true; } break;   /* t49a (#847) · t51a: 창 안 전환 먼저, 안 되면 gh_inwin_cycle 이 g_stage_go 로 폴백 */
             case ui::A_SAVE: { std::string d = gApp.savedir + "\\" + gApp.prof_.id; plat::mkdir(gApp.savedir.c_str()); plat::mkdir(d.c_str());
-                bool ok = gh_do_save(gh_slot_n(gApp.cur_game, a.slot), false); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 에 저장했습니다") : std::string(phr_("저장에 실패했습니다")), 2000); done = true; break; }
+                bool ok = gh_do_save(gh_slot_n(gApp.cur_game, a.slot), false); gh_osd(ok ? phr_("슬롯 ") + ui::Ui::slot_lbl(a.slot) + phr_(" 에 저장했습니다") : std::string(phr_("저장에 실패했습니다")), 2000); done = true; break; }
             case ui::A_LOAD: { if (!U.games[gApp.cur_game].slot[a.slot].used) { gh_osd(phr_("비어 있는 슬롯입니다"), 1500); break; }
-                bool ok = gh_do_load(gh_slot_n(gApp.cur_game, a.slot)); gh_osd(ok ? phr_("슬롯 ") + std::to_string(a.slot + 1) + phr_(" 을 불러왔습니다") : std::string(phr_("불러오기에 실패했습니다")), 2000); done = true; break; }
+                bool ok = gh_do_load(gh_slot_n(gApp.cur_game, a.slot)); gh_osd(ok ? phr_("슬롯 ") + ui::Ui::slot_lbl(a.slot) + phr_(" 을 불러왔습니다") : std::string(phr_("불러오기에 실패했습니다")), 2000); done = true; break; }
             case ui::A_DELSLOT: gh_delete_slot(gApp.cur_game, a.slot); break;
             case ui::A_APPLY: gh_apply_settings(U.eff(), true); kh_western = U.eff().pad == 1; gh_apply_profile_input(gApp.prof_, true); break;   /* t48e (#646): 조작 설정 변경을 바로 입력 층에 */
             case ui::A_SHOT: gApp.scr_req = true; break;   /* t41: 메뉴가 닫힌 뒤 다음 프레임에서 찍는다 */
@@ -182,8 +182,8 @@ static void gh_menu_run(void) {
                 if (fit_ != gApp.fdfiles.end() && a.arg >= 0 && a.arg < (int)fit_->second.size() && a.slot >= 0 && a.slot < 2) { ok = gh_attach(a.slot, fit_->second[a.arg].c_str(), true); if (ok) U.games[gApp.cur_game].cur_fd[a.slot] = U.games[gApp.cur_game].fds[a.arg]; }
                 gh_log("DISKSWAP drive=%c idx=%d %s", a.slot ? 'B' : 'A', a.arg, ok ? "OK" : "FAIL");
                 gh_osd(ok ? std::string(a.slot ? "B" : "A") + phr_(" 드라이브 : ") + U.games[gApp.cur_game].cur_fd[a.slot] : std::string(phr_("디스크 교체에 실패했습니다")), 3000); done = true; break; }
-            case ui::A_MAINMENU: gh_play_commit(); ui::settings_save(U, gApp.cfgpath); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) gApp.inwin_req = 2; else gh_spawn_menu(); GH_QUITSET(); done = true; break;   /* t51a: 창 안 메뉴 */
-            case ui::A_QUIT: gh_play_commit(); if (a.arg) ui::settings_save(U, gApp.cfgpath); GH_QUITSET(); done = true; break;
+            case ui::A_MAINMENU: gh_autosave(); gh_play_commit(); ui::settings_save(U, gApp.cfgpath); if (gApp.inwin_enabled && !gApp.headless && gApp.use_gl) gApp.inwin_req = 2; else gh_spawn_menu(); GH_QUITSET(); done = true; break;   /* t51a: 창 안 메뉴 */
+            case ui::A_QUIT: gh_autosave(); gh_play_commit(); if (a.arg) ui::settings_save(U, gApp.cfgpath); GH_QUITSET(); done = true; break;
             default: break; }
             if (done) break;
         }

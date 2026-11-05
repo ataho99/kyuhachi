@@ -301,8 +301,9 @@ struct Ui {
           line(phr_("설정"), o.empty() ? std::string(phr_("전역과 같음")) : o); }
         line(phr_("판정"), gm->jshort.empty() ? std::string("-") : gm->jshort);
         if (!blk_cur().empty()) line(phr_("사유"), blk_cur(), OR); else line(phr_("플레이"), play_str(gm->play_s));
-        line(phr_("저장"), (gm->lastslot >= 0 && gm->slot[gm->lastslot].used) ? phr_("슬롯 ") + std::to_string(gm->lastslot + 1) + "  " + gm->slot[gm->lastslot].stamp : std::string(phr_("없음")));
+        line(phr_("저장"), (gm->lastslot >= 0 && gm->slot[gm->lastslot].used) ? phr_("슬롯 ") + slot_lbl(gm->lastslot) + "  " + gm->slot[gm->lastslot].stamp : std::string(phr_("없음")));
     }
+    static std::string slot_lbl(int i) { return i == 0 ? std::string(phr_("자동")) : i == 1 ? std::string(phr_("퀵")) : std::string(phr_("일반 ")) + std::to_string(i - 1); }   /* 1b */
     bool has_save(const UiGame * g) const { return g && g->lastslot >= 0 && g->slot[g->lastslot].used; }
     /* mode 0 = 메인, 1 = 게임 시작 창, 2 = 끝내기 확인(타이틀에서) */
     void d_main(Canvas & c, int mode);

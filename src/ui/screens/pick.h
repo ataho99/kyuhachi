@@ -50,7 +50,7 @@ inline void Ui::d_pick(Canvas & c) {
       row(phr_("실행"), fit(ev, IW - LB), col, 1); }
     row(phr_("판정"), g.jshort.empty() ? std::string("-") : g.jshort, WH, 1);
     if (blk) row(phr_("사유"), bk, OR, 1);
-    else { std::string st = phr_("없음"); if (g.lastslot >= 0 && g.slot[g.lastslot].used) st = phr_("슬롯 ") + std::to_string(g.lastslot + 1) + "  " + g.slot[g.lastslot].stamp; row(phr_("저장"), st, WH, 1); }
+    else { std::string st = phr_("없음"); if (g.lastslot >= 0 && g.slot[g.lastslot].used) st = phr_("슬롯 ") + slot_lbl(g.lastslot) + "  " + g.slot[g.lastslot].stamp; row(phr_("저장"), st, WH, 1); }
     c.unclip();
     std::vector<std::string> d;
     if (blk) d = { fit_title(gb.title, 560 - tw(phr_("   [실행 불가]"))) + phr_("   [실행 불가]"), fit(phr_("사유: ") + bk, 560) };

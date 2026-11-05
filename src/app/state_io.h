@@ -44,6 +44,74 @@ static bool gh_png_mem(const uint32_t * fb, int w, int h, std::vector<uint8_t> &
     png_destroy_write_struct(&pp, &pi);
     return true;
 }
+#include <zlib.h>
+/* ---- 1b: 세이브 + 디스크 작업 사본 압축본. 상태 파일(slotNN.g98s) 옆 동반 파일 <상태>.dsk 에 작업 사본(쓰기 가능한 FD/HDD)의 zlib 압축본을 담는다.
+   불러올 때 상태를 먼저 적용한 뒤 같은 핸들로 사본에 되써서 「디스크 내용 = 저장 시점」으로 맞춘다. 동반 파일이 없거나 짝이 안 맞으면 옛 방식(디스크는 지금 그대로). */
+static bool gh_z_pack(const std::string & path, std::vector<uint8_t> & out, uint64_t & rawsz) {
+    FILE * f = fopen(path.c_str(), "rb"); if (!f) return false;
+    z_stream z; memset(&z, 0, sizeof z); if (deflateInit(&z, 1) != Z_OK) { fclose(f); return false; }
+    std::vector<uint8_t> in(1 << 20), ob(1 << 20); rawsz = 0; bool ok = true; int fl = Z_NO_FLUSH;
+    do {
+        size_t n = fread(in.data(), 1, in.size(), f); rawsz += n; fl = n < in.size() ? Z_FINISH : Z_NO_FLUSH;
+        z.next_in = in.data(); z.avail_in = (uInt)n;
+        do { z.next_out = ob.data(); z.avail_out = (uInt)ob.size(); int r = deflate(&z, fl); if (r == Z_STREAM_ERROR) { ok = false; break; } out.insert(out.end(), ob.data(), ob.data() + (ob.size() - z.avail_out)); } while (z.avail_out == 0);
+    } while (ok && fl != Z_FINISH);
+    deflateEnd(&z); fclose(f); return ok;
+}
+static bool gh_z_unpack(const uint8_t * p, size_t n, uint64_t rawsz, FILE * f) {
+    z_stream z; memset(&z, 0, sizeof z); if (inflateInit(&z) != Z_OK) return false;
+    std::vector<uint8_t> ob(1 << 20); z.next_in = (Bytef *)p; z.avail_in = (uInt)n; uint64_t tot = 0; bool ok = fseeko64(f, 0, SEEK_SET) == 0; int r = Z_OK;
+    while (ok && r != Z_STREAM_END) {
+        z.next_out = ob.data(); z.avail_out = (uInt)ob.size(); r = inflate(&z, Z_NO_FLUSH);
+        if (r != Z_OK && r != Z_STREAM_END) { ok = false; break; }
+        size_t g = ob.size() - z.avail_out; if (g && fwrite(ob.data(), 1, g, f) != g) { ok = false; break; } tot += g;
+        if (r == Z_OK && g == 0 && z.avail_in == 0) { ok = false; break; }
+    }
+    inflateEnd(&z); fflush(f); return ok && tot == rawsz;
+}
+static uint32_t gh_state_tailcrc(const std::string & sp) {   /* 상태 파일 맨 끝 4바이트 = 전체 CRC32 (동반 파일과의 짝 확인용) */
+    FILE * f = fopen(sp.c_str(), "rb"); if (!f) return 0; uint8_t b[4] = { 0, 0, 0, 0 }; if (fseeko64(f, -4, SEEK_END) == 0) { if (fread(b, 1, 4, f) != 4) b[0] = b[1] = b[2] = b[3] = 0; } fclose(f);
+    return (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
+}
+static void gh_dp32(std::vector<uint8_t> & o, uint32_t v) { for (int i = 0; i < 4; i++) o.push_back((uint8_t)(v >> (i * 8))); }
+static void gh_dp64(std::vector<uint8_t> & o, uint64_t v) { for (int i = 0; i < 8; i++) o.push_back((uint8_t)(v >> (i * 8))); }
+static uint32_t gh_dg32(const uint8_t * p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
+static uint64_t gh_dg64(const uint8_t * p) { return (uint64_t)gh_dg32(p) | ((uint64_t)gh_dg32(p + 4) << 32); }
+static size_t gh_dsk_save(const std::string & sp) {   /* 돌려주는 값 = 동반 파일 바이트(0 = 없음/실패) */
+    std::string dp = sp + ".dsk"; std::vector<uint8_t> o; const char mg[4] = { 'G', '9', '8', 'D' }; o.insert(o.end(), mg, mg + 4); gh_dp32(o, 1); gh_dp32(o, gh_state_tailcrc(sp)); gh_dp32(o, 0);
+    uint32_t cnt = 0;
+    for (int d = 0; d < 4; d++) {
+        if (gApp.disk_wp[d].empty() || !gApp.disk_fh[d]) continue;
+        fflush(gApp.disk_fh[d]); std::vector<uint8_t> z; uint64_t raw = 0;
+        if (!gh_z_pack(gApp.disk_wp[d], z, raw)) { gh_log("DSK pack FAIL drive %d %s", d, gApp.disk_wp[d].c_str()); plat::remove_file(dp.c_str()); return 0; }
+        gh_dp32(o, (uint32_t)d); const std::string & nm = gApp.disk_nm[d]; o.push_back((uint8_t)(nm.size() & 255)); o.push_back((uint8_t)(nm.size() >> 8)); o.insert(o.end(), nm.begin(), nm.end());
+        gh_dp64(o, raw); gh_dp64(o, (uint64_t)z.size()); o.insert(o.end(), z.begin(), z.end()); cnt++;
+        gh_log("DSK drive %d %s raw=%llu zip=%llu", d, nm.c_str(), (unsigned long long)raw, (unsigned long long)z.size());
+    }
+    if (!cnt) { plat::remove_file(dp.c_str()); return 0; }
+    for (int i = 0; i < 4; i++) o[12 + i] = (uint8_t)(cnt >> (i * 8));
+    gh_dp32(o, gh_crc(o.data(), o.size()));
+    std::string tmp = dp + ".tmp"; FILE * f = fopen(tmp.c_str(), "wb"); if (!f) return 0;
+    size_t w = fwrite(o.data(), 1, o.size(), f); fclose(f); if (w != o.size()) { plat::remove_file(tmp.c_str()); return 0; }
+    plat::remove_file(dp.c_str()); if (!plat::move_file(tmp, dp)) return 0;
+    return o.size();
+}
+static bool gh_dsk_load(const std::string & sp) {   /* 상태 적용이 성공한 뒤 호출. 동반 파일이 없으면 true(옛 저장) */
+    std::string dp = sp + ".dsk"; FILE * f = fopen(dp.c_str(), "rb"); if (!f) return true;
+    std::vector<uint8_t> b; { std::vector<uint8_t> t(1 << 20); for (;;) { size_t n = fread(t.data(), 1, t.size(), f); if (!n) break; b.insert(b.end(), t.begin(), t.begin() + n); } } fclose(f);
+    if (b.size() < 20 || memcmp(b.data(), "G98D", 4) != 0 || gh_dg32(&b[b.size() - 4]) != gh_crc(b.data(), b.size() - 4)) { gh_log("DSK companion file corrupt - disks left as is (%s)", dp.c_str()); return false; }
+    if (gh_dg32(&b[8]) != gh_state_tailcrc(sp)) { gh_log("DSK companion does not match the state file - disks left as is (%s)", dp.c_str()); return false; }
+    uint32_t cnt = gh_dg32(&b[12]); size_t pos = 16, end = b.size() - 4; bool all = true;
+    for (uint32_t k = 0; k < cnt; k++) {
+        if (pos + 6 > end) { all = false; break; } uint32_t d = gh_dg32(&b[pos]); pos += 4; size_t nl = (size_t)b[pos] | ((size_t)b[pos + 1] << 8); pos += 2;
+        if (pos + nl + 16 > end) { all = false; break; } std::string nm((const char *)&b[pos], nl); pos += nl; uint64_t raw = gh_dg64(&b[pos]), zs = gh_dg64(&b[pos + 8]); pos += 16;
+        if (pos + zs > end) { all = false; break; }
+        if (d < 4 && gApp.disk_fh[d] && !gApp.disk_wp[d].empty() && gApp.disk_nm[d] == nm) { bool ok = gh_z_unpack(&b[pos], (size_t)zs, raw, gApp.disk_fh[d]); gh_log("DSK restore drive %u %s %s", d, nm.c_str(), ok ? "OK" : "FAIL"); if (!ok) all = false; }
+        else gh_log("DSK skip drive %u %s (no matching disk in that drive)", d, nm.c_str());
+        pos += (size_t)zs;
+    }
+    return all;
+}
 static bool gh_do_save(const std::string & path, bool test_extract) {
     gh_state_diag("before-save");
     std::vector<uint8_t> th;
@@ -51,6 +119,7 @@ static bool gh_do_save(const std::string & path, bool test_extract) {
     std::string err;
     bool ok = PC98_SaveState_ToFile(path.c_str(), gApp.disks, err, &th);
     gh_log("SAVE %s -> %s %s (THMB %u bytes)", path.c_str(), ok ? "OK" : "FAIL", err.c_str(), (unsigned)th.size());
+    if (ok) { size_t zb = gh_dsk_save(path); plat::FileInfo fi; unsigned long sb = plat::stat_file(path, fi) ? (unsigned long)fi.size_lo : 0ul; gh_log("SAVE-SIZE state=%lu dsk=%zu total=%lu bytes", sb, zb, sb + (unsigned long)zb); }
     gh_state_diag("after-save");
     if (ok) {
         std::vector<uint8_t> back; std::string e2;
@@ -68,6 +137,7 @@ static bool gh_do_load(const std::string & path) {
     std::string err;
     bool ok = PC98_SaveState_FromFile(path.c_str(), gApp.disks, err);
     gh_log("LOAD %s <- %s %s", path.c_str(), ok ? "OK" : "FAIL", err.c_str());
+    if (ok) { bool dk = gh_dsk_load(path); gh_log("LOAD-DSK %s", dk ? "OK" : "SKIP/FAIL"); }
     gh_state_diag("after-load");
     gApp.next_key = (unsigned)gApp.prof_.keys.size();   /* 자동 키 중단: 저장 시점 이후는 상태 그대로 */
     gApp.pic0 = PIC_Ticks;
@@ -77,11 +147,19 @@ static bool gh_do_load(const std::string & path) {
 static std::string gh_slot_path(void) {
     plat::mkdir((gApp.savedir).c_str());
     std::string d = gApp.savedir + "\\" + gApp.prof_.id; plat::mkdir(d.c_str());
-    return d + "\\slot01.g98s";
+    return d + "\\quick.g98s";   /* 1b: F5/F9·화면 버튼 = 퀵 슬롯 */
 }
 /* ===================================================================== r012: 설정 적용·배속·키보드·화면 게시·게임 중 메뉴·부팅 연출 */
-static std::string gh_slot_n(int gi, int slot /*0..7*/) {
-    char b[700]; snprintf(b, sizeof b, "%s\\%s\\slot%02d.g98s", gApp.savedir.c_str(), gApp.ui_.games[gi].id.c_str(), slot + 1); return b;
+static std::string gh_slot_n(int gi, int slot /*1b: 0 자동 · 1 퀵 · 2~4 일반 1~3 (옛 slot01~03 = 일반 1~3 그대로, 옛 04~08 은 숨김)*/) {
+    char b[700]; const char * id = gApp.ui_.games[gi].id.c_str();
+    if (slot == 0) snprintf(b, sizeof b, "%s\\%s\\auto.g98s", gApp.savedir.c_str(), id); else if (slot == 1) snprintf(b, sizeof b, "%s\\%s\\quick.g98s", gApp.savedir.c_str(), id);
+    else snprintf(b, sizeof b, "%s\\%s\\slot%02d.g98s", gApp.savedir.c_str(), id, slot - 1);
+    return b;
+}
+static void gh_autosave(void) {   /* 1b: 「메인 메뉴로」·「끝내기」 때 자동 슬롯에 저장 */
+    if (!gApp.boot_tick || gApp.cur_game < 0 || gApp.cur_game >= (int)gApp.ui_.games.size()) return;
+    plat::mkdir(gApp.savedir.c_str()); plat::mkdir((gApp.savedir + "\\" + gApp.ui_.games[gApp.cur_game].id).c_str());
+    bool ok = gh_do_save(gh_slot_n(gApp.cur_game, 0), false); gh_log("AUTOSAVE %s", ok ? "OK" : "FAIL");
 }
 static void gh_publish(const uint32_t * px, int w, int h) {
 #if defined(__ANDROID__)

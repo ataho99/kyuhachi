@@ -21,8 +21,8 @@ void GFX_Events(void) {
                 else if (k == SDLK_s) { gApp.shader = (gApp.shader + 1) % SH_N; gh_log("SCREEN shader=%d", (int)gApp.shader); static const char * const sn[SH_N] = { "nearest", "sharp", "crt" }; gh_osd(std::string(phr_("셰이더 ")) + sn[gApp.shader % SH_N]); }
                 else if (k == SDLK_UP) { float c = gApp.curve + 0.01f; gApp.curve = c > 0.10f ? 0.10f : c; gh_log("SCREEN curve=%.2f", (double)gApp.curve); { char b[32]; snprintf(b, sizeof b, "곡면 %.2f", (double)gApp.curve); gh_osd(b); } }
                 else if (k == SDLK_DOWN) { float c = gApp.curve - 0.01f; gApp.curve = c < 0.0f ? 0.0f : c; gh_log("SCREEN curve=%.2f", (double)gApp.curve); { char b[32]; snprintf(b, sizeof b, "곡면 %.2f", (double)gApp.curve); gh_osd(b); } }
-                else if (k == SDLK_F5) { if (gApp.boot_tick) { std::string p = gh_slot_path(); bool ok = gh_do_save(p, false); gh_log("HOTKEY save slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 에 저장했습니다") : phr_("저장에 실패했습니다"), 2000); } }
-                else if (k == SDLK_F9) { if (gApp.boot_tick) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("HOTKEY load slot01 %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 1 을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); } }
+                else if (k == SDLK_F5) { if (gApp.boot_tick) { std::string p = gh_slot_path(); bool ok = gh_do_save(p, false); gh_log("HOTKEY save quick %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("퀵 슬롯에 저장했습니다") : phr_("저장에 실패했습니다"), 2000); } }
+                else if (k == SDLK_F9) { if (gApp.boot_tick) { std::string p = gh_slot_path(); bool ok = gh_do_load(p); gh_log("HOTKEY load quick %s", ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("퀵 슬롯을 불러왔습니다") : phr_("불러오기에 실패했습니다"), 2000); } }
                 else if (k == SDLK_k) { if (!gApp.headless && gApp.use_gl && gApp.boot_tick) gh_kb_toggle(); }   /* t46x: Alt+K = 화면 키보드 켜고 끄기 */
                 else if (k == SDLK_p) { if (gApp.boot_tick) gh_bk_pause_set(!gApp.bk_paused, "Alt+P"); }   /* t47a: Alt+P = 자동 입력 일시정지/재개 */
                 else if (k == SDLK_LEFTBRACKET || k == SDLK_RIGHTBRACKET) gh_wm_hotkey(e);
@@ -94,7 +94,7 @@ void GFX_Events(void) {
             }
             if (gApp.resume_slot && since >= 2000) {   /* r012: UI 에서 「이어하기」로 시작 */
                 int sl = gApp.resume_slot - 1; gApp.resume_slot = 0;
-                bool ok = gh_do_load(gh_slot_n(gApp.cur_game, sl)); gh_log("RESUME slot %d %s", sl + 1, ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 ") + std::to_string(sl + 1) + phr_(" 에서 이어합니다") : std::string(phr_("이어하기에 실패했습니다")), 2000);
+                bool ok = gh_do_load(gh_slot_n(gApp.cur_game, sl)); gh_log("RESUME slot %d %s", sl + 1, ok ? "OK" : "FAIL"); gh_osd(ok ? phr_("슬롯 ") + ui::Ui::slot_lbl(sl) + phr_(" 에서 이어합니다") : std::string(phr_("이어하기에 실패했습니다")), 2000);
             }
             if (gApp.bt_x) {   /* 시험: 배속 비율 실측 (--boosttest 시작초,길이초,배율) */
                 static unsigned w0 = 0, p0 = 0; static int ph = 0; static unsigned lastlog = 0;

@@ -124,6 +124,8 @@ struct AppState {
     bool load_done = false;
     unsigned int ev_tick = 0;   /* SDL ticks at save/load event */
     std::vector<Pc98StateDisk> disks;
+    FILE * disk_fh[4] = { NULL, NULL, NULL, NULL };   /* 1b: 드라이브별 열린 작업 사본 핸들 */
+    std::string disk_wp[4], disk_nm[4];               /* 1b: 작업 사본 경로 · 이미지 이름 (세이브가 사본 압축본을 함께 담는다) */
     unsigned int boot_tick = 0;   /* SDL ticks at guest boot, 0 = not yet */
     bool quit = false;
     bool winsize_user = false;

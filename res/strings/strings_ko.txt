@@ -746,3 +746,18 @@ preset_user=내 프리셋
 desc_preset=←→ 로 고르면 바로 화면에 적용됩니다 (비율·필터·주사선·마스크·RGB 번짐·빛 번짐·곡면 한 묶음). 「+ 지금 값을 저장」에서 {○} = 지금 값을 내 프리셋으로 저장(12개까지), 내 프리셋에서 {○} = 지우기.
 preset_q1=이 프리셋을 지웁니다.
 preset_q2=지금 화면 값은 그대로입니다. 계속할까요?
+fn_menu=메뉴 열기
+fn_boost_hold=배속 (누르는 동안)
+fn_boost_toggle=배속 켜고 끄기
+fn_quick_save=퀵 저장
+fn_quick_load=퀵 불러오기
+fn_osk=화면 키보드
+fn_screenshot=스크린샷
+pad_n_y=Y 버튼
+pad_n_north=북쪽 버튼
+pad_t_e=○
+pad_t_s=×
+pad_t_w=□
+pad_t_n=△
+pad_menu_fixed=SELECT+START = 메뉴 열기 (고정)
+pad_stick_note=(왼쪽 스틱도 이 배정을 따름)

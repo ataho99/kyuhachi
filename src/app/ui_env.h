@@ -27,13 +27,16 @@ static KBD_KEYS gh_keyname_pad(const std::string & n) {
     KBD_KEYS k = gh_keyname(n); if (k != KBD_NONE) return k;
     return pn::lookup(n, gh_kb_ibm());
 }
-static const char * const GH_PADBTN[7] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back" };
-static const int GH_PADIDX[7] = { PB_EAST, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK };
+static const char * const GH_PADBTN[PB_N] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick" };   /* 빌드 5a: SDL 표준 버튼 이름 */
+static const char * const GH_PADFN[FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot" };   /* 값 "fn:<이름>" */
+static const int GH_PADIDX[PB_N] = { PB_EAST, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3 };
 static bool gh_pad_parse(const std::string & v, GPadBind & b) {   /* none / mouse_left / mouse_right / 키 이름 */
     std::string s = v; for (auto & c : s) c = (char)tolower((unsigned char)c);
+    b.fn = 0;
     if (s == "none") { b.type = PBT_NONE; b.key = KBD_NONE; return true; }
     if (s == "mouse_left") { b.type = PBT_ML; b.key = KBD_NONE; return true; }
     if (s == "mouse_right") { b.type = PBT_MR; b.key = KBD_NONE; return true; }
+    if (s.compare(0, 3, "fn:") == 0) { for (int q = 1; q < FN_N; q++) if (s.compare(3, std::string::npos, GH_PADFN[q]) == 0) { b.type = PBT_FN; b.key = KBD_NONE; b.fn = q; return true; } return false; }
     KBD_KEYS k = gh_keyname_pad(s); if (k == KBD_NONE) return false; b.type = PBT_KEY; b.key = k; return true;
 }
 /* 프로필의 패드 표·never_map 을 입력 층에 적용 (#237: never_map 은 패드·단축키에 절대 배정 금지)
@@ -52,7 +55,7 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
         std::map<std::string, std::string> m; prof::get_pad_keys(gApp.ui_.games[gApp.cur_game].dir, m); for (auto & kv : m) pad[kv.first] = kv.second;
     }
     /* 1) 전역 btn_* */
-    for (int i = 0; i < 7; i++) { auto it = gApp.ui_.gpad.find(GH_PADBTN[i]); if (it != gApp.ui_.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
+    for (int i = 0; i < PB_N; i++) { auto it = gApp.ui_.gpad.find(GH_PADBTN[i]); if (it != gApp.ui_.gpad.end() && !it->second.empty()) { GPadBind b; if (gh_pad_parse(it->second, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 전역 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], it->second.c_str()); } }
     /* 2) 프로필 옛 이름 o/x/sq — 옛 gh_keyname 으로 지금과 똑같이 */
     auto get = [&](const char * k) -> std::string { auto it = pad.find(k); return it == pad.end() ? std::string() : it->second; };
     std::string o = get("o"), x = get("x"), sq = get("sq");
@@ -66,12 +69,13 @@ static void gh_apply_profile_input(const GProfile & p, bool refresh = false) {
     if (!x.empty() && x != "mouse_right") { KBD_KEYS k = gh_keyname(x); if (k != KBD_NONE) { kh_pb[PB_SOUTH].type = PBT_KEY; kh_pb[PB_SOUTH].key = k; } }
     if (!sq.empty()) { KBD_KEYS k = gh_keyname(sq); if (k != KBD_NONE) { kh_pb[PB_WEST].type = PBT_KEY; kh_pb[PB_WEST].key = k; } }
     /* 3) 프로필 btn_* (옛 이름 위에 얹는다) */
-    for (int i = 0; i < 7; i++) { std::string v = get(GH_PADBTN[i]); if (v.empty()) continue; GPadBind b; if (gh_pad_parse(v, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 프로필 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], v.c_str()); }
+    for (int i = 0; i < PB_N; i++) { std::string v = get(GH_PADBTN[i]); if (v.empty()) continue; GPadBind b; if (gh_pad_parse(v, b)) kh_pb[GH_PADIDX[i]] = b; else gh_log("pad: 프로필 %s=%s 알 수 없는 이름, 무시", GH_PADBTN[i], v.c_str()); }
     /* never_map 에 걸린 키는 옛 규칙대로 되돌린다: 동 → Space(없으면 Esc) · 남 → Esc · 서 → 없음. 그 밖의 버튼은 없음 */
     for (int i = 0; i < PB_N; i++) if (kh_pb[i].type == PBT_KEY && (int)kh_pb[i].key < 256 && kh_never[(int)kh_pb[i].key]) {
         if (i == PB_EAST) kh_pb[i].key = KBD_space; else if (i == PB_SOUTH) kh_pb[i].key = KBD_esc; else { kh_pb[i].type = PBT_NONE; kh_pb[i].key = KBD_NONE; } }
-    auto nm = [](const GPadBind & b) -> std::string { if (b.type == PBT_NONE) return "none"; if (b.type == PBT_ML) return "mouse_left"; if (b.type == PBT_MR) return "mouse_right"; return std::to_string((int)b.key); };
+    auto nm = [](const GPadBind & b) -> std::string { if (b.type == PBT_NONE) return "none"; if (b.type == PBT_ML) return "mouse_left"; if (b.type == PBT_MR) return "mouse_right"; if (b.type == PBT_FN) return std::string("fn:") + GH_PADFN[b.fn > 0 && b.fn < FN_N ? b.fn : 0]; return std::to_string((int)b.key); };
     gh_log("pad: western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str(), refresh ? " (갱신)" : "");
+    GPLOG("BINDS2 north=%s dpup=%s dpdown=%s dpleft=%s dpright=%s l2=%s r2=%s l3=%s r3=%s", nm(kh_pb[PB_NORTH]).c_str(), nm(kh_pb[PB_DUP]).c_str(), nm(kh_pb[PB_DDOWN]).c_str(), nm(kh_pb[PB_DLEFT]).c_str(), nm(kh_pb[PB_DRIGHT]).c_str(), nm(kh_pb[PB_L2]).c_str(), nm(kh_pb[PB_R2]).c_str(), nm(kh_pb[PB_L3]).c_str(), nm(kh_pb[PB_R3]).c_str());
     GPLOG("BINDS western=%d east=%s south=%s west=%s start=%s l1=%s r1=%s select=%s", kh_western ? 1 : 0, nm(kh_pb[PB_EAST]).c_str(), nm(kh_pb[PB_SOUTH]).c_str(), nm(kh_pb[PB_WEST]).c_str(), nm(kh_pb[PB_START]).c_str(), nm(kh_pb[PB_L1]).c_str(), nm(kh_pb[PB_R1]).c_str(), nm(kh_pb[PB_BACK]).c_str());
 }
 

@@ -172,7 +172,7 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "padstate") {
                 std::string gp; for (auto & kv : U.gpad) gp += kv.first + "=" + kv.second + " "; std::string wp; if (U.cur >= 0 && U.cur < (int)U.games.size()) { std::map<std::string, std::string> m; prof::get_pad_keys(U.games[U.cur].dir, m); for (auto & kv : m) wp += kv.first + "=" + kv.second + " "; }
                 gh_log("uikeys: PADSTATE scr=%d sel=%d scope=%d g.pad=%d eff.pad=%d global[%s] work[%s]", (int)U.scr, U.sel, U.scope, U.g.pad, U.eff().pad, gp.c_str(), wp.c_str());
-                if (U.cur >= 0 && U.cur < (int)U.games.size()) { for (int pi = 0; pi < 7; pi++) { bool fw = false, df = false; std::string v = U.pad_val(pi, &fw, &df); gh_log("uikeys: PADROW %d %s -> %s%s", pi, U.pad_row_name(pi).c_str(), v.c_str(), fw ? " (작품)" : df ? " (기본)" : " (전역)"); } }
+                if (U.cur >= 0 && U.cur < (int)U.games.size()) { for (int pi = 0; pi < ui::Ui::PAD_N; pi++) { bool fw = false, df = false; std::string v = U.pad_val(pi, &fw, &df); gh_log("uikeys: PADROW %d %s -> %s%s", pi, U.pad_row_name(pi).c_str(), v.c_str(), fw ? " (작품)" : df ? " (기본)" : " (전역)"); } }
                 continue; }
             if (tk.compare(0, 8, "delslot:") == 0) {   /* S3 retro-test token */
                 std::string r = tk.substr(8); size_t cp = r.find(':'); std::string gid = r.substr(0, cp); int sl = cp == std::string::npos ? 0 : atoi(r.c_str() + cp + 1); int gi = -1;

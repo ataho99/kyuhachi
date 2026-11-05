@@ -747,3 +747,18 @@ preset_user=マイプリセット
 desc_preset=←→ で選ぶとすぐ画面に反映されます(比率・フィルター・走査線・マスク・RGBにじみ・光のにじみ・湾曲を一括)。「+ 今の値を保存」で {○} = 今の値をマイプリセットに保存(12件まで)、マイプリセットで {○} = 削除。
 preset_q1=このプリセットを削除します。
 preset_q2=今の画面の値はそのままです。続けますか?
+fn_menu=メニューを開く
+fn_boost_hold=倍速(押している間)
+fn_boost_toggle=倍速オン/オフ
+fn_quick_save=クイックセーブ
+fn_quick_load=クイックロード
+fn_osk=画面キーボード
+fn_screenshot=スクリーンショット
+pad_n_y=Yボタン
+pad_n_north=北ボタン
+pad_t_e=○
+pad_t_s=×
+pad_t_w=□
+pad_t_n=△
+pad_menu_fixed=SELECT+START = メニューを開く(固定)
+pad_stick_note=(左スティックもこの割り当てに従う)

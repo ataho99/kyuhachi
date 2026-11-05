@@ -201,19 +201,34 @@ struct Ui {
        전역 = settings.ini [global], 이 작품 = user.ini [pad] (작품이 이긴다) */
     std::map<std::string, std::string> gpad;   /* 전역 btn_* */
     std::vector<std::string> pk_opts; int pk_row = 0, pad_sel_keep = 0;
-    static const char * pad_key(int i) { static const char * const K[7] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back" }; return K[i < 0 ? 0 : i > 6 ? 6 : i]; }
+    enum { PAD_N = 16 };   /* 빌드 5a: 배정 가능 버튼 = 16 (옛 7 + 북 · 십자 4 · L2 R2 · L3 R3) */
+    static const char * pad_key(int i) { static const char * const K[PAD_N] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick" }; return K[i < 0 ? 0 : i >= PAD_N ? PAD_N - 1 : i]; }
+    static const char * pad_fn_name(int q) { static const char * const N[8] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot" }; return N[q < 0 || q > 7 ? 0 : q]; }   /* kh_input12.h FN_* 순서와 같게 */
+    static const char * pad_fn_key(int q) { static const char * const N[8] = { "", "fn_menu", "fn_boost_hold", "fn_boost_toggle", "fn_quick_save", "fn_quick_load", "fn_osk", "fn_screenshot" }; return N[q < 0 || q > 7 ? 0 : q]; }
     std::string pad_row_name(int i) const {
         int kd = env.padkind ? env.padkind() : 0;
-        static const char * const X[7] = { phr_("B 버튼"), phr_("A 버튼"), phr_("X 버튼"), "START", "LB", "RB", "BACK" };
-        static const char * const P[7] = { "○", "×", "□", "START", "L1", "R1", "SELECT" };
-        static const char * const O[7] = { phr_("동쪽 버튼"), phr_("남쪽 버튼"), phr_("서쪽 버튼"), "START", phr_("왼쪽 어깨"), phr_("오른쪽 어깨"), "SELECT" };
+        static const char * const X[PAD_N] = { phr_("B 버튼"), phr_("A 버튼"), phr_("X 버튼"), "START", "LB", "RB", "BACK", phr_("pad_n_y"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "LT", "RT", "L-STICK", "R-STICK" };
+        static const char * const P[PAD_N] = { "○", "×", "□", "START", "L1", "R1", "SELECT", phr_("pad_t_n"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
+        static const char * const O[PAD_N] = { phr_("동쪽 버튼"), phr_("남쪽 버튼"), phr_("서쪽 버튼"), "START", phr_("왼쪽 어깨"), phr_("오른쪽 어깨"), "SELECT", phr_("pad_n_north"), "D-PAD UP", "D-PAD DOWN", "D-PAD LEFT", "D-PAD RIGHT", "L2", "R2", "L3", "R3" };
+        if (i < 0 || i >= PAD_N) i = 0;
         return kd == 1 ? X[i] : kd == 2 ? P[i] : O[i];
+    }
+    std::string pad_tag(int i) const {   /* 빌드 5a: 배치 그림 칸의 짧은 이름 */
+        int kd = env.padkind ? env.padkind() : 0;
+        static const char * const T[PAD_N] = { "", "", "", "ST", "L1", "R1", "SE", "", "UP", "DN", "LF", "RG", "L2", "R2", "L3", "R3" };
+        if (i == 0 || i == 1 || i == 2 || i == 7) {
+            const int f = i == 7 ? 3 : i;
+            if (kd == 1) { static const char * const XB[4] = { "B", "A", "X", "Y" }; return XB[f]; }
+            if (kd == 2) { static const char * const PK[4] = { "pad_t_e", "pad_t_s", "pad_t_w", "pad_t_n" }; return phr_(PK[f]); }
+            static const char * const CP[4] = { "E", "S", "W", "N" }; return CP[f]; }
+        return T[i < 0 || i >= PAD_N ? 0 : i];
     }
     std::string pad_default(int i) {   /* 서양식이면 동쪽·남쪽 기본이 서로 바뀐다 */
         bool w = eff().pad == 1;
-        switch (i) { case 0: return w ? "esc" : "space"; case 1: return w ? "space" : "esc"; case 2: return "caps"; case 3: return "ret"; default: return "none"; }
+        switch (i) { case 0: return w ? "esc" : "space"; case 1: return w ? "space" : "esc"; case 2: return "caps"; case 3: return "ret"; case 7: return "fn:menu"; case 8: return "up"; case 9: return "down"; case 10: return "left"; case 11: return "right"; case 13: return "fn:boost_hold"; case 14: return "fn:boost_toggle"; default: return "none"; }
     }
     static std::string pad_show(const std::string & v) {
+        if (v.compare(0, 3, "fn:") == 0) { for (int q = 1; q < 8; q++) if (v.compare(3, std::string::npos, pad_fn_name(q)) == 0) return phr_(pad_fn_key(q)); }
         if (v == "none") return phr_("배정 없음"); if (v == "mouse_left") return phr_("마우스 왼"); if (v == "mouse_right") return phr_("마우스 오른");
         std::string u = v; for (auto & c : u) c = (char)toupper((unsigned char)c); return u;
     }
@@ -224,7 +239,7 @@ struct Ui {
         if (is_def) *is_def = true; return pad_default(i);
     }
     void open_padkey(int row) {
-        pk_row = row; pad_sel_keep = sel; pk_opts.clear(); pk_opts.push_back(std::string()); pk_opts.push_back("none"); pk_opts.push_back("mouse_left"); pk_opts.push_back("mouse_right");
+        pk_row = row; pad_sel_keep = sel; pk_opts.clear(); pk_opts.push_back(std::string()); pk_opts.push_back("none"); pk_opts.push_back("mouse_left"); pk_opts.push_back("mouse_right"); for (int q = 1; q < 8; q++) pk_opts.push_back(std::string("fn:") + pad_fn_name(q));   /* 빌드 5a: 큐하치 기능 */
         if (env.padkeys) for (auto & n : env.padkeys()) pk_opts.push_back(n);
         std::string cv; { std::string k = pad_key(row); if (scope == 1 && env.pad_get && cur >= 0 && cur < (int)games.size()) { std::map<std::string, std::string> m; env.pad_get(cur, m); auto it = m.find(k); if (it != m.end()) cv = it->second; } else if (scope == 0) { auto it = gpad.find(k); if (it != gpad.end()) cv = it->second; } }
         sel = 0; for (size_t i = 0; i < pk_opts.size(); i++) if (pk_opts[i] == cv) sel = (int)i; scr = S_PADKEY;

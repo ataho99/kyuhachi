@@ -55,6 +55,23 @@ static void gh_kb_cursor(void) {   /* 키보드가 보이는 동안은 커서를
     else if (gApp.kb_prevcur >= 0) { SDL_ShowCursor(gApp.kb_prevcur ? SDL_ENABLE : SDL_DISABLE); gApp.kb_prevcur = -1; }
 }
 static void gh_kb_toggle(void) { kbov::set_visible(!kbov::g_vis); gh_kb_cursor(); gh_osd(kbov::g_vis ? phr_("화면 키보드 켜짐 (Alt+K 로 끔)") : phr_("화면 키보드 꺼짐"), 1500); }
+/* 빌드 5a: 패드 버튼에 배정한 큐하치 기능 (kh_input12 가 부른다). 메뉴가 열려 있거나 부팅 전이면 무시, 배속 누름의 놓기는 항상 받는다 */
+static void gh_pad_fn(int fn, bool d) {
+    static const char * const NM[FN_N] = { "-", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot" };
+    gh_log("PADFN %s %s", fn > 0 && fn < FN_N ? NM[fn] : "?", d ? "down" : "up");
+    if (fn == FN_BOOST_HOLD) { if (d && (gApp.menu_open || !gApp.boot_tick)) return; gApp.boost_hold = d; gh_boost_update(); return; }
+    if (!d || gApp.menu_open || !gApp.boot_tick) return;
+    switch (fn) {
+    case FN_MENU: gApp.menu_req = true; break;
+    case FN_BOOST_TOG: gApp.boost_tog = !gApp.boost_tog; gh_boost_update(); break;
+    case FN_QSAVE: gh_ov_act(2); break;
+    case FN_QLOAD: gh_ov_act(3); break;
+    case FN_OSK: gh_kb_toggle(); break;
+    case FN_SHOT: gApp.scr_req = true; break;
+    default: break;
+    }
+}
+static bool g_padfn_inited = (kh_fn_hook = gh_pad_fn, true);
 static bool gh_kb_geom(int & ww, int & wh, int & dw, int & dh, int & rx, int & ry, int & rw, int & rh) {   /* 창 ↔ 화면 표시 사각형: GL 스레드와 같은 gl_rect 로 계산(곡면 왜곡은 반영하지 않음) */
     if (!gApp.win || gApp.fbw <= 0 || gApp.fbh <= 0) return false;
     SDL_GetWindowSize(gApp.win, &ww, &wh); SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
@@ -197,17 +214,13 @@ static bool gh_game_event(const SDL_Event & e) {
     switch (e.type) {
     case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: {
         bool d = e.type == SDL_CONTROLLERBUTTONDOWN;
-        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_Y) { if (d && gApp.boot_tick) gApp.menu_req = true; return true; }
-        if (e.cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSTICK) { if (d) { gApp.boost_tog = !gApp.boost_tog; GPLOG("L3 boost toggle -> %d", (int)gApp.boost_tog); gh_boost_update(); } return true; }
+        (void)d;   /* 빌드 5a: Y · L3 · 트리거는 이제 입력 층의 배정표(kh_pb)가 처리한다 */
+
         return false; }
     case SDL_CONTROLLERAXISMOTION: {
         /* r015: 트리거/오른쪽 스틱 축 이벤트를 로그에 남긴다(값이 4096 단위로 바뀔 때만). 배속 R2 임계값: 켜짐 > 16000, 꺼짐 < 8000 (SDL 트리거 범위 0..32767) */
         { static int lastbin[6] = { -99, -99, -99, -99, -99, -99 }; int ax = e.caxis.axis; if (ax >= 2 && ax < 6 && ax != 0) { int bin = e.caxis.value / 4096; if (bin != lastbin[ax]) { lastbin[ax] = bin; GPLOG("AXIS %d(%s) value=%d", ax, SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)ax), (int)e.caxis.value); } } }
-        if (e.caxis.axis != SDL_CONTROLLER_AXIS_TRIGGERRIGHT) return false;
-        static bool on = false;
-        if (!on && e.caxis.value > 16000) { on = true; gApp.boost_hold = true; GPLOG("R2 boost hold ON (value=%d > 16000)", (int)e.caxis.value); gh_log("R2 hold ON v=%d", (int)e.caxis.value); gh_boost_update(); }
-        else if (on && e.caxis.value < 8000) { on = false; gApp.boost_hold = false; GPLOG("R2 boost hold OFF (value=%d < 8000)", (int)e.caxis.value); gh_log("R2 hold OFF v=%d", (int)e.caxis.value); gh_boost_update(); }
-        return true; }
+        return false; }   /* 빌드 5a: 트리거(L2·R2)는 입력 층(kh_trigger)이 배정표대로 처리 */
     case SDL_KEYDOWN: case SDL_KEYUP: {
         bool d = e.type == SDL_KEYDOWN; SDL_Keycode k = e.key.keysym.sym;
         if (e.key.repeat) return true;

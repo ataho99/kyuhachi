@@ -19,12 +19,14 @@
 bool gensei_lock = false;              /* true when -gensei: mapper hot keys (edit/config/etc.) blocked */
 static bool kh_padmouse = false;
 /* t48e: 버튼 배정표. 위치 기준(동=○ 남=× 서=□). 기본은 옛 t34 와 같다: 동 Space · 남 Esc · 서 CapsLock · START Enter · L1 R1 SELECT 없음 */
-enum { PB_EAST = 0, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_N };
-enum { PBT_KEY = 0, PBT_NONE, PBT_ML, PBT_MR };
-struct GPadBind { int type; KBD_KEYS key; };
+enum { PB_EAST = 0, PB_SOUTH, PB_WEST, PB_START, PB_L1, PB_R1, PB_BACK, PB_NORTH, PB_DUP, PB_DDOWN, PB_DLEFT, PB_DRIGHT, PB_L2, PB_R2, PB_L3, PB_R3, PB_N };   /* 빌드 5a: 7 → 16 (옛 번호 0~6 그대로) */
+enum { PBT_KEY = 0, PBT_NONE, PBT_ML, PBT_MR, PBT_FN };   /* 빌드 5a: PBT_FN = 큐하치 기능(fn) 배정 */
+enum { FN_MENU = 1, FN_BOOST_HOLD, FN_BOOST_TOG, FN_QSAVE, FN_QLOAD, FN_OSK, FN_SHOT, FN_N };   /* ui_env.h GH_PADFN · kh_ui.h pad_fn_name 과 같은 순서 */
+struct GPadBind { int type; KBD_KEYS key; int fn; };
 static GPadBind kh_pb[PB_N];
 static bool kh_western = false;    /* t48e (#651 4): 서양식 = 남쪽 버튼이 결정. settings.ini pad=1 */
 static void kh_pb_defaults(void) {
+    for (int i = 0; i < PB_N; i++) { kh_pb[i].type = PBT_NONE; kh_pb[i].key = KBD_NONE; kh_pb[i].fn = 0; }
     kh_pb[PB_EAST].type = PBT_KEY;  kh_pb[PB_EAST].key = kh_western ? KBD_esc : KBD_space;
     kh_pb[PB_SOUTH].type = PBT_KEY; kh_pb[PB_SOUTH].key = kh_western ? KBD_space : KBD_esc;
     kh_pb[PB_WEST].type = PBT_KEY;  kh_pb[PB_WEST].key = KBD_capslock;
@@ -32,8 +34,19 @@ static void kh_pb_defaults(void) {
     kh_pb[PB_L1].type = PBT_NONE;   kh_pb[PB_L1].key = KBD_NONE;
     kh_pb[PB_R1].type = PBT_NONE;   kh_pb[PB_R1].key = KBD_NONE;
     kh_pb[PB_BACK].type = PBT_NONE; kh_pb[PB_BACK].key = KBD_NONE;
+    /* 빌드 5a: 기본값 = 옛 동작 그대로 (Y=메뉴 · 십자=화살표 · R2=배속 누름 · L3=배속 켜고 끄기) */
+    kh_pb[PB_NORTH].type = PBT_FN;  kh_pb[PB_NORTH].fn = FN_MENU;
+    kh_pb[PB_DUP].type = PBT_KEY;   kh_pb[PB_DUP].key = KBD_up;
+    kh_pb[PB_DDOWN].type = PBT_KEY; kh_pb[PB_DDOWN].key = KBD_down;
+    kh_pb[PB_DLEFT].type = PBT_KEY; kh_pb[PB_DLEFT].key = KBD_left;
+    kh_pb[PB_DRIGHT].type = PBT_KEY; kh_pb[PB_DRIGHT].key = KBD_right;
+    kh_pb[PB_R2].type = PBT_FN;     kh_pb[PB_R2].fn = FN_BOOST_HOLD;
+    kh_pb[PB_L3].type = PBT_FN;     kh_pb[PB_L3].fn = FN_BOOST_TOG;
 }
 static bool kh_pb_init_done = (kh_pb_defaults(), true);
+static void (*kh_fn_hook)(int fn, bool down) = NULL;   /* 빌드 5a: 호스트(kbd_event.h gh_pad_fn)가 채운다 */
+static bool kh_trig_on[2];                              /* L2·R2 눌림(히스테리시스 켜짐 > 16000 · 꺼짐 < 8000) */
+static bool kh_sel_dn, kh_st_dn, kh_sw_sel, kh_sw_st;   /* SELECT+START 메뉴 조합(고정) */
 static bool kh_never[256];   /* #237 never_map: 패드·단축키에 절대 보내지 않는 키(KBD_KEYS 값) */   /* env GENSEI_PADMOUSE=1 : D-pad moves the cursor, A/B = L/R click */
 static std::map<SDL_JoystickID, SDL_GameController*> kh_pads;
 static std::map<SDL_JoystickID, SDL_Joystick*> kh_rawpads;   /* t48e: 표(매핑)에 없는 패드 — 원시 번호 폴백 */
@@ -163,6 +176,7 @@ static void kh_bind_fire(int i, bool down, const char* why) {
     case PBT_KEY:  kh_key(b.key, down, why); break;
     case PBT_ML:   kh_vmouse_button(0, down); GPLOG("  %s -> vmouse L %d", why, (int)down); break;
     case PBT_MR:   kh_vmouse_button(1, down); GPLOG("  %s -> vmouse R %d", why, (int)down); break;
+    case PBT_FN:   GPLOG("  %s -> fn %d %s", why, b.fn, down ? "down" : "up"); if (kh_fn_hook) kh_fn_hook(b.fn, down); break;
     default:       GPLOG("  %s -> (배정 없음)", why); break;
     }
 }
@@ -175,34 +189,53 @@ static bool kh_button(Uint8 b, bool down) {
     case SDL_CONTROLLER_BUTTON_B:          if (kh_padmouse) { kh_vmouse_button(0, down); GPLOG("  EAST -> vmouse L %d", (int)down); } else kh_bind_fire(PB_EAST, down, "EAST(confirm)"); return true;
     case SDL_CONTROLLER_BUTTON_A:          if (kh_padmouse) { kh_vmouse_button(1, down); GPLOG("  SOUTH -> vmouse R %d", (int)down); } else kh_bind_fire(PB_SOUTH, down, "SOUTH(cancel)"); return true;
     case SDL_CONTROLLER_BUTTON_X:          kh_bind_fire(PB_WEST, down, "WEST(fast)"); return true;
-    case SDL_CONTROLLER_BUTTON_Y:          return true;   /* r012: △ = 우리 메뉴(호스트가 먼저 가로챔). F10 은 메뉴의 「PC-98 키 보내기」로만 */
-    case SDL_CONTROLLER_BUTTON_START:      kh_bind_fire(PB_START, down, "START(enter)"); return true;
+    case SDL_CONTROLLER_BUTTON_Y:          kh_bind_fire(PB_NORTH, down, "NORTH(menu)"); return true;   /* 빌드 5a: 기본 = 큐하치 메뉴(fn:menu), 바꿀 수 있다. 메뉴는 SELECT+START 로도 항상 열린다 */
+    case SDL_CONTROLLER_BUTTON_START:
+        kh_st_dn = down;
+        if (down && kh_sel_dn) { kh_sw_st = true; GPLOG("  SELECT+START -> menu (fixed)"); if (kh_fn_hook) kh_fn_hook(FN_MENU, true); return true; }
+        if (!down && kh_sw_st) { kh_sw_st = false; return true; }
+        kh_bind_fire(PB_START, down, "START(enter)"); return true;
     case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:  kh_bind_fire(PB_L1, down, "L1"); return true;
     case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: kh_bind_fire(PB_R1, down, "R1"); return true;
-    case SDL_CONTROLLER_BUTTON_BACK:       kh_bind_fire(PB_BACK, down, "SELECT"); return true;
-    case SDL_CONTROLLER_BUTTON_DPAD_UP:    if (kh_padmouse) kh_dpad_mouse[2] = down; else kh_key(KBD_up, down, "DPAD_UP"); return true;
-    case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  if (kh_padmouse) kh_dpad_mouse[3] = down; else kh_key(KBD_down, down, "DPAD_DOWN"); return true;
-    case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  if (kh_padmouse) kh_dpad_mouse[0] = down; else kh_key(KBD_left, down, "DPAD_LEFT"); return true;
-    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: if (kh_padmouse) kh_dpad_mouse[1] = down; else kh_key(KBD_right, down, "DPAD_RIGHT"); return true;
+    case SDL_CONTROLLER_BUTTON_BACK:
+        kh_sel_dn = down;
+        if (down && kh_st_dn) { kh_sw_sel = true; GPLOG("  SELECT+START -> menu (fixed)"); if (kh_fn_hook) kh_fn_hook(FN_MENU, true); return true; }
+        if (!down && kh_sw_sel) { kh_sw_sel = false; return true; }
+        kh_bind_fire(PB_BACK, down, "SELECT"); return true;
+    case SDL_CONTROLLER_BUTTON_LEFTSTICK:  kh_bind_fire(PB_L3, down, "L3"); return true;
+    case SDL_CONTROLLER_BUTTON_RIGHTSTICK: kh_bind_fire(PB_R3, down, "R3"); return true;
+    case SDL_CONTROLLER_BUTTON_DPAD_UP:    if (kh_padmouse) kh_dpad_mouse[2] = down; else kh_bind_fire(PB_DUP, down, "DPAD_UP"); return true;
+    case SDL_CONTROLLER_BUTTON_DPAD_DOWN:  if (kh_padmouse) kh_dpad_mouse[3] = down; else kh_bind_fire(PB_DDOWN, down, "DPAD_DOWN"); return true;
+    case SDL_CONTROLLER_BUTTON_DPAD_LEFT:  if (kh_padmouse) kh_dpad_mouse[0] = down; else kh_bind_fire(PB_DLEFT, down, "DPAD_LEFT"); return true;
+    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: if (kh_padmouse) kh_dpad_mouse[1] = down; else kh_bind_fire(PB_DRIGHT, down, "DPAD_RIGHT"); return true;
     default: GPLOG("  button %d %s (unassigned)", (int)b, down ? "down" : "up"); return true;
     }
 }
 
+/* 빌드 5a: L2·R2 트리거 → 배정표 (옛 R2 배속 임계값 그대로: 켜짐 > 16000, 꺼짐 < 8000) */
+static void kh_trigger(int axis, Sint16 v) {
+    int q = axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT ? 1 : 0; bool & on = kh_trig_on[q];
+    if (!on && v > 16000) { on = true; GPLOG("  %s ON (value=%d)", q ? "R2" : "L2", (int)v); kh_bind_fire(q ? PB_R2 : PB_L2, true, q ? "R2" : "L2"); }
+    else if (on && v < 8000) { on = false; GPLOG("  %s OFF (value=%d)", q ? "R2" : "L2", (int)v); kh_bind_fire(q ? PB_R2 : PB_L2, false, q ? "R2" : "L2"); }
+}
 static void kh_stick(int axis, Sint16 v) {
     /* left stick -> arrows with hysteresis (on >16000, off <8000) */
-    static const KBD_KEYS neg[2] = { KBD_left, KBD_up }, pos[2] = { KBD_right, KBD_down };
+    static const int neg[2] = { PB_DLEFT, PB_DUP }, pos[2] = { PB_DRIGHT, PB_DDOWN };   /* 빌드 5a: 왼쪽 스틱 = 십자키 배정을 따른다 */
     int a = (axis == SDL_CONTROLLER_AXIS_LEFTX) ? 0 : 1;
     bool& n = kh_axis_dir[0][a * 2]; bool& p = kh_axis_dir[0][a * 2 + 1];
-    if (!n && v < -16000) { n = true;  kh_key(neg[a], true, "LSTICK-"); }
-    if (n && v > -8000)   { n = false; kh_key(neg[a], false, "LSTICK-"); }
-    if (!p && v > 16000)  { p = true;  kh_key(pos[a], true, "LSTICK+"); }
-    if (p && v < 8000)    { p = false; kh_key(pos[a], false, "LSTICK+"); }
+    if (!n && v < -16000) { n = true;  kh_bind_fire(neg[a], true, "LSTICK-"); }
+    if (n && v > -8000)   { n = false; kh_bind_fire(neg[a], false, "LSTICK-"); }
+    if (!p && v > 16000)  { p = true;  kh_bind_fire(pos[a], true, "LSTICK+"); }
+    if (p && v < 8000)    { p = false; kh_bind_fire(pos[a], false, "LSTICK+"); }
 }
 
 /* t49a (#823): 패드 제거 때 눌려 있던 입력을 모두 놓는다(제거 이벤트가 오면 버튼 UP 이 오지 않아 키가 눌린 채 남는 것을 막는다) */
 static void kh_release_all(void) {
     static const Uint8 B[] = { SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B, SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, SDL_CONTROLLER_BUTTON_DPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_DOWN, SDL_CONTROLLER_BUTTON_DPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT };
     for (Uint8 b : B) kh_button(b, false);
+    kh_button(SDL_CONTROLLER_BUTTON_LEFTSTICK, false); kh_button(SDL_CONTROLLER_BUTTON_RIGHTSTICK, false);
+    for (int q = 0; q < 2; q++) if (kh_trig_on[q]) { kh_trig_on[q] = false; kh_bind_fire(q ? PB_R2 : PB_L2, false, "TRIGGER release"); }
+    kh_sel_dn = kh_st_dn = kh_sw_sel = kh_sw_st = false;
     kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0);
     for (int q = 0; q < 4; q++) kh_dpad_mouse[q] = false;
     GPLOG("RELEASE ALL (패드 제거)");
@@ -261,6 +294,7 @@ static bool gensei_input_event(const SDL_Event& e) {
         return kh_button(e.cbutton.button, down); }
     case SDL_CONTROLLERAXISMOTION:
         if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) kh_stick(e.caxis.axis, e.caxis.value);
+        else if (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) kh_trigger(e.caxis.axis, e.caxis.value);
         return true;
     case SDL_JOYDEVICEADDED:   /* 표에 없는 패드만 여기서 연다(표에 있는 패드는 SDL_CONTROLLERDEVICEADDED 가 따로 온다) */
         if (!SDL_IsGameController(e.jdevice.which)) { GPLOG("JOYDEVICE added idx=%d (not a game controller)", (int)e.jdevice.which); gensei_open_pad(e.jdevice.which); }

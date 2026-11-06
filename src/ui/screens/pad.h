@@ -12,17 +12,20 @@ inline void Ui::d_pad(Canvas & c) {
     rbox(c, 16, 24, 288, 296, WH, (std::string("[") + phr_("패드 버튼") + "] " + phr_("tab_hot") + " (R)").c_str());
     std::vector<std::string> r = { phr_("적용 범위"), phr_("pad_decide") };
     for (int i = 0; i < PAD_N; i++) { bool fw, df; val(i, fw, df); r.push_back(std::string(fw ? "* " : "  ") + fit(pad_row_name(i), 220)); }
-    static const char * const SL[4] = { "pad_stk_l", "pad_dz_l", "pad_stk_r", "pad_dz_r" };
+    static const char * const SL[5] = { "pad_stk_l", "pad_dz_l", "pad_stk_r", "pad_dz_r", "pad_msp" };
     static const char * const DV[4] = { "pad_dz0", "pad_dz1", "pad_dz2", "pad_dz3" };
-    auto sv = [&](int j) -> int { return j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : s.dz_r; };
+    static const char * const RV[3] = { "pad_stk_off", "pad_stk_on", "pad_role_mouse" }, * const MV[3] = { "pad_msp1", "pad_msp2", "pad_msp3" };
+    auto sv = [&](int j) -> int { return j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : j == 3 ? s.dz_r : s.stk_sp; };
     auto svt = [&](int j) -> std::string {
         const int v = sv(j);
+        if (j == 4) return std::string(phr_(MV[v < 1 ? 0 : v > 3 ? 2 : v - 1]));
         if (j & 1) return std::string(phr_(DV[v < 0 ? 0 : v > 3 ? 3 : v]));
-        return std::string(phr_(v ? "pad_stk_on" : "pad_stk_off"));
+        return std::string(phr_(RV[v < 0 ? 0 : v > 2 ? 2 : v]));
     };
     const bool own_ = scope == 1 && cur >= 0 && cur < MAXG;
-    for (int j = 0; j < 4; j++) {
-        const bool mk = own_ && (ovm[cur] & (1u << (17 + j)));
+    static const int SB[5] = { 17, 19, 18, 20, 21 };   /* field bit of each row (KH_FIELDS order) */
+    for (int j = 0; j < 5; j++) {
+        const bool mk = own_ && (ovm[cur] & (1u << SB[j]));
         r.push_back(std::string(mk ? "* " : "  ") + fit(std::string(phr_(SL[j])) + ": " + svt(j), 220));
     }
     std::vector<uint32_t> col(r.size(), 0u);
@@ -48,24 +51,27 @@ inline void Ui::d_pad(Canvas & c) {
     if (sel < 2) ln = sel == 0 ? phr_("전역=모든 작품, 이 작품=이 작품만. 작품 값이 우선.") : phr_("pad_decide_help");
     else if (sel < PAD_N + 2) { bool fw, df; std::string v = val(sel - 2, fw, df); ln = pad_row_name(sel - 2) + " → " + pad_show(v) + ((scope == 1 && !fw) ? (df ? phr_(" (기본)") : phr_(" (전역)")) : (scope == 0 && df ? phr_(" (기본)") : ""));
         if (sel >= 10 && sel <= 13) ln += std::string("  ") + phr_("pad_stick_note"); }
+    const char * PH = phr_("↑↓:선택, ←→:값, ○:키 고르기, ×:뒤로, △:출하 시 설정");
     if (sel >= PAD_N + 2) {
-        const int j = sel - PAD_N - 2; const std::string l1 = std::string(phr_(SL[j])) + " -> " + svt(j), l2 = phr_((j & 1) ? "pad_dz_help" : "pad_stk_help");
-        desc(c, 324, 44, { fit(dkey(l1), 560), fit(dkey(l2), 560) });
+        const int j = sel - PAD_N - 2; const std::string l1 = std::string(phr_(SL[j])) + " -> " + svt(j), l2 = phr_(j == 4 ? "pad_msp_help" : (j & 1) ? "pad_dz_help" : "pad_stk_help");
+        desc(c, 324, 58, { fit(dkey(l1), 560), fit(dkey(l2), 560) }, -1, PH);
     } else desc(c, 324, 44, { fit(dkey(ln), 560) });
-    helpline(c, phr_("↑↓:선택, ←→:값, ○:키 고르기, ×:뒤로, △:출하 시 설정"));
+    helpline(c, PH);
 }
 inline void Ui::k_pad(UKey k, Act & a) {
     struct Gp { Ui & u; bool have; Settings pre; int gi; ~Gp() { if (have && u.scope == 1 && u.cur == gi && gi >= 0 && gi < Ui::MAXG) { unsigned d = Ui::diff_bits(pre, u.t[gi]); if (d) u.ov_set(gi, u.ovm[gi] | d); u.sync_t(gi); } } } gp{ *this, false, Settings(), cur };   /* #587: 이 작품에서 바꾼 줄만 개별 값 */
     if (scope == 1 && cur >= 0 && cur < MAXG) { sync_t(cur); gp.pre = t[cur]; gp.have = true; }
     auto stkstep = [&](int j, int d) {   /* #619/#620: j 0 L stick, 1 L deadzone, 2 R stick, 3 R deadzone; d 0 = cycle */
-        Settings & s = edit(); int & v = j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : s.dz_r; const int o = v;
-        if (j & 1) v = d == 0 ? (v + 1) % 4 : clampi(v + d, 0, 3); else v = v ? 0 : 1;
+        Settings & s = edit(); int & v = j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : j == 3 ? s.dz_r : s.stk_sp; const int o = v;   /* #624: j 4 = mouse speed 1..3, roles 0..2 */
+        if (j == 4) v = d == 0 ? v % 3 + 1 : clampi(v + d, 1, 3);
+        else if (j & 1) v = d == 0 ? (v + 1) % 4 : clampi(v + d, 0, 3);
+        else v = d == 0 ? (v + 1) % 3 : clampi(v + d, 0, 2);
         if (v != o) { dirty = true; a.t = A_APPLY; }
     };
     auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
     do { {
             if (k == UK_R) { pad_sel_keep = sel; scr = S_HOT; sel = 0; hot_cap = false; break; }
-            mv(sel, PAD_N + 6);
+            mv(sel, PAD_N + 7);
             if (k == UK_LEFT || k == UK_RIGHT) {
                 int d = (k == UK_RIGHT) ? 1 : -1;
                 if (sel == 0) { scope_step(d); }
@@ -78,9 +84,9 @@ inline void Ui::k_pad(UKey k, Act & a) {
             } else if (k == UK_TRI) {   /* 출하 시 설정: 이 범위의 버튼 줄을 모두 지움, 결정 방식은 일본식 */
                 if (scope == 0) {
                     gpad.clear(); Settings d0; Settings & e0 = eff();
-                    e0.pad = d0.pad; e0.stk_l = d0.stk_l; e0.stk_r = d0.stk_r; e0.dz_l = d0.dz_l; e0.dz_r = d0.dz_r;
+                    e0.pad = d0.pad; e0.stk_l = d0.stk_l; e0.stk_r = d0.stk_r; e0.dz_l = d0.dz_l; e0.dz_r = d0.dz_r; e0.stk_sp = d0.stk_sp;
                 }
-                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } gp.have = false; ov_set(cur, ovm[cur] & ~((1u << 9) | (15u << 17))); sync_t(cur); }
+                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } gp.have = false; ov_set(cur, ovm[cur] & ~((1u << 9) | (31u << 17))); sync_t(cur); }
                 dirty = true; a.t = A_APPLY;
             } else if (k == UK_CANCEL) { go(S_CONF, rowidx(S_CONF, 4)); }
             break; }

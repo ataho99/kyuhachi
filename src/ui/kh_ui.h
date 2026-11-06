@@ -54,9 +54,9 @@ struct Ui {
 
     int scope3() const { return scope; }
     void scope_step(int d) { int i = scope + d; if (i < 0) i = 0; if (i > 1) i = 1; scope = i; }   /* #587: 범위는 「전역」 / 「이 작품」 둘뿐 */
-    static unsigned fbit_of(const std::string & k) { static const char * const KN[21] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "stick_l", "stick_r", "dz_l", "dz_r" }; for (unsigned i = 0; i < 21; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
+    static unsigned fbit_of(const std::string & k) { static const char * const KN[22] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp" }; for (unsigned i = 0; i < 22; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
     static unsigned fbits_all() { return (1u << 17) - 1u; }
-#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20)
+#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21)
     Settings overlay(Settings s, int gi) const { if (gi >= 0 && gi < MAXG && ovm[gi]) { const Settings & o = t[gi];
 #define KH_X(f, b) if (ovm[gi] & (1u << b)) s.f = o.f;
         KH_FIELDS(KH_X)
@@ -99,7 +99,7 @@ struct Ui {
     std::vector<int> vis, rent;   /* vis: 목록에 보이는 작품(index) 순서 · rent[작품]: 행이 가리키는 실행 방법(ents index, -1 = 자동) */
     std::string sel_entry;        /* 고른 실행 방법 이름 — 실행 요청(Act.entry)에 실려 간다. 빈칸 = 폴더 기본 */
     bool reorder = false; long long now_s = 0; Env env;
-    std::vector<UiFont> fonts; std::string font_kr, font_jp; int lang = 0; bool lang_chg = false;   /* t52g (#133): UI 언어 0 한국어 1 English 2 にほんご (전역 전용 · settings.ini [global] lang=) · 바뀌면 목록을 다시 만든다 */   /* 글꼴 폴더 목록 · 전역 선택(빈칸 = 기본) */
+    std::vector<UiFont> fonts; std::string font_kr, font_jp; int lang = 0; bool lang_chg = false, lang_seen = false;   /* t52g (#133): UI 언어 0 한국어 1 English 2 にほんご (전역 전용 · settings.ini [global] lang=) · 바뀌면 목록을 다시 만든다 */   /* 글꼴 폴더 목록 · 전역 선택(빈칸 = 기본) */
     static const char * tab_name(int t) { const char * n[] = { phr_("한글판"), phr_("원판"), phr_("미분류"), phr_("전체") }; return n[t < 0 || t > 3 ? 3 : t]; }
     static const char * sort_name(int m) { static const char * n[] = { phr_("제목"), phr_("원제"), phr_("연도"), phr_("제작사"), phr_("최근 실행"), phr_("자주 실행"), phr_("사용자 지정") }; return n[m < 0 || m >= SM_N ? 0 : m]; }
     static const char * sort_id(int m) { static const char * n[] = { "title", "orig", "year", "company", "recent", "play", "custom" }; return n[m < 0 || m >= SM_N ? 0 : m]; }
@@ -261,7 +261,7 @@ struct Ui {
     }
     std::string pad_default(int i) {   /* 서양식이면 동쪽·남쪽 기본이 서로 바뀐다 */
         bool w = eff().pad == 1;
-        switch (i) { case 0: return w ? "esc" : "space"; case 1: return w ? "space" : "esc"; case 2: return "caps"; case 3: return "ret"; case 7: return "fn:menu"; case 8: return "up"; case 9: return "down"; case 10: return "left"; case 11: return "right"; case 13: return "fn:boost_hold"; case 14: return "fn:boost_toggle"; default: return "none"; }
+        switch (i) { case 0: return w ? "esc" : "space"; case 1: return w ? "space" : "esc"; case 2: return "caps"; case 3: return "ret"; case 4: return "mouse_left"; case 5: return "mouse_right"; case 7: return "fn:menu"; case 8: return "up"; case 9: return "down"; case 10: return "left"; case 11: return "right"; case 13: return "fn:boost_hold"; case 14: return "fn:boost_toggle"; default: return "none"; }
     }
     static std::string pad_show(const std::string & v) {
         if (v.compare(0, 3, "fn:") == 0) { for (int q = 1; q < PAD_FN_N; q++) if (v.compare(3, std::string::npos, pad_fn_name(q)) == 0) return phr_(pad_fn_key(q)); }
@@ -912,7 +912,7 @@ static void settings_load(Ui & u, const std::string & path) {
         if (cur == &u.g && s.compare(0, 5, "sort=") == 0) { u.sortm = Ui::sort_from(s.substr(5)); continue; }
         if (cur == &u.g && s.compare(0, 8, "sortfav=") == 0) { u.sortfav = atoi(s.c_str() + 8) != 0; continue; }
         if (cur == &u.g && s.compare(0, 4, "tab=") == 0) { u.tab = Ui::tab_from(s.substr(4)); continue; }
-        if (cur == &u.g && s.compare(0, 5, "lang=") == 0) { int lv = atoi(s.c_str() + 5); u.lang = (lv >= 0 && lv <= 2) ? lv : 0; continue; }   /* t52g (#133) */
+        if (cur == &u.g && s.compare(0, 5, "lang=") == 0) { int lv = atoi(s.c_str() + 5); u.lang = (lv >= 0 && lv <= 2) ? lv : 0; u.lang_seen = true; continue; }   /* t52g (#133) */
         if (cur == &u.g && s.compare(0, 8, "font_kr=") == 0) { u.font_kr = s.substr(8); continue; }
         if (cur == &u.g && s.compare(0, 8, "font_jp=") == 0) { u.font_jp = s.substr(8); continue; }
         if (cur == &u.g && s.compare(0, 4, "btn_") == 0) { size_t e3 = s.find('='); if (e3 != std::string::npos && e3 > 4) { std::string kk = s.substr(0, e3); for (auto & ch : kk) ch = (char)tolower((unsigned char)ch); u.gpad[kk] = s.substr(e3 + 1); } continue; }   /* t48e (#646) */

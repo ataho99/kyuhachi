@@ -142,6 +142,10 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk == "extraopen") { U.go(ui::S_EXTRA, 0); continue; }
             if (tk == "extrastate") { std::string rs2; for (int id2 : U.extra_ids()) rs2 += std::to_string(id2) + " "; const int fb = U.base_of(U.cur); const int fav2 = (fb >= 0 && fb < (int)U.games.size()) ? (U.games[fb].fav ? 1 : 0) : -1;
                 gh_log("uikeys: EXTRASTATE scr=%d sub=%d sel=%d n=%d fav=%d ids[%s]", (int)U.scr, U.extra_sub, U.sel, U.nitems(), fav2, rs2.c_str()); continue; }
+            if (tk == "pickstate") { std::string vs; for (size_t q = 0; q < U.vis.size() && q < 8; q++) vs += std::to_string(U.vis[q]) + " "; const int cb = (U.cur >= 0 && U.cur < (int)U.games.size()) ? U.cur : -1;
+                gh_log("uikeys: PICKSTATE scr=%d sel=%d tab=%d pick=%d nvis=%d vis[%s] cur=%d entg=%d games=%d lang_gid=%d sub=%d cur_id=%s cur_lang=%s cur_exp=%s gcur=%d", (int)U.scr, U.sel, U.tab, U.pick, (int)U.vis.size(), vs.c_str(), U.cur, U.entg, (int)U.games.size(), (int)U.lang_gid.size(), U.extra_sub, cb >= 0 ? U.games[cb].id.c_str() : "-", cb >= 0 ? U.games[cb].lang.c_str() : "-", cb >= 0 ? U.games[cb].lang_exp.c_str() : "-", gApp.cur_game); continue; }
+            if (tk.compare(0, 4, "tab:") == 0) { U.tab = atoi(tk.c_str() + 4); U.rebuild_vis(U.cur); continue; }
+            if (tk == "addlang") { gh_reload_games(); U.add_new.clear(); U.add_new_why.clear(); for (auto & gg : U.games) { U.add_new.push_back(gg.id); U.add_new_why.push_back("test"); } U.scr = ui::S_ADD; U.sel = 0; U.open_lang(U.add_new, U.add_new_why, ui::S_ADD); continue; }   /* #625 test only: act like the end of "add work" */
             if (tk == "fontnow") { gh_log("uikeys: FONTNOW cur=%d line=[%s]", U.cur, U.font_now().c_str()); continue; }
             if (tk == "home") { U.in_game = false; U.scr = ui::S_MAIN; U.mainsel = 0; U.sel = 0; continue; }   /* t52i 시험 전용: 메인메뉴로 돌아가 맨 위 */
             if (tk == "startpick") { U.start_ret = ui::S_PICK; U.startsel = 1; U.scr = ui::S_START; U.sel = 1; continue; }   /* t52i 시험 전용: 작품 목록에서 연 시작 팝업 */
@@ -221,8 +225,8 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 6, "scope:") == 0) { U.scope = atoi(tk.c_str() + 6); if (U.scope == 1 && U.cur >= 0 && U.cur < (int)U.games.size() && !U.has_t[U.cur]) { U.t[U.cur] = U.effective(U.cur); U.has_t[U.cur] = true; } continue; }
             if (tk.compare(0, 8, "stkdump:") == 0) {   /* #619/#620 test only: stick values, global vs effective */
                 const int ci = U.cur; const bool ok = ci >= 0 && ci < (int)ui::Ui::MAXG; const ui::Settings ef = U.effective(ci);
-                gh_log("uikeys: STKDUMP %s scr=%d sel=%d scope=%d ovm=%x g[%d %d %d %d] eff[%d %d %d %d]", tk.c_str() + 8, (int)U.scr, U.sel,
-                       U.scope, ok ? U.ovm[ci] : 0u, U.g.stk_l, U.g.stk_r, U.g.dz_l, U.g.dz_r, ef.stk_l, ef.stk_r, ef.dz_l, ef.dz_r); continue; }
+                gh_log("uikeys: STKDUMP %s scr=%d sel=%d scope=%d ovm=%x g[%d %d %d %d %d] eff[%d %d %d %d %d]", tk.c_str() + 8, (int)U.scr, U.sel,
+                       U.scope, ok ? U.ovm[ci] : 0u, U.g.stk_l, U.g.stk_r, U.g.dz_l, U.g.dz_r, U.g.stk_sp, ef.stk_l, ef.stk_r, ef.dz_l, ef.dz_r, ef.stk_sp); continue; }
             if (tk == "padstate") {
                 std::string gp; for (auto & kv : U.gpad) gp += kv.first + "=" + kv.second + " "; std::string wp; if (U.cur >= 0 && U.cur < (int)U.games.size()) { std::map<std::string, std::string> m; prof::get_pad_keys(U.games[U.cur].dir, m); for (auto & kv : m) wp += kv.first + "=" + kv.second + " "; }
                 gh_log("uikeys: PADSTATE scr=%d sel=%d scope=%d g.pad=%d eff.pad=%d global[%s] work[%s]", (int)U.scr, U.sel, U.scope, U.g.pad, U.eff().pad, gp.c_str(), wp.c_str());

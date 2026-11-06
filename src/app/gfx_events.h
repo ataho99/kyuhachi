@@ -4,6 +4,8 @@ void GFX_Events(void) {
     static unsigned int last_ev = 0;
     unsigned int now = SDL_GetTicks();
     kh_input_tick();
+    kh_stk_mouse_ok = gApp.mouse_game && gApp.boot_tick && !gApp.menu_open && !kbov::g_vis;   /* #624 */
+    kh_stk_tick();
     kha_ld_tick(now);
     if (now != last_ev) {
         last_ev = now;

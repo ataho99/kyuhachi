@@ -761,7 +761,7 @@ pad_t_s=×
 pad_t_w=□
 pad_t_n=△
 pad_menu_fixed=SELECT+START = Open menu (fixed)
-pad_stick_note=(left stick follows this)
+pad_stick_note=(a stick set to D-pad follows this too)
 tab_hot=Hotkeys
 hot_help=Up/Down:Select, O:Capture, Tri:Default, L:Pad tab, R:Extra buttons, X:Back
 hot_cap_title=Press the button (combo) now
@@ -893,15 +893,21 @@ fsrc_sys=system
 extra_ttl=Extras
 extra_desc=Disc layout and extra features of the selected game.
 lang_set=Language
-pad_stk_l=Left stick
-pad_stk_r=Right stick
+pad_stk_l=Left stick role
+pad_stk_r=Right stick role
 pad_dz_l=Left deadzone
 pad_dz_r=Right deadzone
-pad_stk_on=On
+pad_stk_on=D-pad
 pad_stk_off=Off
 pad_dz0=Default
 pad_dz1=Large
 pad_dz2=Larger
 pad_dz3=Largest
-pad_stk_help=Off = this stick is ignored everywhere. L3/R3 buttons still work.
+pad_stk_help=Off = ignored, D-pad = arrow keys, Mouse = PC-98 mouse. L3/R3 still work.
 pad_dz_help=Tilt needed to register. Default = as before. Raise if it drifts.
+pad_role_mouse=Mouse
+pad_msp=Stick mouse speed
+pad_msp1=Slow
+pad_msp2=Normal
+pad_msp3=Fast
+pad_msp_help=Speed of a stick set to Mouse. It moves only in games that use the mouse.

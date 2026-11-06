@@ -33,6 +33,12 @@ static void gh_main_input_init(std::string & id) {
     gh_android_savedir();
     gh_android_fontdiag();
 #endif
+    if (!gApp.ui_.lang_seen && gApp.cli_lang < 0 && gApp.uitest_dir.empty()) {   /* #627: no lang= key yet (first boot) -> system locale: ko 0, ja 2, other 1, unknown 0; saved at once */
+        std::string l0; if (!gApp.cli_sysloc.empty()) l0 = gApp.cli_sysloc; else { SDL_Locale * lc_ = SDL_GetPreferredLocales(); if (lc_ && lc_[0].language) l0 = lc_[0].language; if (lc_) SDL_free(lc_); }
+        const int lp_ = l0.empty() ? 0 : (l0.compare(0, 2, "ko") == 0 ? 0 : l0.compare(0, 2, "ja") == 0 ? 2 : 1);
+        gApp.ui_.lang = lp_; gApp.ui_.lang_seen = true; ui::settings_save(gApp.ui_, gApp.cfgpath);
+        gh_log("T627 first boot UI language: locale='%s' -> lang=%d (saved)", l0.c_str(), lp_);
+    }
     if (gApp.cli_lang >= 0 && gApp.cli_lang <= 2) gApp.ui_.lang = gApp.cli_lang;   /* t52g 시험: --lang N */
     phr_set_lang(gApp.ui_.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", gApp.ui_.lang, phr_loaded_count, phr_("게임 시작"));
     kh_western = gApp.ui_.g.pad == 1;   /* t48e: 시작 메뉴용(게임 시작 때 작품별 값으로 다시 정함) */

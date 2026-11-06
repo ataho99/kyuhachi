@@ -31,8 +31,8 @@ static void kh_pb_defaults(void) {
     kh_pb[PB_SOUTH].type = PBT_KEY; kh_pb[PB_SOUTH].key = kh_western ? KBD_space : KBD_esc;
     kh_pb[PB_WEST].type = PBT_KEY;  kh_pb[PB_WEST].key = KBD_capslock;
     kh_pb[PB_START].type = PBT_KEY; kh_pb[PB_START].key = KBD_enter;
-    kh_pb[PB_L1].type = PBT_NONE;   kh_pb[PB_L1].key = KBD_NONE;
-    kh_pb[PB_R1].type = PBT_NONE;   kh_pb[PB_R1].key = KBD_NONE;
+    kh_pb[PB_L1].type = PBT_ML;     kh_pb[PB_L1].key = KBD_NONE;   /* #624: L1 = mouse left click, R1 = mouse right click (plain L1/R1 were empty; SELECT+L1/R1 stay the quick load/save hotkeys) */
+    kh_pb[PB_R1].type = PBT_MR;     kh_pb[PB_R1].key = KBD_NONE;
     kh_pb[PB_BACK].type = PBT_NONE; kh_pb[PB_BACK].key = KBD_NONE;
     /* 빌드 5a: 기본값 = 옛 동작 그대로 (Y=메뉴 · 십자=화살표 · R2=배속 누름 · L3=배속 켜고 끄기) */
     kh_pb[PB_NORTH].type = PBT_FN;  kh_pb[PB_NORTH].fn = FN_MENU;
@@ -314,6 +314,15 @@ static void kh_stick(int axis, Sint16 v) {
     if (!p && v > 16000)  { p = true;  kh_bind_fire(pos[a], true, "LSTICK+"); }
     if (p && v < 8000)    { p = false; kh_bind_fire(pos[a], false, "LSTICK+"); }
 }
+static void kh_stick_r(int axis, Sint16 v) {   /* #624: right stick with the d-pad role: same thresholds and bindings as the left one */
+    static const int neg[2] = { PB_DLEFT, PB_DUP }, pos[2] = { PB_DRIGHT, PB_DDOWN };
+    int a = (axis == SDL_CONTROLLER_AXIS_RIGHTX) ? 0 : 1;
+    bool& n = kh_axis_dir[1][a * 2]; bool& p = kh_axis_dir[1][a * 2 + 1];
+    if (!n && v < -16000) { n = true;  kh_bind_fire(neg[a], true, "RSTICK-"); }
+    if (n && v > -8000)   { n = false; kh_bind_fire(neg[a], false, "RSTICK-"); }
+    if (!p && v > 16000)  { p = true;  kh_bind_fire(pos[a], true, "RSTICK+"); }
+    if (p && v < 8000)    { p = false; kh_bind_fire(pos[a], false, "RSTICK+"); }
+}
 
 /* t49a (#823): 패드 제거 때 눌려 있던 입력을 모두 놓는다(제거 이벤트가 오면 버튼 UP 이 오지 않아 키가 눌린 채 남는 것을 막는다) */
 static void kh_release_all(void) {
@@ -322,7 +331,7 @@ static void kh_release_all(void) {
     kh_button(SDL_CONTROLLER_BUTTON_LEFTSTICK, false); kh_button(SDL_CONTROLLER_BUTTON_RIGHTSTICK, false);
     for (int q = 0; q < 2; q++) if (kh_trig_on[q]) { kh_trig_on[q] = false; kh_bind_fire(q ? PB_R2 : PB_L2, false, "TRIGGER release"); }
     kh_sel_dn = kh_st_dn = kh_sw_sel = kh_sw_st = false; memset(kh_hot_sw, 0, sizeof kh_hot_sw);
-    kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0);
+    kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0); kh_stick_r(SDL_CONTROLLER_AXIS_RIGHTX, 0); kh_stick_r(SDL_CONTROLLER_AXIS_RIGHTY, 0);
     for (int q = 0; q < 4; q++) kh_dpad_mouse[q] = false;
     GPLOG("RELEASE ALL (패드 제거)");
 }
@@ -353,12 +362,14 @@ static bool kh_xb_event(const SDL_Event & e) {   /* a registered extra button fi
     return false;
 }
 /* #619/#620: per-stick on/off + deadzone. Applied to the SDL axis event first, so menu, game, device detection and capture all see the result */
-static int kh_stk_en[2] = { 1, 1 }, kh_stk_dz[2] = { 0, 0 };
+static int kh_stk_en[2] = { 0, 2 }, kh_stk_dz[2] = { 0, 0 }, kh_stk_sp = 2;   /* #624: en = role 0 off 1 d-pad 2 mouse; default left off, right mouse */
+static float kh_stk_mv[2][2];       /* #624: mouse-role stick values after the deadzone (-1..1); the SDL event itself is zeroed so nothing else reacts */
+static bool kh_stk_mouse_ok = false;   /* #624: set every tick by the host: running game uses the mouse, no menu / keyboard overlay */
 static bool kh_stk_act[4], kh_stk_sup[4];
 static void kh_stk_val(int side, int ix, Sint16 & v) {
     static const int ON[4] = { 0, 22000, 27000, 30500 }, OFF[4] = { 0, 14000, 20000, 25000 };
     const int q = side * 2 + ix, m = v < 0 ? -(int)v : (int)v; bool cut = false;
-    if (!kh_stk_en[side]) cut = true;
+    if (kh_stk_en[side] == 0) cut = true;
     else if (kh_stk_dz[side] > 0) {
         const int lv = kh_stk_dz[side];
         if (!kh_stk_act[q] && m >= ON[lv]) kh_stk_act[q] = true; else if (kh_stk_act[q] && m < OFF[lv]) kh_stk_act[q] = false;
@@ -371,6 +382,7 @@ static void kh_stk_val(int side, int ix, Sint16 & v) {
         }
         v = 0;
     }
+    if (kh_stk_en[side] == 2) { kh_stk_mv[side][ix] = (float)v / 32767.0f; v = 0; } else kh_stk_mv[side][ix] = 0.0f;   /* #624: mouse role keeps the value for the mouse, nobody else sees it */
     if (m < 4000) kh_stk_sup[q] = false;
 }
 static void kh_stk_ev(SDL_Event & e) {
@@ -379,13 +391,34 @@ static void kh_stk_ev(SDL_Event & e) {
     if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_LEFTY) kh_stk_val(0, a == SDL_CONTROLLER_AXIS_LEFTY ? 1 : 0, e.caxis.value);
     else if (a == SDL_CONTROLLER_AXIS_RIGHTX || a == SDL_CONTROLLER_AXIS_RIGHTY) kh_stk_val(1, a == SDL_CONTROLLER_AXIS_RIGHTY ? 1 : 0, e.caxis.value);
 }
-static void kh_stk_set(int le, int re, int ld, int rd) {
-    const int n[4] = { le ? 1 : 0, re ? 1 : 0, ld < 0 ? 0 : ld > 3 ? 3 : ld, rd < 0 ? 0 : rd > 3 ? 3 : rd };
-    if (n[0] == kh_stk_en[0] && n[1] == kh_stk_en[1] && n[2] == kh_stk_dz[0] && n[3] == kh_stk_dz[1]) return;
-    kh_stk_en[0] = n[0]; kh_stk_en[1] = n[1]; kh_stk_dz[0] = n[2]; kh_stk_dz[1] = n[3];
-    memset(kh_stk_act, 0, sizeof kh_stk_act);
-    GPLOG("STICKSET L=%s dz%d R=%s dz%d", n[0] ? "on" : "off", n[2], n[1] ? "on" : "off", n[3]);
-    kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0);   /* let go of a direction that was held */
+static void kh_stk_set(int le, int re, int ld, int rd, int sp) {
+    const int n[5] = { le < 0 ? 0 : le > 2 ? 2 : le, re < 0 ? 0 : re > 2 ? 2 : re, ld < 0 ? 0 : ld > 3 ? 3 : ld, rd < 0 ? 0 : rd > 3 ? 3 : rd, sp < 1 ? 1 : sp > 3 ? 3 : sp };
+    if (n[0] == kh_stk_en[0] && n[1] == kh_stk_en[1] && n[2] == kh_stk_dz[0] && n[3] == kh_stk_dz[1] && n[4] == kh_stk_sp) return;
+    kh_stk_en[0] = n[0]; kh_stk_en[1] = n[1]; kh_stk_dz[0] = n[2]; kh_stk_dz[1] = n[3]; kh_stk_sp = n[4];
+    memset(kh_stk_act, 0, sizeof kh_stk_act); memset(kh_stk_mv, 0, sizeof kh_stk_mv);
+    static const char * const RN[3] = { "off", "key", "mouse" };
+    GPLOG("STICKSET L=%s dz%d R=%s dz%d sp%d", RN[n[0]], n[2], RN[n[1]], n[3], n[4]);
+    kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0); kh_stick_r(SDL_CONTROLLER_AXIS_RIGHTX, 0); kh_stick_r(SDL_CONTROLLER_AXIS_RIGHTY, 0);   /* let go of a direction that was held */
+}
+/* #624: sticks whose role is mouse move the PC-98 mouse in proportion to the tilt (counts per second x frame time). Only while the running game uses the mouse: otherwise the input goes nowhere (never to the keys) */
+static void kh_stk_tick(void) {
+    static const float SP[4] = { 0.0f, 220.0f, 400.0f, 700.0f };
+    static Uint32 last = 0, wt = 0; static float ax = 0, ay = 0; static bool wasblk = false;
+    const Uint32 now = SDL_GetTicks(); Uint32 dt = last ? now - last : 0; last = now; if (dt > 100) dt = 100;
+    float ux = 0, uy = 0;
+    for (int sd = 0; sd < 2; sd++) {
+        if (kh_stk_en[sd] != 2) continue;
+        const float D = (kh_stk_dz[sd] == 1 ? 14000.0f : kh_stk_dz[sd] == 2 ? 20000.0f : kh_stk_dz[sd] == 3 ? 25000.0f : 4500.0f) / 32767.0f;
+        for (int ix = 0; ix < 2; ix++) {
+            const float raw = kh_stk_mv[sd][ix]; float m = raw < 0 ? -raw : raw; if (m <= D) continue;
+            m = (m - D) / (1.0f - D); if (m > 1.0f) m = 1.0f; (ix ? uy : ux) += raw < 0 ? -m : m; }
+    }
+    if (ux == 0 && uy == 0) { wasblk = false; if (ax != 0 || ay != 0) { GPLOG("  STKMOUSE move dx=%.1f dy=%.1f", (double)ax, (double)ay); ax = ay = 0; } return; }
+    if (!kh_stk_mouse_ok) { if (!wasblk) { wasblk = true; GPLOG("  STKMOUSE blocked (running game does not use the mouse, or a menu / keyboard overlay is up)"); } return; }
+    wasblk = false;
+    const float k = SP[kh_stk_sp < 1 ? 1 : kh_stk_sp > 3 ? 3 : kh_stk_sp] * (float)dt / 1000.0f;
+    kh_vmouse_move_rel(ux * k, uy * k); ax += ux * k; ay += uy * k; if (!wt) wt = now;
+    if (now - wt >= 500) { wt = now; GPLOG("  STKMOUSE move dx=%.1f dy=%.1f", (double)ax, (double)ay); ax = ay = 0; }
 }
 static bool gensei_raw_event(const SDL_Event& e) {
     static const Uint8 MAP[10] = { SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B, SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_LEFTSTICK, SDL_CONTROLLER_BUTTON_RIGHTSTICK };
@@ -429,6 +462,7 @@ static bool gensei_input_event(const SDL_Event& e) {
         return kh_button(e.cbutton.button, down); }
     case SDL_CONTROLLERAXISMOTION:
         if (e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX || e.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY) kh_stick(e.caxis.axis, e.caxis.value);
+        else if (e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX || e.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY) kh_stick_r(e.caxis.axis, e.caxis.value);
         else if (e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || e.caxis.axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT) kh_trigger(e.caxis.axis, e.caxis.value);
         return true;
     case SDL_JOYDEVICEADDED:   /* 표에 없는 패드만 여기서 연다(표에 있는 패드는 SDL_CONTROLLERDEVICEADDED 가 따로 온다) */

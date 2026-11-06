@@ -761,7 +761,7 @@ pad_t_s=×
 pad_t_w=□
 pad_t_n=△
 pad_menu_fixed=SELECT+START = メニューを開く(固定)
-pad_stick_note=(左スティックもこの割り当てに従う)
+pad_stick_note=(役割が十字キーのスティックもこの割り当てに従う)
 tab_hot=ホットキー
 hot_help=↑↓:選択 ○:取得 △:初期値 L:パッド R:追加ボタン ×:戻る
 hot_cap_title=押すボタン(組み合わせ)を押してください
@@ -893,15 +893,21 @@ fsrc_sys=システム
 extra_ttl=付加機能
 extra_desc=選んだ作品のディスク構成と付加機能です。
 lang_set=言語指定
-pad_stk_l=左スティック
-pad_stk_r=右スティック
+pad_stk_l=左スティックの役割
+pad_stk_r=右スティックの役割
 pad_dz_l=左デッドゾーン
 pad_dz_r=右デッドゾーン
-pad_stk_on=オン
+pad_stk_on=十字キー
 pad_stk_off=オフ
 pad_dz0=標準
 pad_dz1=大
 pad_dz2=より大
 pad_dz3=最大
-pad_stk_help=オフ=このスティックを無視。L3/R3ボタンは有効。
+pad_stk_help=オフ=無視・十字キー=方向キー・マウス=PC-98マウス。L3/R3は有効。
 pad_dz_help=倒す量のしきい値。標準=従来どおり。勝手に動くなら大きく。
+pad_role_mouse=マウス
+pad_msp=スティックのマウス速度
+pad_msp1=遅い
+pad_msp2=普通
+pad_msp3=速い
+pad_msp_help=マウス役スティックの速度。マウスを使う作品でのみ動きます。

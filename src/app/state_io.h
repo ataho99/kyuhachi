@@ -191,7 +191,7 @@ static void gh_apply_volume(const ui::Settings & s) {
     if (s.bgm != last_b || s.se != last_s) { last_b = s.bgm; last_s = s.se; gh_log("VOLUME parts: bgm=%d -> fm/ssg/rhythm=%u | se=%d -> adpcm/pcm86=%u + spk | PC-98 ch=%p(1.0) SPKR=%p", s.bgm, nb, s.se, ns, (void *)m, (void *)MIXER_FindChannel("SPKR")); }
 }
 static void gh_apply_settings(const ui::Settings & s, bool vol) {
-    kh_stk_set(s.stk_l, s.stk_r, s.dz_l, s.dz_r);   /* #619/#620 */
+    kh_stk_set(s.stk_l, s.stk_r, s.dz_l, s.dz_r, s.stk_sp);   /* #619/#620/#624 */
     gApp.bosd_on = s.bosd != 0; gApp.fps_on = s.fpsd != 0; kbov::g_btn_on = kbov::g_cli_btn >= 0 ? kbov::g_cli_btn != 0 : s.kbbtn != 0; kbov::g_ov_on = kbov::g_cli_ov >= 0 ? kbov::g_cli_ov != 0 : s.ovbtn != 0; vpad::g_mode = vpad::g_cli >= 0 ? vpad::g_cli : s.padbtn; gApp.kbshader = gApp.cli_kbsh >= 0 ? gApp.cli_kbsh : (s.kbshader != 0 ? 1 : 0);
     gApp.fit = gApp.menu43 ? (int)FIT_43 : s.ratio; { bool fxany = s.scan > 0 || s.mask > 0 || s.bleed > 0 || s.glow > 0 || s.curve > 0; gApp.shader = fxany ? SH_CRT : (s.shader == 2 ? SH_NEAREST : SH_SHARP); gApp.nearv = (s.shader == 2) ? 1.0f : 0.0f;   /* t48c: 효과가 하나라도 켜져 있으면 효과 셰이더(밑 그림은 uNear), 아니면 sharp/nearest 셰이더 */
       static int lfx = -1; int kfx = (s.scan << 0) | (s.mask << 4) | (s.bleed << 8) | (s.glow << 12) | (s.curve << 16) | ((s.shader == 2 ? 1 : 0) << 20); if (kfx != lfx) { lfx = kfx; gh_log("FX filter=%s scan=%d mask=%d rgb=%d glow=%d curve=%d -> shader=%d", s.shader == 2 ? "nearest" : "sharp", s.scan, s.mask, s.bleed, s.glow, s.curve, (int)gApp.shader); } }

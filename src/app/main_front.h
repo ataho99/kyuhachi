@@ -74,6 +74,7 @@ static int gh_main_args(int argc, char * argv[], std::string & id) {
         else if (a == "--vpad" && i + 1 < argc) vpad::g_cli = atoi(argv[++i]);   // test: virtual pad 0 off 1 on 2 auto
         else if (a == "--ovbtn" && i + 1 < argc) kbov::g_cli_ov = atoi(argv[++i]) ? 1 : 0;   /* t52f 시험: 오버레이 버튼 줄 켬/끔 */
         else if (a == "--ovstrong") kbov::g_force_strong = true;   /* t52f 시험: 버튼 줄을 항상 진하게 */
+        else if (a == "--sysloc" && i + 1 < argc) gApp.cli_sysloc = argv[++i];
         else if (a == "--lang" && i + 1 < argc) gApp.cli_lang = atoi(argv[++i]);   /* t52g 시험 */
         else if (a == "--menushot") gApp.menushot = true;   /* t52f 시험: 메뉴 창 캡처 후 종료 */
         else if (a == "--kbshader" && i + 1 < argc) gApp.cli_kbsh = atoi(argv[++i]) ? 1 : 0;

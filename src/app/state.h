@@ -224,6 +224,7 @@ struct AppState {
     bool aw_dry = false;
     bool batest = false;
     /* ---- 옛 위치: app/uitest.h ---- */
+    std::string cli_sysloc;   /* #627 test only (--sysloc ko|ja|en): pretend the first system locale */
     int cli_lang = -1;   /* t52g 시험 전용(--lang N): 설정의 언어 대신 0 한국어 · 1 English · 2 にほんご */
     bool menushot = false;   /* t52f 시험 전용(--menushot): 메뉴 창을 실제로 찍어 4:3 고정을 눈으로 본다 */
     /* ---- 옛 위치: app/video_sink.h ---- */

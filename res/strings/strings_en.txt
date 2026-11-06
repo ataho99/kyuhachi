@@ -712,7 +712,7 @@ desc_bleed=CRT color bleed: red/green/blue drift sideways. Higher = colored frin
 desc_glow=Light that spreads softly around bright areas. Higher = wider, stronger glow (off to 100%).
 desc_curve=CRT-style rounded screen edges. Flat at 0; higher = more curve and rounder corners.
 desc_fullscr=Fullscreen: switch between windowed and fullscreen. Alt+Enter works too.
-desc_fps=Shows frames per second and speed in a corner. In game: Alt+F or pad SELECT+R1 toggles it.
+desc_fps=Shows frames per second and speed in a corner. In game: Alt+F toggles it. For a pad, assign a button in the hotkey tab of Controls.
 desc_bgm=BGM volume, set separately from sound effects.
 desc_se=Sound effect volume. The startup sound follows this value.
 desc_snddev=Sound output device. Only the default device is used for now.
@@ -893,3 +893,15 @@ fsrc_sys=system
 extra_ttl=Extras
 extra_desc=Disc layout and extra features of the selected game.
 lang_set=Language
+pad_stk_l=Left stick
+pad_stk_r=Right stick
+pad_dz_l=Left deadzone
+pad_dz_r=Right deadzone
+pad_stk_on=On
+pad_stk_off=Off
+pad_dz0=Default
+pad_dz1=Large
+pad_dz2=Larger
+pad_dz3=Largest
+pad_stk_help=Off = this stick is ignored everywhere. L3/R3 buttons still work.
+pad_dz_help=Tilt needed to register. Default = as before. Raise if it drifts.

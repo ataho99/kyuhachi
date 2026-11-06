@@ -73,7 +73,8 @@ static void gh_hotplug_hook(bool added, const char * name) {
     gh_log("HOTPLUG %s (%s) -> 조작 설명 표기 %s", added ? "연결" : "해제", name ? name : "?", added ? "패드" : "키보드");
 }
 #include "gensei_harness_t49a.h"   /* t49a: 하니스 전용 코드(별도 파일) */
-static bool gh_evpre(const SDL_Event & e, int tag) {
+static bool gh_evpre(SDL_Event & e, int tag) {
+    kh_stk_ev(e);   /* #619/#620: stick off / deadzone, before anyone looks at the event */
     if (e.type == SDL_CONTROLLERDEVICEADDED || e.type == SDL_CONTROLLERDEVICEREMOVED || e.type == SDL_JOYDEVICEADDED || e.type == SDL_JOYDEVICEREMOVED) { gensei_input_event(e); return true; }   /* t49a: 장치 추가/제거는 메뉴·게임 공통으로 여기서 한 번만 */
     if (gensei_raw_event(e)) return true;   /* t48e (#651 2): 표에 없는 패드의 원시 이벤트 → 표준 이벤트로 바꿔 다시 밀어 넣음(메뉴·게임 공통) */
     if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_F12 && !e.key.repeat) { if ((e.key.keysym.mod & KMOD_CTRL) || (SDL_GetModState() & KMOD_CTRL)) { gh_winshot(); return true; } if (tag == 0) return true; /* t49f (#858): 평범한 F12 는 창 캡처가 먹지 않고 게임 중 일시정지 메뉴(게임 루프)·일시정지 메뉴(닫기)로 통과, 창 캡처는 Ctrl+F12 */ }

@@ -23,6 +23,7 @@ struct Settings {
     int boot = 0;       /* 0 켬 1 끔 */
     int bosd = 1;       /* 배속 표시(오른쪽 위 ▶▶) 0 끔 1 켬 */
     int fpsd = 0;       /* FPS / speed display 0 off 1 on (ini key fpsdisp) */
+    int stk_l = 1, stk_r = 1, dz_l = 0, dz_r = 0;   /* #619/#620: stick on/off (1 = on) and deadzone level 0 default .. 3 largest */
     int kbshader = 0;   /* t46z (#548): 화면 키보드·버튼·배속·OSD 에 셰이더 적용 0 안 함(기본) 1 적용 */
     int kbbtn = 1;      /* t46x: 화면 키보드 토글 버튼 표시 0 숨김 1 표시 */
     int ovbtn = 1;      /* t52f (#132): 오버레이 버튼 줄(메뉴·저장·불러오기·배속·키보드) 표시 0 숨김 1 표시 */
@@ -54,6 +55,7 @@ inline void fx_finish(Settings & s) {
 static void ini_put(FILE * f, const Settings & s) {
     fprintf(f, "fx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nbgm=%d\nse=%d\ndevice=%d\npad=%d\nbmult=%d\nbmode=%d\nboot=%d\nbosd=%d\nbsound=%d\nkbbtn=%d\nkbshader=%d\novbtn=%d\npadbtn=%d\n", s.ratio, (s.shader == 2 ? 2 : 0), s.curve, s.bleed, s.glow, s.scan, s.mask, s.bgm, s.se, s.device, s.pad, s.bmult, s.bmode, s.boot, s.bosd, s.bsound, s.kbbtn, s.kbshader, s.ovbtn, s.padbtn);
     fprintf(f, "shim=%d\nshim_amp=%d\nshim_spd=%d\nshim_glow=%d\nshim_col=%d\n", s.shim, s.shim_amp, s.shim_spd, s.shim_glow, s.shim_col);
+    fprintf(f, "stick_l=%d\nstick_r=%d\ndz_l=%d\ndz_r=%d\n", s.stk_l ? 1 : 0, s.stk_r ? 1 : 0, s.dz_l, s.dz_r);
     fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다: 작품 구역은 전역 값을 먼저 복사하므로 줄이 없으면 전역 켬이 새어 든다 */
 }
 static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587: 작품 구역에는 바꾼 줄만 쓴다 (비트 = Ui::fbit_of 순서) */
@@ -73,6 +75,10 @@ static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587
     if (m & (1u << 13)) fprintf(f, "bosd=%d\n", s.bosd);
     if (m & (1u << 14)) fprintf(f, "bsound=%d\n", s.bsound);
     if (m & (1u << 15)) fprintf(f, "ovbtn=%d\n", s.ovbtn);
+    if (m & (1u << 17)) fprintf(f, "stick_l=%d\n", s.stk_l ? 1 : 0);
+    if (m & (1u << 18)) fprintf(f, "stick_r=%d\n", s.stk_r ? 1 : 0);
+    if (m & (1u << 19)) fprintf(f, "dz_l=%d\n", s.dz_l);
+    if (m & (1u << 20)) fprintf(f, "dz_r=%d\n", s.dz_r);
     if (m & (1u << 16)) fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다 (T252) */
 }
 static bool ini_set(Settings & s, const std::string & k, int v) {
@@ -81,6 +87,10 @@ static bool ini_set(Settings & s, const std::string & k, int v) {
     if (k == "shim_spd") { s.shim_spd = v < 1 ? 1 : v > 10 ? 10 : v; return true; }
     if (k == "shim_glow") { s.shim_glow = v < 0 ? 0 : v > 10 ? 10 : v; return true; }
     if (k == "shim_col") { s.shim_col = v < 0 ? 0 : v > 3 ? 3 : v; return true; }
+    if (k == "stick_l") { s.stk_l = v ? 1 : 0; return true; }   /* #619/#620 */
+    if (k == "stick_r") { s.stk_r = v ? 1 : 0; return true; }
+    if (k == "dz_l") { s.dz_l = v < 0 ? 0 : v > 3 ? 3 : v; return true; }
+    if (k == "dz_r") { s.dz_r = v < 0 ? 0 : v > 3 ? 3 : v; return true; }
     if (k == "fx") { s.lmode = false; }   /* t48c: 새 형식 표지. 이 구역의 화면 키는 새 범위로 읽는다 */
     else if (s.lmode && (k == "shader" || k == "curve" || k == "bleed" || k == "scan" || k == "mask")) { s.lseen = true; if (k == "shader") s.l_sh = v; else if (k == "curve") s.l_curve = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "bleed") s.l_bleed = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "scan") s.l_scan = v < 0 ? 0 : v > 10 ? 10 : v; else s.l_mask = v < 0 ? 0 : v > 3 ? 3 : v; }   /* 옛 형식: 구역이 끝날 때 fx_finish 가 옮긴다 */
     else if (k == "ratio") s.ratio = v; else if (k == "shader") s.shader = (v == 2) ? 2 : 0; else if (k == "curve") s.curve = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "bleed") s.bleed = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "glow") s.glow = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "scan") s.scan = v < 0 ? 0 : v > 10 ? 10 : v; else if (k == "mask") s.mask = v < 0 ? 0 : v > 10 ? 10 : v;

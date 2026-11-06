@@ -352,6 +352,41 @@ static bool kh_xb_event(const SDL_Event & e) {   /* a registered extra button fi
         return true; }
     return false;
 }
+/* #619/#620: per-stick on/off + deadzone. Applied to the SDL axis event first, so menu, game, device detection and capture all see the result */
+static int kh_stk_en[2] = { 1, 1 }, kh_stk_dz[2] = { 0, 0 };
+static bool kh_stk_act[4], kh_stk_sup[4];
+static void kh_stk_val(int side, int ix, Sint16 & v) {
+    static const int ON[4] = { 0, 22000, 27000, 30500 }, OFF[4] = { 0, 14000, 20000, 25000 };
+    const int q = side * 2 + ix, m = v < 0 ? -(int)v : (int)v; bool cut = false;
+    if (!kh_stk_en[side]) cut = true;
+    else if (kh_stk_dz[side] > 0) {
+        const int lv = kh_stk_dz[side];
+        if (!kh_stk_act[q] && m >= ON[lv]) kh_stk_act[q] = true; else if (kh_stk_act[q] && m < OFF[lv]) kh_stk_act[q] = false;
+        cut = !kh_stk_act[q];
+    }
+    if (cut) {
+        if (m >= 16000 && !kh_stk_sup[q]) {
+            kh_stk_sup[q] = true;
+            GPLOG("  STICKFILTER %c axis %d value=%d -> 0 (%s)", side ? 'R' : 'L', ix, (int)v, kh_stk_en[side] ? "deadzone" : "off");
+        }
+        v = 0;
+    }
+    if (m < 4000) kh_stk_sup[q] = false;
+}
+static void kh_stk_ev(SDL_Event & e) {
+    if (e.type != SDL_CONTROLLERAXISMOTION) return;
+    const int a = e.caxis.axis;
+    if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_LEFTY) kh_stk_val(0, a == SDL_CONTROLLER_AXIS_LEFTY ? 1 : 0, e.caxis.value);
+    else if (a == SDL_CONTROLLER_AXIS_RIGHTX || a == SDL_CONTROLLER_AXIS_RIGHTY) kh_stk_val(1, a == SDL_CONTROLLER_AXIS_RIGHTY ? 1 : 0, e.caxis.value);
+}
+static void kh_stk_set(int le, int re, int ld, int rd) {
+    const int n[4] = { le ? 1 : 0, re ? 1 : 0, ld < 0 ? 0 : ld > 3 ? 3 : ld, rd < 0 ? 0 : rd > 3 ? 3 : rd };
+    if (n[0] == kh_stk_en[0] && n[1] == kh_stk_en[1] && n[2] == kh_stk_dz[0] && n[3] == kh_stk_dz[1]) return;
+    kh_stk_en[0] = n[0]; kh_stk_en[1] = n[1]; kh_stk_dz[0] = n[2]; kh_stk_dz[1] = n[3];
+    memset(kh_stk_act, 0, sizeof kh_stk_act);
+    GPLOG("STICKSET L=%s dz%d R=%s dz%d", n[0] ? "on" : "off", n[2], n[1] ? "on" : "off", n[3]);
+    kh_stick(SDL_CONTROLLER_AXIS_LEFTX, 0); kh_stick(SDL_CONTROLLER_AXIS_LEFTY, 0);   /* let go of a direction that was held */
+}
 static bool gensei_raw_event(const SDL_Event& e) {
     static const Uint8 MAP[10] = { SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B, SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y, SDL_CONTROLLER_BUTTON_LEFTSHOULDER, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_LEFTSTICK, SDL_CONTROLLER_BUTTON_RIGHTSTICK };
     switch (e.type) {

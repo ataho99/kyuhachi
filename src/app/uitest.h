@@ -219,6 +219,10 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 7, "padkey:") == 0) { U.open_padkey(atoi(tk.c_str() + 7)); continue; }   /* t50a 시험 전용: 패드 키 고르기 화면 */
             if (tk.compare(0, 4, "osk:") == 0) { U.osk_open(atoi(tk.c_str() + 4), "", ui::S_MAIN, false); continue; }   /* t50a 시험 전용: 화면 키보드 (0=이름 · 그 밖=DOS 명령) */
             if (tk.compare(0, 6, "scope:") == 0) { U.scope = atoi(tk.c_str() + 6); if (U.scope == 1 && U.cur >= 0 && U.cur < (int)U.games.size() && !U.has_t[U.cur]) { U.t[U.cur] = U.effective(U.cur); U.has_t[U.cur] = true; } continue; }
+            if (tk.compare(0, 8, "stkdump:") == 0) {   /* #619/#620 test only: stick values, global vs effective */
+                const int ci = U.cur; const bool ok = ci >= 0 && ci < (int)ui::Ui::MAXG; const ui::Settings ef = U.effective(ci);
+                gh_log("uikeys: STKDUMP %s scr=%d sel=%d scope=%d ovm=%x g[%d %d %d %d] eff[%d %d %d %d]", tk.c_str() + 8, (int)U.scr, U.sel,
+                       U.scope, ok ? U.ovm[ci] : 0u, U.g.stk_l, U.g.stk_r, U.g.dz_l, U.g.dz_r, ef.stk_l, ef.stk_r, ef.dz_l, ef.dz_r); continue; }
             if (tk == "padstate") {
                 std::string gp; for (auto & kv : U.gpad) gp += kv.first + "=" + kv.second + " "; std::string wp; if (U.cur >= 0 && U.cur < (int)U.games.size()) { std::map<std::string, std::string> m; prof::get_pad_keys(U.games[U.cur].dir, m); for (auto & kv : m) wp += kv.first + "=" + kv.second + " "; }
                 gh_log("uikeys: PADSTATE scr=%d sel=%d scope=%d g.pad=%d eff.pad=%d global[%s] work[%s]", (int)U.scr, U.sel, U.scope, U.g.pad, U.eff().pad, gp.c_str(), wp.c_str());

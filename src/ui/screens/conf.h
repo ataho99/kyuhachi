@@ -6,7 +6,7 @@ inline void Ui::d_conf(Canvas & c) {
     rbox(c, 16, 24, 288, 296, WH, phr_("동작 환경 설정"));
     const std::vector<int> ri = rowids(S_CONF);
     const bool own = scope == 1 && cur >= 0 && cur < MAXG; const bool ind = own && ovm[cur] != 0u;
-    static const unsigned rb[15] = { 0u, 1u << 7, 1u << 8, 0u, 1u << 9, 1u << 10, 1u << 11, 1u << 14, 1u << 12, 1u << 13, 1u << 15, 0u, 0u, 0u, 0u };
+    static const unsigned rb[15] = { 0u, 1u << 7, 1u << 8, 0u, (1u << 9) | (15u << 17), 1u << 10, 1u << 11, 1u << 14, 1u << 12, 1u << 13, 1u << 15, 0u, 0u, 0u, 0u };
     std::vector<std::string> n;
     { const std::string nm[15] = { phr_("적용 범위"), phr_("BGM 음량"), phr_("효과음 음량"), KH_SNDLABEL, phr_("조작 설정"), phr_("배속 배율"), phr_("배속 방식"), phr_("배속 중 소리"), phr_("부팅 시퀀스"), phr_("배속 표시"), phr_("오버레이 버튼 표시"), phr_("한글 글꼴"), phr_("일본어 글꼴"), phr_("언어 / Language / 言語"), phr_("indiv_reset") };
       for (int id : ri) n.push_back((own && (ovm[cur] & rb[id])) ? std::string("● ") + nm[id] : nm[id]); }

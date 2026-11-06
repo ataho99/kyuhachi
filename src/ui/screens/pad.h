@@ -12,6 +12,19 @@ inline void Ui::d_pad(Canvas & c) {
     rbox(c, 16, 24, 288, 296, WH, (std::string("[") + phr_("패드 버튼") + "] " + phr_("tab_hot") + " (R)").c_str());
     std::vector<std::string> r = { phr_("적용 범위"), phr_("pad_decide") };
     for (int i = 0; i < PAD_N; i++) { bool fw, df; val(i, fw, df); r.push_back(std::string(fw ? "* " : "  ") + fit(pad_row_name(i), 220)); }
+    static const char * const SL[4] = { "pad_stk_l", "pad_dz_l", "pad_stk_r", "pad_dz_r" };
+    static const char * const DV[4] = { "pad_dz0", "pad_dz1", "pad_dz2", "pad_dz3" };
+    auto sv = [&](int j) -> int { return j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : s.dz_r; };
+    auto svt = [&](int j) -> std::string {
+        const int v = sv(j);
+        if (j & 1) return std::string(phr_(DV[v < 0 ? 0 : v > 3 ? 3 : v]));
+        return std::string(phr_(v ? "pad_stk_on" : "pad_stk_off"));
+    };
+    const bool own_ = scope == 1 && cur >= 0 && cur < MAXG;
+    for (int j = 0; j < 4; j++) {
+        const bool mk = own_ && (ovm[cur] & (1u << (17 + j)));
+        r.push_back(std::string(mk ? "* " : "  ") + fit(std::string(phr_(SL[j])) + ": " + svt(j), 220));
+    }
     std::vector<uint32_t> col(r.size(), 0u);
     rowlist(c, 40, 44, 256, 11, r, sel, 24, &col);
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
@@ -33,28 +46,41 @@ inline void Ui::d_pad(Canvas & c) {
     text(c, 332, 302, fit(phr_("pad_menu_fixed"), 284), CY, K);
     std::string ln;
     if (sel < 2) ln = sel == 0 ? phr_("전역=모든 작품, 이 작품=이 작품만. 작품 값이 우선.") : phr_("pad_decide_help");
-    else { bool fw, df; std::string v = val(sel - 2, fw, df); ln = pad_row_name(sel - 2) + " → " + pad_show(v) + ((scope == 1 && !fw) ? (df ? phr_(" (기본)") : phr_(" (전역)")) : (scope == 0 && df ? phr_(" (기본)") : ""));
+    else if (sel < PAD_N + 2) { bool fw, df; std::string v = val(sel - 2, fw, df); ln = pad_row_name(sel - 2) + " → " + pad_show(v) + ((scope == 1 && !fw) ? (df ? phr_(" (기본)") : phr_(" (전역)")) : (scope == 0 && df ? phr_(" (기본)") : ""));
         if (sel >= 10 && sel <= 13) ln += std::string("  ") + phr_("pad_stick_note"); }
-    desc(c, 324, 44, { fit(dkey(ln), 560) });
+    if (sel >= PAD_N + 2) {
+        const int j = sel - PAD_N - 2; const std::string l1 = std::string(phr_(SL[j])) + " -> " + svt(j), l2 = phr_((j & 1) ? "pad_dz_help" : "pad_stk_help");
+        desc(c, 324, 44, { fit(dkey(l1), 560), fit(dkey(l2), 560) });
+    } else desc(c, 324, 44, { fit(dkey(ln), 560) });
     helpline(c, phr_("↑↓:선택, ←→:값, ○:키 고르기, ×:뒤로, △:출하 시 설정"));
 }
 inline void Ui::k_pad(UKey k, Act & a) {
     struct Gp { Ui & u; bool have; Settings pre; int gi; ~Gp() { if (have && u.scope == 1 && u.cur == gi && gi >= 0 && gi < Ui::MAXG) { unsigned d = Ui::diff_bits(pre, u.t[gi]); if (d) u.ov_set(gi, u.ovm[gi] | d); u.sync_t(gi); } } } gp{ *this, false, Settings(), cur };   /* #587: 이 작품에서 바꾼 줄만 개별 값 */
     if (scope == 1 && cur >= 0 && cur < MAXG) { sync_t(cur); gp.pre = t[cur]; gp.have = true; }
+    auto stkstep = [&](int j, int d) {   /* #619/#620: j 0 L stick, 1 L deadzone, 2 R stick, 3 R deadzone; d 0 = cycle */
+        Settings & s = edit(); int & v = j == 0 ? s.stk_l : j == 1 ? s.dz_l : j == 2 ? s.stk_r : s.dz_r; const int o = v;
+        if (j & 1) v = d == 0 ? (v + 1) % 4 : clampi(v + d, 0, 3); else v = v ? 0 : 1;
+        if (v != o) { dirty = true; a.t = A_APPLY; }
+    };
     auto mv = [&](int & s, int cnt) { if (cnt < 1) cnt = 1; if (k == UK_UP) s = (s + cnt - 1) % cnt; else if (k == UK_DOWN) s = (s + 1) % cnt; };
     do { {
             if (k == UK_R) { pad_sel_keep = sel; scr = S_HOT; sel = 0; hot_cap = false; break; }
-            mv(sel, PAD_N + 2);
+            mv(sel, PAD_N + 6);
             if (k == UK_LEFT || k == UK_RIGHT) {
                 int d = (k == UK_RIGHT) ? 1 : -1;
                 if (sel == 0) { scope_step(d); }
                 else if (sel == 1) { Settings & s = edit(); int nv = clampi(s.pad + d, 0, 1); if (nv != s.pad) { s.pad = nv; dirty = true; a.t = A_APPLY; } }
+                else if (sel >= PAD_N + 2) stkstep(sel - PAD_N - 2, d);
             } else if (k == UK_OK) {
-                if (sel >= 2) open_padkey(sel - 2);
+                if (sel >= PAD_N + 2) stkstep(sel - PAD_N - 2, 0);
+                else if (sel >= 2) open_padkey(sel - 2);
                 else if (sel == 1) { Settings & s = edit(); s.pad = s.pad == 1 ? 0 : 1; dirty = true; a.t = A_APPLY; }
             } else if (k == UK_TRI) {   /* 출하 시 설정: 이 범위의 버튼 줄을 모두 지움, 결정 방식은 일본식 */
-                if (scope == 0) { gpad.clear(); eff().pad = 0; }
-                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } gp.have = false; ov_set(cur, ovm[cur] & ~(1u << 9)); sync_t(cur); }
+                if (scope == 0) {
+                    gpad.clear(); Settings d0; Settings & e0 = eff();
+                    e0.pad = d0.pad; e0.stk_l = d0.stk_l; e0.stk_r = d0.stk_r; e0.dz_l = d0.dz_l; e0.dz_r = d0.dz_r;
+                }
+                else if (cur >= 0 && cur < (int)games.size()) { if (env.pad_get && env.pad_set) { std::map<std::string, std::string> m; env.pad_get(cur, m); for (auto & kv : m) env.pad_set(cur, kv.first, std::string()); } gp.have = false; ov_set(cur, ovm[cur] & ~((1u << 9) | (15u << 17))); sync_t(cur); }
                 dirty = true; a.t = A_APPLY;
             } else if (k == UK_CANCEL) { go(S_CONF, rowidx(S_CONF, 4)); }
             break; }

@@ -54,9 +54,9 @@ struct Ui {
 
     int scope3() const { return scope; }
     void scope_step(int d) { int i = scope + d; if (i < 0) i = 0; if (i > 1) i = 1; scope = i; }   /* #587: 범위는 「전역」 / 「이 작품」 둘뿐 */
-    static unsigned fbit_of(const std::string & k) { static const char * const KN[17] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp" }; for (unsigned i = 0; i < 17; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
+    static unsigned fbit_of(const std::string & k) { static const char * const KN[21] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "stick_l", "stick_r", "dz_l", "dz_r" }; for (unsigned i = 0; i < 21; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
     static unsigned fbits_all() { return (1u << 17) - 1u; }
-#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16)
+#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20)
     Settings overlay(Settings s, int gi) const { if (gi >= 0 && gi < MAXG && ovm[gi]) { const Settings & o = t[gi];
 #define KH_X(f, b) if (ovm[gi] & (1u << b)) s.f = o.f;
         KH_FIELDS(KH_X)

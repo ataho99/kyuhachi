@@ -197,7 +197,7 @@ static void gh_apply_settings(const ui::Settings & s, bool vol) {
       static int lfx = -1; int kfx = (s.scan << 0) | (s.mask << 4) | (s.bleed << 8) | (s.glow << 12) | (s.curve << 16) | ((s.shader == 2 ? 1 : 0) << 20) | (s.phos << 21); if (kfx != lfx) { lfx = kfx; gh_log("FX filter=%s scan=%d mask=%d rgb=%d glow=%d curve=%d -> shader=%d phos=%d", s.shader == 2 ? "nearest" : "sharp", s.scan, s.mask, s.bleed, s.glow, s.curve, (int)gApp.shader, s.phos); } }
     { static int lk = -1; if (lk != (int)gApp.kbshader) { lk = (int)gApp.kbshader; gh_log("KBSHADER %d (0=오버레이 평면 합성, 1=셰이더 적용) cli=%d", (int)gApp.kbshader, gApp.cli_kbsh); } }
     gApp.curve = s.curve_f(); gApp.scanv = s.scan > 0 ? 2.0f + (float)s.scan : 0.0f; gApp.maskv = s.mask_f(); gApp.bleedv = s.bleed_f(); gApp.glowv = s.glow_f();
-    { static const float bvt[4] = { 0.0f, 0.4f, 0.7f, 1.0f }, rvt[4] = { 0.0f, 0.015f, 0.025f, 0.04f }, gvt[4] = { 0.0f, 0.9f, 1.8f, 3.0f }; static const int pmt[4] = { 0, 40, 90, 160 };
+    { static const float bvt[4] = { 0.0f, 0.4f, 0.7f, 1.0f }, rvt[4] = { 0.0f, 0.015f, 0.025f, 0.04f }, gvt[4] = { 0.0f, 0.15f, 0.3f, 0.5f }; static const int pmt[4] = { 0, 40, 90, 160 };
       gApp.beamv = bvt[s.ph_beam()]; gApp.persms = pmt[s.ph_pers()]; gApp.breathv = rvt[s.ph_breath()]; gApp.glowpv = gvt[s.ph_glow()]; }   /* t662 (#635) */
     if (vol && gApp.boot_tick) gh_apply_volume(s);
 }

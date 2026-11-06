@@ -23,6 +23,7 @@
 #include "ui/screens/yn.h"
 #include "ui/screens/hddask.h"
 #include "ui/screens/screen.h"
+#include "ui/screens/phos.h"
 #include "ui/screens/conf.h"
 #include "ui/screens/save.h"
 #include "ui/screens/game.h"

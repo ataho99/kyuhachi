@@ -54,9 +54,9 @@ struct Ui {
 
     int scope3() const { return scope; }
     void scope_step(int d) { int i = scope + d; if (i < 0) i = 0; if (i > 1) i = 1; scope = i; }   /* #587: 범위는 「전역」 / 「이 작품」 둘뿐 */
-    static unsigned fbit_of(const std::string & k) { static const char * const KN[22] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp" }; for (unsigned i = 0; i < 22; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
+    static unsigned fbit_of(const std::string & k) { static const char * const KN[23] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp", "phos" }; for (unsigned i = 0; i < 23; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
     static unsigned fbits_all() { return (1u << 17) - 1u; }
-#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21)
+#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21) X(phos, 22)
     Settings overlay(Settings s, int gi) const { if (gi >= 0 && gi < MAXG && ovm[gi]) { const Settings & o = t[gi];
 #define KH_X(f, b) if (ovm[gi] & (1u << b)) s.f = o.f;
         KH_FIELDS(KH_X)
@@ -77,13 +77,13 @@ struct Ui {
 #if !defined(__ANDROID__)
             if (scope == 0) { r.push_back(8); r.push_back(9); }
 #endif
-            r.push_back(10); if (scope == 1) r.push_back(11); }
+            r.push_back(10); r.push_back(13); if (scope == 1) r.push_back(11); }   /* t662: 13 = phosphor page */
         else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 1) r.push_back(14); }
         return r; }
     static unsigned indiv_bit(Scr s, int id);   /* build 9: own-value bit of a settings line (0 = none) */
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
     Settings follow_base(int gi) const {   /* 전역 + 프로파일 값(화면 효과 키 제외). 개별 값은 overlay 가 얹는다 */
-        Settings s = g; if (gi >= 0 && gi < (int)games.size()) { std::map<std::string, std::string> m = games[gi].ov; static const char * const fxk[] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "fx" }; for (const char * k : fxk) m.erase(k); apply_ov(s, m); }
+        Settings s = g; if (gi >= 0 && gi < (int)games.size()) { std::map<std::string, std::string> m = games[gi].ov; static const char * const fxk[] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "fx", "phos" }; for (const char * k : fxk) m.erase(k); apply_ov(s, m); }
         return s; }
     Settings & edit() { return eff(); }   /* #587: 이 작품 범위의 값 쓰기는 이 작품 칸에 — 끝난 뒤 키 처리부가 바뀐 줄만 개별 값으로 표시 */
     const UiGame * game() const { return (cur >= 0 && cur < (int)games.size()) ? &games[cur] : NULL; }
@@ -589,6 +589,7 @@ struct Ui {
     void d_hddask(Canvas & c);
     void d_add(Canvas & c);
     void d_screen(Canvas & c);
+    void d_phos(Canvas & c); Act k_phos(UKey k, Act & a); bool phos_pg = false;   /* t662 (#635): phosphor sub-page of S_SCREEN */
     void d_screen_t48b2_old(Canvas & c) {
         titlebar(c, phr_("화면 설정"));
         Settings & s = eff(); bool crt = s.shader == 1;
@@ -812,25 +813,25 @@ struct Ui {
     /* ---- 입력 */
     struct Preset { std::string name; Settings st; };   /* 빌드 6: 화면 프리셋 = 비율·필터·주사선·마스크·RGB 번짐·빛 번짐·곡면 한 묶음 */
     std::vector<Preset> presets; int pre_i = 0;   /* pre_i: 프리셋 줄에서 마지막으로 고른 칸 */
-    enum { PRE_NB = 3, PRE_MAX = 12 };   /* 기본 제공 3 · 내 프리셋 최대 12 · 맨 끝에 「지금 값을 저장」 칸 */
-    static Settings pre_builtin(int i) { Settings s; if (i == 1) { s.scan = 3; s.mask = 3; s.bleed = 2; s.glow = 2; s.curve = 2; } else if (i == 2) { s.scan = 6; s.mask = 6; s.bleed = 4; s.glow = 4; s.curve = 4; } return s; }
-    static bool pre_same(const Settings & a, const Settings & b) { return a.ratio == b.ratio && (a.shader == 2) == (b.shader == 2) && a.curve == b.curve && a.bleed == b.bleed && a.glow == b.glow && a.scan == b.scan && a.mask == b.mask; }
-    static void pre_copy(Settings & d, const Settings & p) { d.ratio = p.ratio < 0 ? 0 : p.ratio > 2 ? 2 : p.ratio; d.shader = p.shader == 2 ? 2 : 0; d.curve = p.curve; d.bleed = p.bleed; d.glow = p.glow; d.scan = p.scan; d.mask = p.mask; }
+    enum { PRE_NB = 4, PRE_MAX = 12 };   /* 기본 제공 3 · 내 프리셋 최대 12 · 맨 끝에 「지금 값을 저장」 칸 */
+    static Settings pre_builtin(int i) { Settings s; if (i == 1) { s.scan = 3; s.mask = 3; s.bleed = 2; s.glow = 2; s.curve = 2; } else if (i == 2) { s.scan = 6; s.mask = 6; s.bleed = 4; s.glow = 4; s.curve = 4; } else if (i == 3) { s.phos = 2 | (2 << 2) | (2 << 4) | (1 << 6); } return s; }   /* t662: preset 3 = OLED vivid (beam 2, persistence 90 ms, breathing 2, glow 1) */
+    static bool pre_same(const Settings & a, const Settings & b) { return a.ratio == b.ratio && (a.shader == 2) == (b.shader == 2) && a.curve == b.curve && a.bleed == b.bleed && a.glow == b.glow && a.scan == b.scan && a.mask == b.mask && a.phos == b.phos; }
+    static void pre_copy(Settings & d, const Settings & p) { d.ratio = p.ratio < 0 ? 0 : p.ratio > 2 ? 2 : p.ratio; d.shader = p.shader == 2 ? 2 : 0; d.curve = p.curve; d.bleed = p.bleed; d.glow = p.glow; d.scan = p.scan; d.mask = p.mask; d.phos = p.phos < 0 ? 0 : p.phos > 255 ? 255 : p.phos; }
     int pre_total() const { return PRE_NB + (int)presets.size() + 1; }
     Settings pre_get(int i) const { return i < PRE_NB ? pre_builtin(i) : presets[(size_t)(i - PRE_NB)].st; }
     int pre_match() { const Settings e = eff(); for (int i = 0; i < PRE_NB + (int)presets.size(); i++) if (pre_same(e, pre_get(i))) return i; return -1; }
     int pre_pos() { const int nb = PRE_NB + (int)presets.size(); if (pre_i >= 0 && pre_i <= nb) { if (pre_i >= nb) return pre_i; if (pre_same(eff(), pre_get(pre_i))) return pre_i; } return pre_match(); }   /* 지금 줄이 가리키는 칸(-1 = 직접 조정) */
-    std::string pre_name(int i) const { if (i < PRE_NB) { static const char * const KN[3] = { "preset_b0", "preset_b1", "preset_b2" }; return std::string(phr_(KN[i])); } if (i < PRE_NB + (int)presets.size()) return presets[(size_t)(i - PRE_NB)].name; return std::string(phr_("preset_new")); }
+    std::string pre_name(int i) const { if (i < PRE_NB) { static const char * const KN[4] = { "preset_b0", "preset_b1", "preset_b2", "preset_b3" }; return std::string(phr_(KN[i])); } if (i < PRE_NB + (int)presets.size()) return presets[(size_t)(i - PRE_NB)].name; return std::string(phr_("preset_new")); }
     void pre_add(const Settings & s) { if ((int)presets.size() >= PRE_MAX) return; std::string nm; for (int n = 1; n < 100; n++) { nm = std::string(phr_("preset_user")) + " " + std::to_string(n); bool dup = false; for (size_t q = 0; q < presets.size(); q++) if (presets[q].name == nm) dup = true; if (!dup) break; } Preset p; p.name = nm; pre_copy(p.st, s); presets.push_back(p); pre_i = PRE_NB + (int)presets.size() - 1; dirty = true; }
     int nitems() const {
-        switch (scr) { case S_MAIN: return 6; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_SET: return 5; case S_SHIM: return 5; case S_GKB: return 5; case S_EXTRA: return extra_sub ? 2 : 7; case S_GAME: return 8 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
+        switch (scr) { case S_MAIN: return 6; case S_START: return 3; case S_SWAP: return 2; case S_SWAPI: return (game() ? (int)game()->fds.size() : 1); case S_ABOUT: return 1; case S_PICK: return (int)vis.size() + 1; case S_ADD: return 6; case S_SCREEN: return phos_pg ? 4 : (int)rowids(S_SCREEN).size(); case S_CONF: return (int)rowids(S_CONF).size(); case S_SAVE: return 8; case S_SET: return 5; case S_SHIM: return 5; case S_GKB: return 5; case S_EXTRA: return extra_sub ? 2 : 7; case S_GAME: return 8 + (stage_next_label.empty() ? 0 : 1); case S_KEYS: return 9; case S_HELP: return 1; default: return 1; }
     }
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
-    void go(Scr s, int selv = 0) { scr = s; sel = selv; fnow_cur = -2; if (s == S_EXTRA) extra_sub = 0; }   /* build 5b-3: font-now cache reset / work menu back to its main list */
+    void go(Scr s, int selv = 0) { scr = s; sel = selv; phos_pg = false; fnow_cur = -2; if (s == S_EXTRA) extra_sub = 0; }   /* build 5b-3: font-now cache reset / work menu back to its main list */
     void enter_conf_cfg() { cb_g = g; cb_cur = cur; cb_has_t = false; if (cur >= 0 && cur < MAXG) { cb_has_t = has_t[cur]; cb_t = t[cur]; } cb_scope = scope; cb_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; cb_fkr = font_kr; cb_fjp = font_jp; cb_has = true; }
     static void conf_fields(Settings & d, const Settings & s) { d.bgm = s.bgm; d.se = s.se; d.device = s.device; d.bmult = s.bmult; d.bmode = s.bmode; d.bsound = s.bsound; d.boot = s.boot; d.bosd = s.bosd; d.ovbtn = s.ovbtn; }   /* 조작 설정(pad)은 하위 화면 [S_PAD] 몫이라 복원하지 않는다 */
     bool conf_restore() { if (!cb_has) return false; cb_has = false; conf_fields(g, cb_g); if (cb_cur >= 0 && cb_cur < MAXG) { if (cb_has_t) { has_t[cb_cur] = true; conf_fields(t[cb_cur], cb_t); } else has_t[cb_cur] = false; } if (cb_cur >= 0 && cb_cur < MAXG) { ov_set(cb_cur, cb_ovm); sync_t(cb_cur); } scope = cb_scope; font_kr = cb_fkr; font_jp = cb_fjp; return true; }
-    void enter_screen_cfg() { pre_i = 0; bk_cur = cur; bk_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; backup = eff(); backup_has = true; bk_wmult = wmult; bk_winw = winw; bk_winh = winh; }
+    void enter_screen_cfg() { pre_i = 0; phos_pg = false; bk_cur = cur; bk_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; backup = eff(); backup_has = true; bk_wmult = wmult; bk_winw = winw; bk_winh = winh; }
     static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }
 
     void k_quit(UKey k, Act & a);
@@ -880,7 +881,7 @@ static void settings_save(const Ui & u, const std::string & path) {
     fprintf(f, "[order]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].order_n > 0) fprintf(f, "%s=%d\n", u.games[i].id.c_str(), u.games[i].order_n);
     fprintf(f, "[play]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].play_s > 0) fprintf(f, "%s=%d\n", u.games[i].id.c_str(), u.games[i].play_s);
     for (size_t i = 0; i < u.games.size() && i < (size_t)Ui::MAXG; i++) if (u.ovm[i]) { fprintf(f, "[%s]\nindiv=1\nfx=1\n", u.games[i].id.c_str()); ini_put_masked(f, u.t[i], u.ovm[i]); }   /* #587: 바꾼 줄만 */
-    for (size_t i = 0; i < u.presets.size(); i++) { const Settings & p = u.presets[i].st; fprintf(f, "[preset.%s]\nfx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\n", u.presets[i].name.c_str(), p.ratio, p.shader == 2 ? 2 : 0, p.curve, p.bleed, p.glow, p.scan, p.mask); }   /* 빌드 6: 내 프리셋 */
+    for (size_t i = 0; i < u.presets.size(); i++) { const Settings & p = u.presets[i].st; fprintf(f, "[preset.%s]\nfx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nphos=%d\n", u.presets[i].name.c_str(), p.ratio, p.shader == 2 ? 2 : 0, p.curve, p.bleed, p.glow, p.scan, p.mask, p.phos); }   /* 빌드 6: 내 프리셋 */
     fclose(f);
 }
 static void settings_load(Ui & u, const std::string & path) {

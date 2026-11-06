@@ -193,10 +193,12 @@ static void gh_apply_volume(const ui::Settings & s) {
 static void gh_apply_settings(const ui::Settings & s, bool vol) {
     kh_stk_set(s.stk_l, s.stk_r, s.dz_l, s.dz_r, s.stk_sp);   /* #619/#620/#624 */
     gApp.bosd_on = s.bosd != 0; gApp.fps_on = s.fpsd != 0; kbov::g_btn_on = kbov::g_cli_btn >= 0 ? kbov::g_cli_btn != 0 : s.kbbtn != 0; kbov::g_ov_on = kbov::g_cli_ov >= 0 ? kbov::g_cli_ov != 0 : s.ovbtn != 0; vpad::g_mode = vpad::g_cli >= 0 ? vpad::g_cli : s.padbtn; gApp.kbshader = gApp.cli_kbsh >= 0 ? gApp.cli_kbsh : (s.kbshader != 0 ? 1 : 0);
-    gApp.fit = gApp.menu43 ? (int)FIT_43 : s.ratio; { bool fxany = s.scan > 0 || s.mask > 0 || s.bleed > 0 || s.glow > 0 || s.curve > 0; gApp.shader = fxany ? SH_CRT : (s.shader == 2 ? SH_NEAREST : SH_SHARP); gApp.nearv = (s.shader == 2) ? 1.0f : 0.0f;   /* t48c: 효과가 하나라도 켜져 있으면 효과 셰이더(밑 그림은 uNear), 아니면 sharp/nearest 셰이더 */
-      static int lfx = -1; int kfx = (s.scan << 0) | (s.mask << 4) | (s.bleed << 8) | (s.glow << 12) | (s.curve << 16) | ((s.shader == 2 ? 1 : 0) << 20); if (kfx != lfx) { lfx = kfx; gh_log("FX filter=%s scan=%d mask=%d rgb=%d glow=%d curve=%d -> shader=%d", s.shader == 2 ? "nearest" : "sharp", s.scan, s.mask, s.bleed, s.glow, s.curve, (int)gApp.shader); } }
+    gApp.fit = gApp.menu43 ? (int)FIT_43 : s.ratio; { bool fxany = s.scan > 0 || s.mask > 0 || s.bleed > 0 || s.glow > 0 || s.curve > 0 || s.phos != 0; gApp.shader = fxany ? SH_CRT : (s.shader == 2 ? SH_NEAREST : SH_SHARP); gApp.nearv = (s.shader == 2) ? 1.0f : 0.0f;   /* t48c: 효과가 하나라도 켜져 있으면 효과 셰이더(밑 그림은 uNear), 아니면 sharp/nearest 셰이더 */
+      static int lfx = -1; int kfx = (s.scan << 0) | (s.mask << 4) | (s.bleed << 8) | (s.glow << 12) | (s.curve << 16) | ((s.shader == 2 ? 1 : 0) << 20) | (s.phos << 21); if (kfx != lfx) { lfx = kfx; gh_log("FX filter=%s scan=%d mask=%d rgb=%d glow=%d curve=%d -> shader=%d phos=%d", s.shader == 2 ? "nearest" : "sharp", s.scan, s.mask, s.bleed, s.glow, s.curve, (int)gApp.shader, s.phos); } }
     { static int lk = -1; if (lk != (int)gApp.kbshader) { lk = (int)gApp.kbshader; gh_log("KBSHADER %d (0=오버레이 평면 합성, 1=셰이더 적용) cli=%d", (int)gApp.kbshader, gApp.cli_kbsh); } }
     gApp.curve = s.curve_f(); gApp.scanv = s.scan > 0 ? 2.0f + (float)s.scan : 0.0f; gApp.maskv = s.mask_f(); gApp.bleedv = s.bleed_f(); gApp.glowv = s.glow_f();
+    { static const float bvt[4] = { 0.0f, 0.4f, 0.7f, 1.0f }, rvt[4] = { 0.0f, 0.015f, 0.025f, 0.04f }, gvt[4] = { 0.0f, 0.9f, 1.8f, 3.0f }; static const int pmt[4] = { 0, 40, 90, 160 };
+      gApp.beamv = bvt[s.ph_beam()]; gApp.persms = pmt[s.ph_pers()]; gApp.breathv = rvt[s.ph_breath()]; gApp.glowpv = gvt[s.ph_glow()]; }   /* t662 (#635) */
     if (vol && gApp.boot_tick) gh_apply_volume(s);
 }
 /* ---- 배속 */

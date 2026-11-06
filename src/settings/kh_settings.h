@@ -24,6 +24,7 @@ struct Settings {
     int bosd = 1;       /* 배속 표시(오른쪽 위 ▶▶) 0 끔 1 켬 */
     int fpsd = 0;       /* FPS / speed display 0 off 1 on (ini key fpsdisp) */
     int stk_l = 0, stk_r = 2, dz_l = 0, dz_r = 0, stk_sp = 2;   /* #624: stick role 0 off 1 d-pad 2 mouse (left default off, right default mouse); deadzone level 0 default .. 3 largest; mouse speed 1 slow .. 3 fast */
+    int phos = 0;       /* t662 (#635): phosphor bundle, 2 bits each: beam width | persistence << 2 | breathing << 4 | glow << 6 (0 = all off) */
     int kbshader = 0;   /* t46z (#548): 화면 키보드·버튼·배속·OSD 에 셰이더 적용 0 안 함(기본) 1 적용 */
     int kbbtn = 1;      /* t46x: 화면 키보드 토글 버튼 표시 0 숨김 1 표시 */
     int ovbtn = 1;      /* t52f (#132): 오버레이 버튼 줄(메뉴·저장·불러오기·배속·키보드) 표시 0 숨김 1 표시 */
@@ -34,6 +35,7 @@ struct Settings {
     bool lmode = false, lseen = false; int l_sh = 0, l_scan = 5, l_mask = 1, l_bleed = 0, l_curve = 4;   /* t48c: 옛 형식(fx=1 표지 없음) 파일을 읽는 동안만 쓰는 칸. 끝나면 fx_finish 가 새 칸으로 옮긴다 */
     float curve_f() const { return curve * 0.01f; }
     float glow_f() const { return glow * 0.1f; }
+    int ph_beam() const { return phos & 3; }  int ph_pers() const { return (phos >> 2) & 3; }  int ph_breath() const { return (phos >> 4) & 3; }  int ph_glow() const { return (phos >> 6) & 3; }
     float bleed_f() const { return bleed * 0.1f; }
     float scan_f() const { return scan / 10.0f; }
     float mask_f() const { return (mask < 0 ? 0 : mask > 10 ? 10 : mask) * 0.05f; }   /* t48c: 옛 마스크 1/2/3 = 0.15/0.3/0.5 = 새 3/6/10 단계 */
@@ -56,6 +58,7 @@ static void ini_put(FILE * f, const Settings & s) {
     fprintf(f, "fx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nbgm=%d\nse=%d\ndevice=%d\npad=%d\nbmult=%d\nbmode=%d\nboot=%d\nbosd=%d\nbsound=%d\nkbbtn=%d\nkbshader=%d\novbtn=%d\npadbtn=%d\n", s.ratio, (s.shader == 2 ? 2 : 0), s.curve, s.bleed, s.glow, s.scan, s.mask, s.bgm, s.se, s.device, s.pad, s.bmult, s.bmode, s.boot, s.bosd, s.bsound, s.kbbtn, s.kbshader, s.ovbtn, s.padbtn);
     fprintf(f, "shim=%d\nshim_amp=%d\nshim_spd=%d\nshim_glow=%d\nshim_col=%d\n", s.shim, s.shim_amp, s.shim_spd, s.shim_glow, s.shim_col);
     fprintf(f, "sk_l=%d\nsk_r=%d\ndz_l=%d\ndz_r=%d\nsk_sp=%d\n", s.stk_l, s.stk_r, s.dz_l, s.dz_r, s.stk_sp);
+    fprintf(f, "phos=%d\n", s.phos);
     fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다: 작품 구역은 전역 값을 먼저 복사하므로 줄이 없으면 전역 켬이 새어 든다 */
 }
 static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587: 작품 구역에는 바꾼 줄만 쓴다 (비트 = Ui::fbit_of 순서) */
@@ -80,9 +83,11 @@ static void ini_put_masked(FILE * f, const Settings & s, unsigned m) {   /* #587
     if (m & (1u << 19)) fprintf(f, "dz_l=%d\n", s.dz_l);
     if (m & (1u << 20)) fprintf(f, "dz_r=%d\n", s.dz_r);
     if (m & (1u << 21)) fprintf(f, "sk_sp=%d\n", s.stk_sp);
+    if (m & (1u << 22)) fprintf(f, "phos=%d\n", s.phos);   /* t662 (#635) */
     if (m & (1u << 16)) fprintf(f, "fpsdisp=%d\n", s.fpsd ? 1 : 0);   /* 0 도 쓴다 (T252) */
 }
 static bool ini_set(Settings & s, const std::string & k, int v) {
+    if (k == "phos") { s.phos = v < 0 ? 0 : v > 255 ? 255 : v; return true; }   /* t662 (#635) */
     if (k == "shim") { s.shim = v < 0 ? 0 : v > 2 ? 2 : v; return true; }   /* build 7: menu text shimmer keys (before the long chain) */
     if (k == "shim_amp") { s.shim_amp = v < 1 ? 1 : v > 10 ? 10 : v; return true; }
     if (k == "shim_spd") { s.shim_spd = v < 1 ? 1 : v > 10 ? 10 : v; return true; }

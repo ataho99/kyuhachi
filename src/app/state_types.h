@@ -14,4 +14,5 @@ struct GProfile {
 struct GMouse { unsigned at_ms; float dx, dy; int act; };   /* act: 0 이동만, 1 좌 누름, 2 좌 뗌, 3 우 누름, 4 우 뗌 */
 enum { FIT_43 = 0, FIT_1610 = 1, FIT_INT = 2 };
 enum { SH_NEAREST = 0, SH_SHARP = 1, SH_CRT = 2, SH_N = 3 };
-struct GProg { unsigned int p; int uTex, uSrc, uOut, uCurve, uScan, uMask, uBleed, uGlow, uNear; bool ok, linear; };
+struct GProg { unsigned int p; int uTex, uSrc, uOut, uCurve, uScan, uMask, uBleed, uGlow, uNear, uBeam, uBreath,
+    uTime, uGlowP, uGTex; bool ok, linear; };

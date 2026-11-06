@@ -172,6 +172,10 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
             if (tk.compare(0, 7, "addnew:") == 0) { U.add_new.push_back(tk.substr(7)); U.add_new_why.push_back("시험: 자동 판정 근거 줄"); continue; }   /* t44c: 방금 추가한 작품 목록 */
             if (tk == "addscr") { U.scr = ui::S_ADD; U.sel = 0; continue; }
             if (tk.compare(0, 4, "cur:") == 0) { for (size_t i = 0; i < U.games.size(); i++) if (U.games[i].id == tk.substr(4)) { U.cur = (int)i; U.entg = (int)i; gApp.cur_game = (int)i; } continue; }   /* t48e2 시험 전용: 현재 작품 지정 */
+            if (tk == "scrcfg") { U.scr_from = ui::S_MAIN; U.enter_screen_cfg(); U.go(ui::S_SCREEN, 0); continue; }
+            if (tk == "phospg") { U.scr_from = ui::S_MAIN; U.enter_screen_cfg(); U.go(ui::S_SCREEN, 0); U.phos_pg = true; U.sel = 0; continue; }   /* t662 (#635) test only: open the phosphor page */
+            if (tk.compare(0, 9, "phosdump:") == 0) { const int ci = U.cur; const bool ok = ci >= 0 && ci < (int)ui::Ui::MAXG;
+                gh_log("uikeys: PHOSDUMP %s scr=%d pg=%d sel=%d scope=%d g=%d eff=%d t=%d ovm=%x", tk.c_str() + 9, (int)U.scr, U.phos_pg ? 1 : 0, U.sel, U.scope, U.g.phos, U.eff().phos, ok ? U.t[ci].phos : -1, ok ? U.ovm[ci] : 0u); continue; }
             if (tk == "padscr") { U.scr = ui::S_PAD; U.sel = 0; continue; }
             if (tk == "hotscr") { U.scr = ui::S_HOT; U.sel = 0; continue; }   /* build 5a-2 test only: hotkey tab */
             if (tk.compare(0, 5, "kind:") == 0) { gensei_padkind_v = atoi(tk.c_str() + 5); continue; }   /* test only: pad kind (3 = Retroid) */

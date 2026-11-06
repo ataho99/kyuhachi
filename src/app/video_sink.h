@@ -191,6 +191,8 @@ static bool gl_build(const std::string & src, GProg & g, bool linear, const char
     if (!ok) { char lg[1024]; int n = 0; F.GetProgramInfoLog(g.p, 1023, &n, lg); lg[n < 0 ? 0 : n] = 0; gh_log("GL: shader %s link FAIL: %s", name, lg); return false; }
     F.DeleteShader(sh[0]); F.DeleteShader(sh[1]);
     g.uTex = F.GetUniformLocation(g.p, "uTex"); g.uSrc = F.GetUniformLocation(g.p, "uSrcSize"); g.uOut = F.GetUniformLocation(g.p, "uOutSize"); g.uCurve = F.GetUniformLocation(g.p, "uCurve"); g.uScan = F.GetUniformLocation(g.p, "uScan"); g.uMask = F.GetUniformLocation(g.p, "uMask"); g.uBleed = F.GetUniformLocation(g.p, "uBleed"); g.uGlow = F.GetUniformLocation(g.p, "uGlow"); g.uNear = F.GetUniformLocation(g.p, "uNear");
+    g.uBeam = F.GetUniformLocation(g.p, "uBeam"); g.uBreath = F.GetUniformLocation(g.p, "uBreath"); g.uTime = F.GetUniformLocation(g.p, "uTime");
+    g.uGlowP = F.GetUniformLocation(g.p, "uGlowP"); g.uGTex = F.GetUniformLocation(g.p, "uGTex");   /* t662 (#635) */
     g.ok = true; gh_log("GL: shader %s OK (prog %u)", name, g.p);
     return true;
 }
@@ -209,6 +211,7 @@ static void gl_patch_crt(std::string & src) {
         src.replace(p, e - p, rs[k].rep);
     }
 }
+#include "app/gl_phos.h"
 static bool gl_init_all(void) {   /* 메인 스레드, 컨텍스트 current 상태에서 */
 #if defined(GH_GLES)
     if (!gh_gles_load()) return false;
@@ -225,8 +228,11 @@ static bool gl_init_all(void) {   /* 메인 스레드, 컨텍스트 current 상�
             const unsigned char * ep = (i == SH_SHARP) ? emb_sh_sharp : emb_sh_crt; size_t en = (i == SH_SHARP) ? emb_sh_sharp_n : emb_sh_crt_n;
             src.assign((const char *)ep, en); gApp.builtin_res = true; if (gApp.osd.empty()) gh_osd(phr_("셰이더 파일이 없어 내장 셰이더로 실행합니다 (exe 옆 shaders 폴더 확인)"), 12000); gh_log("WARN: GL: shader file not found: %s -> 내장 셰이더 사용", path.c_str());
         }
-        if (i == SH_CRT && src.find("PC98_FX_T48C") == std::string::npos) { gh_log("GL: pc98_crt.glsl 에 효과 표지(PC98_FX_T48C)가 없다(옛 판) -> 내장 셰이더 사용"); src.assign((const char *)emb_sh_crt, emb_sh_crt_n); }   /* t48c: 옛 res 폴더의 셰이더 파일이 남아 있어도 새 효과가 먹게 한다 */
-        if (!gl_build(src, gApp.prog[i], true, names[i])) gApp.prog[i] = gApp.prog[SH_NEAREST];
+        if (i == SH_CRT && (src.find("PC98_FX_T48C") == std::string::npos || src.find("PC98_PHOS_T662") == std::string::npos)) { gh_log("GL: pc98_crt.glsl 에 효과 표지(PC98_FX_T48C)가 없다(옛 판) -> 내장 셰이더 사용"); src.assign((const char *)emb_sh_crt, emb_sh_crt_n); }   /* t48c: 옛 res 폴더의 셰이더 파일이 남아 있어도 새 효과가 먹게 한다 */
+        bool bok = gl_build(src, gApp.prog[i], true, names[i]);   /* t662 (#635): the classic program is always built (phos off = the old shader text, same pixels); the phosphor variant is a second program */
+        if (i == SH_CRT) { gApp.phos_gl = bok && gl_build(std::string("#define PC98_PHOS 1\n") + src, gApp.prog_ph, true, "pc98_crt.glsl+phos");
+            if (bok && !gApp.phos_gl) gh_log("WARN: GL: phosphor shader failed -> classic crt shader only"); }
+        if (!bok) gApp.prog[i] = gApp.prog[SH_NEAREST];
     }
     static const float quad[16] = { -1, -1, 0, 1,   1, -1, 1, 1,   -1, 1, 0, 0,   1, 1, 1, 0 };
     F.GenBuffers(1, &gApp.vbo); F.BindBuffer(GL_ARRAY_BUFFER, gApp.vbo); F.BufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
@@ -266,13 +272,20 @@ static int SDLCALL gl_thread(void *) {
             else if (nf) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cw, ch, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.rbuf, (size_t)cw * ch, sw));
             int fit = gApp.fit, sh = gApp.shader;
             if (fit == FIT_INT) sh = SH_NEAREST;
-            const GProg & P = gApp.prog[sh];
+            const GProg & P = (sh == SH_CRT && gApp.phos_gl && (gApp.beamv > 0.0f || gApp.breathv > 0.0f || gApp.glowpv > 0.0f)) ? gApp.prog_ph : gApp.prog[sh];
             int x, y, rw, rh; gl_rect(dw, dh, cw, ch, fit, x, y, rw, rh);
             sx = x; sy = y; srw = rw; srh = rh;
             glViewport(x, y, rw, rh);
             GLint filt = P.linear ? GL_LINEAR : GL_NEAREST;
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filt); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filt);
             Uint64 gt_a = SDL_GetPerformanceCounter();
+            unsigned gTex = 0;   /* t662 (#635): persistence / glow passes run first (only with the crt shader and only when switched on) */
+            if (sh == SH_CRT && gApp.phos_gl && (gApp.persms > 0 || gApp.glowpv > 0.0f)) {
+                unsigned st = glp_prepare(gApp.tex_gl, cw, ch, gApp.persms, gApp.glowpv > 0.0f, &gTex);
+                glViewport(x, y, rw, rh); glBindTexture(GL_TEXTURE_2D, st);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filt); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filt);
+                if (gTex) { FP.ActTex(GLP_TEXTURE0 + 1); glBindTexture(GL_TEXTURE_2D, gTex); FP.ActTex(GLP_TEXTURE0); }
+            }
             F.UseProgram(P.p);
             if (P.uTex >= 0) F.Uniform1i(P.uTex, 0);
             if (P.uSrc >= 0) F.Uniform2f(P.uSrc, (float)cw, (float)ch);
@@ -283,6 +296,11 @@ static int SDLCALL gl_thread(void *) {
             if (P.uBleed >= 0) F.Uniform1f(P.uBleed, gApp.bleedv);
             if (P.uGlow >= 0) F.Uniform1f(P.uGlow, gApp.glowv);
             if (P.uNear >= 0) F.Uniform1f(P.uNear, gApp.nearv);
+            if (P.uBeam >= 0) F.Uniform1f(P.uBeam, gApp.beamv);   /* t662 (#635) */
+            if (P.uBreath >= 0) F.Uniform1f(P.uBreath, gApp.breathv);
+            if (P.uTime >= 0) F.Uniform1f(P.uTime, (float)fmod((double)SDL_GetTicks() * 0.001, 997.0));
+            if (P.uGlowP >= 0) F.Uniform1f(P.uGlowP, gTex ? gApp.glowpv : 0.0f);
+            if (P.uGTex >= 0) F.Uniform1i(P.uGTex, 1);
             F.BindBuffer(GL_ARRAY_BUFFER, gApp.vbo);
             F.EnableVertexAttribArray(0); F.EnableVertexAttribArray(1);
             F.VertexAttribPointer(0, 2, GL_FLOAT, 0, 16, (const void *)0); F.VertexAttribPointer(1, 2, GL_FLOAT, 0, 16, (const void *)8);
@@ -292,7 +310,7 @@ static int SDLCALL gl_thread(void *) {
                 glFinish(); Uint64 gt_b = SDL_GetPerformanceCounter(); double fq = (double)SDL_GetPerformanceFrequency();
                 double ms = (double)(gt_b - gt_a) * 1000.0 / fq; gt_sum += ms; if (ms > gt_max) gt_max = ms; gt_n++;
                 if (gt_t0 == 0) gt_t0 = gt_b;
-                if ((double)(gt_b - gt_t0) / fq >= 3.0) { gh_log("GLTIME 그리기 평균 %.3f ms (최대 %.3f, %d프레임, glFinish 기준) shader=%d scan=%.1f mask=%.2f bleed=%.2f glow=%.2f near=%.0f curve=%.2f out=%dx%d", gt_sum / gt_n, gt_max, gt_n, sh, (double)gApp.scanv, (double)gApp.maskv, (double)gApp.bleedv, (double)gApp.glowv, (double)gApp.nearv, (double)gApp.curve, rw, rh); gt_sum = 0; gt_max = 0; gt_n = 0; gt_t0 = gt_b; }
+                if ((double)(gt_b - gt_t0) / fq >= 3.0) { gh_log("GLTIME 그리기 평균 %.3f ms (최대 %.3f, %d프레임, glFinish 기준) shader=%d scan=%.1f mask=%.2f bleed=%.2f glow=%.2f near=%.0f curve=%.2f out=%dx%d beam=%.1f pers=%d breath=%.3f glowp=%.1f", gt_sum / gt_n, gt_max, gt_n, sh, (double)gApp.scanv, (double)gApp.maskv, (double)gApp.bleedv, (double)gApp.glowv, (double)gApp.nearv, (double)gApp.curve, rw, rh, (double)gApp.beamv, (int)gApp.persms, (double)gApp.breathv, (double)gApp.glowpv); gt_sum = 0; gt_max = 0; gt_n = 0; gt_t0 = gt_b; }
             }
         }
         if (ov_has && !gApp.kbshader && !gApp.shot_req && srw > 0 && srh > 0 && ovw > 0 && ovh > 0 && gApp.ovl_gl.size() >= (size_t)ovw * ovh && gApp.prog_ov.ok) {   /* t46z: 셰이더 사각형과 같은 뷰포트에 평면 알파 합성(premultiplied) */

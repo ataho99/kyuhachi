@@ -177,6 +177,8 @@ struct AppState {
     volatile float maskv = 0.15f;
     volatile float bleedv = 0.0f;
     volatile float glowv = 0.0f;
+    volatile float beamv = 0.0f, breathv = 0.0f, glowpv = 0.0f; volatile int persms = 0;
+    GProg prog_ph; bool phos_gl = false;   /* t662 (#635): phosphor bundle (render thread reads) */
     volatile float nearv = 0.0f;   /* t48c: 빛 번짐 · 밑 그림 nearest(1) *//* crt 셰이더 uniform(렌더 스레드가 읽음) */
     std::string exedir;
     std::string cfgpath;

@@ -9,7 +9,7 @@ inline void Ui::d_conf(Canvas & c) {
     static const unsigned rb[15] = { 0u, 1u << 7, 1u << 8, 0u, (1u << 9) | (31u << 17), 1u << 10, 1u << 11, 1u << 14, 1u << 12, 1u << 13, 1u << 15, 0u, 0u, 0u, 0u };
     std::vector<std::string> n;
     { const std::string nm[15] = { phr_("적용 범위"), phr_("BGM 음량"), phr_("효과음 음량"), KH_SNDLABEL, phr_("조작 설정"), phr_("배속 배율"), phr_("배속 방식"), phr_("배속 중 소리"), phr_("부팅 시퀀스"), phr_("배속 표시"), phr_("오버레이 버튼 표시"), phr_("한글 글꼴"), phr_("일본어 글꼴"), phr_("언어 / Language / 言語"), phr_("indiv_reset") };
-      for (int id : ri) n.push_back((own && (ovm[cur] & rb[id])) ? std::string("● ") + nm[id] : nm[id]); }
+      for (int id : ri) n.push_back(id == 15 ? std::string("FPS / Speed") : ((own && (ovm[cur] & rb[id])) ? std::string("● ") + nm[id] : nm[id])); }
     const int rs = (sel >= 0 && sel < (int)ri.size()) ? ri[sel] : 0;
     items(c, 40, 44, 256, n, sel, 19);
     rbox(c, 320, 24, 304, 296, WH, phr_("인포메이션"));
@@ -33,6 +33,7 @@ inline void Ui::d_conf(Canvas & c) {
     const char * bt[] = { phr_("켬"), phr_("끔") }; choices(c, 344, ry(8), bt, 2, s.boot, WH, row(8));
     { const char * bo[] = { phr_("끔"), phr_("켬") }; choices(c, 344, ry(9), bo, 2, s.bosd, WH, row(9)); }
     { const char * ob[] = { phr_("끔"), phr_("켬") }; choices(c, 344, ry(10), ob, 2, s.ovbtn, WH, row(10)); }   /* t52f (#132) */
+    if (scope == 0) { const char * fp[] = { "OFF", "ON" }; choices(c, 344, ry(15), fp, 2, g.fpsd ? 1 : 0, WH, row(15)); }   /* #639 */
     if (scope == 0) {
     text(c, 344, ry(11), fit(font_kr.empty() ? std::string(phr_("기본 (kyuhachi_font)")) : font_kr, 250), row(11) ? K : WH, row(11) ? WH : K);
     text(c, 344, ry(12), fit(font_jp.empty() ? std::string(phr_("기본 (jp_default)")) : font_jp, 250), row(12) ? K : WH, row(12) ? WH : K);
@@ -43,7 +44,7 @@ inline void Ui::d_conf(Canvas & c) {
 #else
     static const char * dd[] = { "desc_scope", "desc_bgm", "desc_se", "desc_snddev", "desc_pad", "desc_bmult", "desc_bmode", "desc_bsound", "desc_boot", "desc_bosd", "desc_ovbtn", "desc_fontkr", "desc_fontjp", "desc_lang", "desc_indiv_reset" };
 #endif
-    std::string dt = dkey(phr_(dd[rs]));
+    std::string dt = dkey(phr_(rs == 15 ? "desc_fps" : dd[rs]));
     if (ind) dt = std::string(phr_("indiv_has")) + "  ·  " + dt;
     desc_mq(c, 328, 44, dt, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
     if (scope == 0 && (rs == 11 || rs == 12)) { const std::string & fl = font_now(); if (!fl.empty()) text(c, 344, 288, fit(fl, 270), CY, K); }   /* build 5b-3: font now applied to the current work */

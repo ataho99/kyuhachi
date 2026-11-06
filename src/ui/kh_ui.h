@@ -77,8 +77,8 @@ struct Ui {
 #if !defined(__ANDROID__)
             if (scope == 0) { r.push_back(8); r.push_back(9); }
 #endif
-            r.push_back(10); r.push_back(13); if (scope == 1) r.push_back(11); }   /* t662: 13 = phosphor page */
-        else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 1) r.push_back(14); }
+            r.push_back(13); if (scope == 1) r.push_back(11); }   /* t662: 13 = phosphor page */
+        else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 0 && (!conf_grp || conf_grp == 2)) r.push_back(15); if (scope == 1) r.push_back(14); }   /* #639: 15 = FPS display (global only, after the overlay rows) */
         return r; }
     static unsigned indiv_bit(Scr s, int id);   /* build 9: own-value bit of a settings line (0 = none) */
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
@@ -221,7 +221,7 @@ struct Ui {
     void shr_open_make(int g, int menu_i); void shr_open_import(); void shr_preview(const std::string & code);
     void d_share(Canvas & c); void k_share(UKey k, Act & a); void d_shimp(Canvas & c); void k_shimp(UKey k, Act & a);
     void d_shprev(Canvas & c); void k_shprev(UKey k, Act & a);
-    static int conf_grp_of(int i) { return (i >= 1 && i <= 3) ? 1 : (i == 8 || i >= 11) ? 3 : 2; }
+    static int conf_grp_of(int i) { return (i >= 1 && i <= 3) ? 1 : (i == 8 || (i >= 11 && i != 15)) ? 3 : 2; }
     void leave_cfg() {   /* leaving S_SCREEN / S_CONF: back to the settings hub when it was opened from there */
         const bool sc = scr == S_SCREEN;
         if (sc && scr_from == S_SET) go(S_SET, 0);
@@ -871,7 +871,8 @@ struct Ui {
 #include "ui/screen_table.h"   /* S8a: draw/key dispatch and the home-flow screens */
 
 static void settings_save(const Ui & u, const std::string & path) {
-    FILE * f = fopen(path.c_str(), "wb"); if (!f) return;
+    FILE * f = fopen(path.c_str(), "wb"); if (!f) { ::remove(path.c_str()); f = fopen(path.c_str(), "wb"); }   /* #638: a read-only copy (other uid) must not swallow every save */
+    if (!f) return;
     fprintf(f, "; " KH_FULLNAME " 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)\n[global]\n"); ini_put(f, u.g); fprintf(f, "all_global=%d\n", u.all_global ? 1 : 0);
     fprintf(f, "lastgame=%d\nwmult=%d\nwinw=%d\nwinh=%d\ngamefolder=%s\nlang=%d\n", u.cur, u.wmult, u.winw, u.winh, u.gamefolder.c_str(), u.lang);
     fprintf(f, "lastgame_id=%s\nlastentry=%s\nsort=%s\nsortfav=%d\ntab=%s\nfont_kr=%s\nfont_jp=%s\n", (u.cur >= 0 && u.cur < (int)u.games.size()) ? u.games[u.cur].id.c_str() : "", u.sel_entry.c_str(), Ui::sort_id(u.sortm), u.sortfav ? 1 : 0, Ui::tab_id(u.tab), u.font_kr.c_str(), u.font_jp.c_str());

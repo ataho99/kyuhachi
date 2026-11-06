@@ -176,10 +176,13 @@ static void barv(Canvas & c, int x, int y, int w, double v, const char * l, cons
     text(c, tx + tl + 8, y, r, fg, K);
 }
 /* 선택지 나열: 현재값 반전. 반환 = 끝 x */
+struct ChHit { int x, y, w, h, idx, n, cur; };   /* #638: option rects of the last drawn frame (touch) */
+static std::vector<ChHit> g_chit;
 static int choices(Canvas & c, int x, int y, const char * const * arr, int n, int cur, uint32_t fg, bool rowsel) {
     int cx = x;
     for (int i = 0; i < n; i++) {
         int w = tw(arr[i]) + 8;
+        { ChHit q = { cx - 4, y - 2, w, 20, i, n, cur }; g_chit.push_back(q); }
         if (i == cur) { c.rect(cx - 4, y - 2, w, 20, WH); text(c, cx, y, arr[i], K, WH); }
         else text(c, cx, y, arr[i], fg, K);
         cx += w + 8;

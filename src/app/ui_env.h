@@ -390,9 +390,10 @@ static aw::Ctx gh_aw_ctx(void) {
 }
 static void gh_reload_games(void) {   /* 목록을 다시 만들고 보던 작품을 id 로 되찾는다 */
     std::string keep = (gApp.cur_game >= 0 && gApp.cur_game < (int)gApp.ui_.games.size()) ? gApp.ui_.games[gApp.cur_game].id : std::string();
+    const int lang_keep_ = gApp.ui_.lang;   /* #638 */
     ui::settings_save(gApp.ui_, gApp.cfgpath);
     gApp.fdfiles.clear();
-    gh_ui_init_games(); ui::settings_load(gApp.ui_, gApp.cfgpath);   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "after-list-reload", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
+    gh_ui_init_games(); ui::settings_load(gApp.ui_, gApp.cfgpath); gApp.ui_.lang = lang_keep_;   { FILE * zf_ = fopen(gApp.cfgpath.c_str(), "rb"); int ex_ = zf_ != NULL; if (zf_) fclose(zf_); int cg_ = gApp.cur_game; bool ht_ = cg_ >= 0 && cg_ < (int)ui::Ui::MAXG && gApp.ui_.has_t[cg_]; gh_log("SETDIAG %s path=%s file=%d g[scan=%d mask=%d bleed=%d glow=%d curve=%d ratio=%d] cur_game=%d has_t=%d games=%d", "after-list-reload", gApp.cfgpath.c_str(), ex_, gApp.ui_.g.scan, gApp.ui_.g.mask, gApp.ui_.g.bleed, gApp.ui_.g.glow, gApp.ui_.g.curve, gApp.ui_.g.ratio, cg_, (int)ht_, (int)gApp.ui_.games.size()); }
     for (size_t i = 0; i < gApp.ui_.games.size(); i++) if (gApp.ui_.games[i].id == keep) { gApp.cur_game = (int)i; gApp.ui_.cur = (int)i; gApp.ui_.pick = (int)i; }
     if (!gApp.headless) for (size_t i = 0; i < gApp.ui_.games.size(); i++) gh_refresh_game_slots((int)i);
 }
@@ -538,6 +539,17 @@ static void gh_touch_feed(const SDL_Event & e) {
         dn = false; if (mv) { gh_log("TOUCH swipe end v=(%d,%d)", vx, vy); return; }
         if (vx < 0 || vx >= 640 || vy < 0 || vy >= 400) { gh_log("TOUCH tap v=(%d,%d) outside -> cancel", vx, vy); gh_touch_key(SDLK_ESCAPE); return; }
         ui::Ui & U = gApp.ui_;
+        if (U.scr == ui::S_CONF || U.scr == ui::S_SCREEN) {   /* #638: tap on an option of a choice line = select that option (move to its row, then left/right) */
+            for (const ov::ChHit & ch : ov::g_chit) {
+                if (vx < ch.x || vx >= ch.x + ch.w || vy < ch.y || vy >= ch.y + ch.h) continue;
+                const int cyc = ch.y + ch.h / 2; const ui::Ui::Hit * rh = NULL;
+                for (const ui::Ui::Hit & t : U.hits) if (t.x + t.w <= 320 && cyc >= t.y && cyc < t.y + t.h) rh = &t;
+                if (!rh) break;
+                int d = rh->i - rh->sel, dv = ch.idx - ch.cur;
+                gh_log("TOUCH tap v=(%d,%d) option %d/%d (cur %d) on row %d (sel %d) -> select", vx, vy, ch.idx, ch.n, ch.cur, rh->i, rh->sel);
+                for (; d > 0; d--) gh_touch_key(SDLK_DOWN); for (; d < 0; d++) gh_touch_key(SDLK_UP);
+                for (; dv > 0; dv--) gh_touch_key(SDLK_RIGHT); for (; dv < 0; dv++) gh_touch_key(SDLK_LEFT);
+                return; } }
         for (int h = (int)U.hits.size() - 1; h >= 0; h--) {   /* rows drawn later (on top) first */
             const ui::Ui::Hit & t = U.hits[h];
             if (vx >= t.x && vx < t.x + t.w && vy >= t.y && vy < t.y + t.h) {

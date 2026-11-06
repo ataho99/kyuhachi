@@ -31,18 +31,18 @@ static const char * g_phos_src =
     "#endif\n"
     "#ifdef PASS_BRIGHT\n"
     "  vec3 s = vec3(0.0);\n"
-    "  for (int i = 0; i < 4; i++) {\n"
-    "    vec2 o = vec2((i == 0 || i == 2) ? -1.0 : 1.0, (i < 2) ? -1.0 : 1.0) * uTexel;\n"
+    "  for (int i = 0; i < 1; i++) {\n"
+    "    vec2 o = vec2(0.0);\n"
     "    vec3 c = texture2D(uTex, t + o).rgb; float lg = dot(c, LW); c = c * c;\n"
     "    s += c * smoothstep(0.6, 0.9, lg);\n"
     "  }\n"
-    "  gl_FragColor = vec4(sqrt(s * 0.25), 1.0);\n"
+    "  gl_FragColor = vec4(sqrt(s), 1.0);\n"
     "#endif\n"
     "#ifdef PASS_BLUR\n"
     "  vec3 a0 = texture2D(uTex, t).rgb; vec3 s = 0.2270270 * (a0 * a0);\n"
     "  for (int i = 1; i <= 4; i++) {\n"
     "    float w = (i == 1) ? 0.1945946 : ((i == 2) ? 0.1216216 : ((i == 3) ? 0.0540541 : 0.0162162));\n"
-    "    vec2 o = uDir * uTexel * (0.6 * float(i));\n"
+    "    vec2 o = uDir * uTexel * (1.2 * float(i));\n"
     "    vec3 a = texture2D(uTex, t + o).rgb; vec3 b = texture2D(uTex, t - o).rgb;\n"
     "    s += w * (a * a + b * b);\n"
     "  }\n"
@@ -53,7 +53,7 @@ static bool glp_pass_build(const char * def, GProg & g, const char * name) { ret
     name); }
 static bool glp_init(void) {
     if (PH.tried) return PH.ok;
-    PH.tried = true; PH.gdiv = 2; { const char * e = getenv("KH_GLOWDIV"); if (e && atoi(e) >= 1 && atoi(e) <= 16) PH.gdiv = atoi(e); }
+    PH.tried = true; PH.gdiv = 1;   { const char * e = getenv("KH_GLOWDIV"); if (e && atoi(e) >= 1 && atoi(e) <= 16) PH.gdiv = atoi(e); }
 #define LP(m, a, b) do { FP.m = (decltype(FP.m))SDL_GL_GetProcAddress(a); if (!FP.m) FP.m = (decltype(FP.m))SDL_GL_GetProcAddress(b); \
         if (!FP.m) { gh_log("GL: phos: missing %s", a); return false; } } while (0)
     LP(GenFb, "glGenFramebuffers", "glGenFramebuffersEXT"); LP(BindFb, "glBindFramebuffer", "glBindFramebufferEXT");

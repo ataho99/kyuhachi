@@ -6,7 +6,7 @@ inline void Ui::d_yn(Canvas & c, Scr under) {
     for (int i = 0; i < 3; i++) if (!yn_msg[i].empty()) text(c, bx + 24, by + 22 + i * 22, fit(yn_msg[i], bw - 48), WH, K);
     const char * q[] = { phr_("예"), phr_("아니오") }; int cw = choices_w(q, 2); const int cx0 = bx + ((bw - cw) >> 1) + 4;
     choices(c, cx0, by + 100, q, 2, ynsel, WH, false);
-    hits.clear();   /* 4: 확인창 터치 — 예/아니오 두 칸만 받는다(뒤 화면 줄은 막음). 탭 = 위/아래 키 + 결정 */
+    hits.clear(); ov::g_chit.clear();   /* 4: 확인창 터치 — 예/아니오 두 칸만 받는다(뒤 화면 줄은 막음). 탭 = 위/아래 키 + 결정 */
     for (int i = 0, hx = cx0; i < 2; i++) { Hit ht = { hx - 2, by + 97, tw(q[i]) + 12, 24, i, ynsel }; hits.push_back(ht); hx += tw(q[i]) + 16; }
     helpline(c, phr_("←→:선택, ○:결정, ×:아니오"));
 }

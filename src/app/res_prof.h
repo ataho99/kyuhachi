@@ -36,7 +36,7 @@ static void gh_fps_draw(ov::Canvas & oc) {   /* FPS / speed display: frames per 
 }
 static void gh_fps_toggle(void) {
     int v = gApp.fps_on ? 0 : 1; gApp.fps_on = v != 0;
-    if (gApp.cur_game >= 0 && gApp.cur_game < (int)ui::Ui::MAXG && (gApp.ui_.ovm[gApp.cur_game] & (1u << 16))) gApp.ui_.t[gApp.cur_game].fpsd = v; else gApp.ui_.g.fpsd = v;   /* #587: 이 작품에 개별 FPS 값이 있으면 그것을, 없으면 전역을 */
+    gApp.ui_.g.fpsd = v;   /* #639: global only */
     gApp.ui_.dirty = true; gh_osd(v ? "FPS ON" : "FPS OFF");
 }
 static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bool other_on) {   /* 오른쪽 위: 배속 중 계속 표시 + 그 밑에 다른 안내 */

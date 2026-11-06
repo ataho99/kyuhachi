@@ -6,7 +6,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     Settings & s = eff();
     rbox(c, 16, 24, 288, 220, WH, phr_("화면 설정"));
     const std::vector<int> ri = rowids(S_SCREEN);
-    const int PY = ri.size() > 12 ? 15 : 16;   /* t662: 13 rows (Windows, global) must fit the box */
+    const int PY = 16;
     const bool own = scope == 1 && cur >= 0 && cur < MAXG; const bool ind = own && ovm[cur] != 0u;
     static const unsigned rb[14] = { 0u, 1u << 0, 1u << 1, 1u << 5, 1u << 6, 1u << 3, 1u << 4, 1u << 2, 0u, 0u, 1u << 16, 0u, 127u, 1u << 22 };
     std::vector<std::string> n;
@@ -29,7 +29,6 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
       choicesd(c, 344, Y(8), wm, 6, wmult ? wmult - 1 : 5, WH, dmk);
       const char * fsc[] = { phr_("창 모드"), phr_("전체화면") }; choices(c, 344, Y(9), fsc, 2, fs_now ? 1 : 0, WH, row(9)); }   /* t52i (B3) */
 #endif
-    { const char * fp[] = { "OFF", "ON" }; choices(c, 344, Y(10), fp, 2, s.fpsd ? 1 : 0, WH, row(10)); }
     { char pb[32]; if (s.phos == 0) snprintf(pb, sizeof pb, "%s", phr_("ph_lv0")); else snprintf(pb, sizeof pb, "%d %d %d %d", s.ph_beam(), s.ph_pers(), s.ph_breath(), s.ph_glow());
       text(c, 344, Y(13), std::string(pb) + "  >", s.ratio == 2 ? GY : WH, K); }   /* t662 (#635): phosphor page summary */
     rbox(c, 16, 248, 608, 82, WH, phr_("미리보기"));
@@ -41,7 +40,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
     static std::string wd; wd = wb;
     static const char * dd[] = { "desc_scope", "desc_ratio", "desc_filter", "desc_scan", "desc_mask", "desc_bleed", "desc_glow", "desc_curve" };
-    desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 13 ? dkey(phr_("desc_phos")) : rs == 12 ? dkey(phr_("desc_preset")) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 10 ? dkey(phr_("desc_fps")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
+    desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 13 ? dkey(phr_("desc_phos")) : rs == 12 ? dkey(phr_("desc_preset")) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
     const bool ibk = own && (ovm[cur] & indiv_bit(S_SCREEN, rs));
     helpline(c, ibk ? phr_("indiv_help") : phr_("↑↓:선택, ←→:값, ○:결정, ×:취소(되돌림), △:출하 시 설정"));
 }
@@ -78,7 +77,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
             if (p < PRE_NB + np) { pre_copy(eff(), pre_get(p)); a.t = A_APPLY; dirty = true; }
             return a; }
         if (scr_s && sel == 13) { if (k == UK_OK || k == UK_RIGHT) { phos_pg = true; sel = 0; } return a; }   /* t662 (#635): open the phosphor page */
-        if (scr_s && sel == 10 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { Settings & fs = eff(); fs.fpsd = fs.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }
+        if (scr == S_CONF && sel == 15 && (k == UK_LEFT || k == UK_RIGHT || k == UK_OK)) { g.fpsd = g.fpsd ? 0 : 1; a.t = A_APPLY; dirty = true; return a; }   /* #639: FPS display is global only */
         if (sel == 0 && k == UK_OK && scope == 0) { sel = sidx; yn_open(scr0, YN_INDIVALL, phr_("indiv_allq1"), phr_("indiv_q2")); break; }   /* t147d: 전역 범위에서 ○ = 전역 일괄 적용 켬/끔 */
         Settings & s = (sel == 0) ? eff() : edit();
         if (k == UK_LEFT || k == UK_RIGHT) {
@@ -103,7 +102,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
                 a.t = A_APPLY;
             }
             dirty = true; (void)nrow;
-        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; e.fpsd = def.fpsd; e.phos = def.phos; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; e.ovbtn = def.ovbtn; } dirty = true; a.t = A_APPLY; }
+        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; e.phos = def.phos; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; e.ovbtn = def.ovbtn; if (scope == 0) g.fpsd = def.fpsd; } dirty = true; a.t = A_APPLY; }
         else if (k == UK_CANCEL) { if (!scr_s) { cb_has = false; a.t = A_APPLY; dirty = true; }   /* t52i: × = 뒤로. 값은 바뀐 순간부터 저장 대상 */ if (scr_s && backup_has) { eff() = backup; if (bk_cur >= 0 && bk_cur < MAXG) { ov_set(bk_cur, bk_ovm); sync_t(bk_cur); } backup_has = false; a.t = A_APPLY; if (wmult != bk_wmult || winw != bk_winw || winh != bk_winh) { wmult = bk_wmult; winw = bk_winw; winh = bk_winh; a.t = A_WINMULT; a.arg = wmult; } } leave_cfg(); }
         else if (k == UK_OK) { backup_has = false; cb_has = false; dirty = true; a.t = A_APPLY; leave_cfg(); }
         break; }

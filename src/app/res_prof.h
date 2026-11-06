@@ -13,6 +13,12 @@ extern unsigned gensei_ba_calls, gensei_ba_under, gensei_ba_drops; extern double
 extern uint32_t emulator_speed;       /* dosbox.cpp: 시계 배율(%) */
 void MENU_mute(bool enabled);         /* mixer.cpp(믹서 사본) */
 static void gh_osd(const std::string & s, unsigned int ms = 1500) { gApp.osd = s; gApp.osd_until = SDL_GetTicks() + ms; }
+static unsigned g_cfg_n = 0, g_cfg_bad = 0;
+static void gh_cfg_report(bool ok, const char * path) {   /* #646: every settings save is logged; a failed one shows a line on screen */
+    g_cfg_n++; if (!ok) g_cfg_bad++; gh_log("SETTINGS save %s n=%u bad=%u %s", ok ? "OK" : "FAILED", g_cfg_n, g_cfg_bad, path);
+    if (!ok) gh_osd(phr_("cfg_savefail"), 6000);
+}
+static struct CfgHook { CfgHook() { ui::g_cfg_cb = gh_cfg_report; } } g_cfg_hook;
 /* r019 (#246-3): 외부 글꼴·셰이더가 없어 내장본을 쓰는 중이면 화면 맨 아래에 경고 한 줄 */
 static std::string gh_builtin_warn(void) {
     if (gApp.builtin_res_font && gApp.builtin_res) return phr_("글꼴·셰이더 파일을 찾지 못해 내장본으로 실행 중 (run\\res 폴더 확인)");
@@ -36,7 +42,7 @@ static void gh_fps_draw(ov::Canvas & oc) {   /* FPS / speed display: frames per 
 }
 static void gh_fps_toggle(void) {
     int v = gApp.fps_on ? 0 : 1; gApp.fps_on = v != 0;
-    gApp.ui_.g.fpsd = v;   /* #639: global only */
+    if (gApp.cur_game >= 0 && gApp.cur_game < (int)ui::Ui::MAXG && (gApp.ui_.ovm[gApp.cur_game] & (1u << 16))) gApp.ui_.t[gApp.cur_game].fpsd = v; else gApp.ui_.g.fpsd = v;   /* #587: 이 작품에 개별 FPS 값이 있으면 그것을, 없으면 전역을 */
     gApp.ui_.dirty = true; gh_osd(v ? "FPS ON" : "FPS OFF");
 }
 static void gh_boost_osd_draw(ov::Canvas & oc, const std::string & other_osd, bool other_on) {   /* 오른쪽 위: 배속 중 계속 표시 + 그 밑에 다른 안내 */

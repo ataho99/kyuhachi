@@ -871,9 +871,8 @@ struct Ui {
 };
 #include "ui/screen_table.h"   /* S8a: draw/key dispatch and the home-flow screens */
 
-static void settings_save(const Ui & u, const std::string & path) {
-    FILE * f = fopen(path.c_str(), "wb"); if (!f) { ::remove(path.c_str()); f = fopen(path.c_str(), "wb"); }   /* #638: a read-only copy (other uid) must not swallow every save */
-    if (!f) return;
+static void (*g_cfg_cb)(bool ok, const char * path) = NULL;   /* #646: set by the app; told about every save (log + on-screen line on failure) */
+static void settings_write(const Ui & u, FILE * f) {
     fprintf(f, "; " KH_FULLNAME " 설정 -- [global] 전역, [작품id] 작품별 덮어쓰기(작품별 > 전역)\n[global]\n"); ini_put(f, u.g); fprintf(f, "all_global=%d\n", u.all_global ? 1 : 0);
     fprintf(f, "lastgame=%d\nwmult=%d\nwinw=%d\nwinh=%d\ngamefolder=%s\nlang=%d\n", u.cur, u.wmult, u.winw, u.winh, u.gamefolder.c_str(), u.lang);
     fprintf(f, "lastgame_id=%s\nlastentry=%s\nsort=%s\nsortfav=%d\ntab=%s\nfont_kr=%s\nfont_jp=%s\n", (u.cur >= 0 && u.cur < (int)u.games.size()) ? u.games[u.cur].id.c_str() : "", u.sel_entry.c_str(), Ui::sort_id(u.sortm), u.sortfav ? 1 : 0, Ui::tab_id(u.tab), u.font_kr.c_str(), u.font_jp.c_str());
@@ -884,7 +883,22 @@ static void settings_save(const Ui & u, const std::string & path) {
     fprintf(f, "[play]\n"); for (size_t i = 0; i < u.games.size(); i++) if (u.games[i].play_s > 0) fprintf(f, "%s=%d\n", u.games[i].id.c_str(), u.games[i].play_s);
     for (size_t i = 0; i < u.games.size() && i < (size_t)Ui::MAXG; i++) if (u.ovm[i]) { fprintf(f, "[%s]\nindiv=1\nfx=1\n", u.games[i].id.c_str()); ini_put_masked(f, u.t[i], u.ovm[i]); }   /* #587: 바꾼 줄만 */
     for (size_t i = 0; i < u.presets.size(); i++) { const Settings & p = u.presets[i].st; fprintf(f, "[preset.%s]\nfx=1\nratio=%d\nshader=%d\ncurve=%d\nbleed=%d\nglow=%d\nscan=%d\nmask=%d\nphos=%d\n", u.presets[i].name.c_str(), p.ratio, p.shader == 2 ? 2 : 0, p.curve, p.bleed, p.glow, p.scan, p.mask, p.phos); }   /* 빌드 6: 내 프리셋 */
-    fclose(f);
+}
+/* #646: write to <path>.tmp and rename over the real file (atomic where the file system allows); a read-only or foreign-owned old copy
+   is removed and replaced; last resort writes in place. A failure is reported through g_cfg_cb, never swallowed. */
+static void settings_save(const Ui & u, const std::string & path) {
+    const std::string tmp = path + ".tmp"; bool ok = false;
+    FILE * f = fopen(tmp.c_str(), "wb"); if (!f) { ::remove(tmp.c_str()); f = fopen(tmp.c_str(), "wb"); }
+    if (f) {
+        settings_write(u, f); ok = fflush(f) == 0 && ferror(f) == 0; if (fclose(f) != 0) ok = false;
+        if (ok) { ok = rename(tmp.c_str(), path.c_str()) == 0; if (!ok) { ::remove(path.c_str()); ok = rename(tmp.c_str(), path.c_str()) == 0; } }
+    }
+    if (!ok) {
+        FILE * g = fopen(path.c_str(), "wb"); if (!g) { ::remove(path.c_str()); g = fopen(path.c_str(), "wb"); }
+        if (g) { settings_write(u, g); ok = fflush(g) == 0 && ferror(g) == 0; if (fclose(g) != 0) ok = false; }
+    }
+    ::remove(tmp.c_str());
+    if (g_cfg_cb) g_cfg_cb(ok, path.c_str());
 }
 static void settings_load(Ui & u, const std::string & path) {
     FILE * f = fopen(path.c_str(), "rb"); if (!f) { u.fit_tab_to_cur(); u.rebuild_vis(u.cur); return; }   /* t39ui2: 설정 파일이 없어도 목록을 만든다 */

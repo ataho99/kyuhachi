@@ -938,3 +938,4 @@ dsnd_seek=Seek only
 dsnd_on=On
 desc_dsnd=Floppy drive noises (seek, read, spin, insert, eject). Seek only = head clicks only. Loading speed is unchanged. No hard disk sound.
 desc_dvol=Disk sound volume. The sound files can be replaced in the res/disk-noises folder.
+cfg_savefail=Could not save settings

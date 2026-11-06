@@ -43,6 +43,8 @@ struct St {
     std::vector<int16_t> seekv[3]; bool hseek[3] = { false, false, false };   /* fdd_seek1..3.wav: short / medium / long seek */
     unsigned ev[7] = { 0, 0, 0, 0, 0, 0, 0 }; unsigned started[5] = { 0, 0, 0, 0, 0 }; unsigned merged = 0, dropped = 0;
     unsigned calls = 0; unsigned long long nz = 0;
+    unsigned pk = 0, pk_all = 0; double sumsq = 0.0; unsigned long long ns = 0;
+    unsigned lpk[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };   /* file peaks after norm: 0 seek1 1 read 2 ins 3 eje 4 spin 5 seek2 6 seek3 */
     FILE * lg = NULL; std::vector<int16_t> dump; bool dumping = false; std::string wavpath;
     int test = 0; unsigned tc = 0;
     const void * ip[2] = { NULL, NULL }; long long lpos[2] = { -1, -1 }; unsigned polled = 0, chg = 0;   /* image poll */
@@ -83,6 +85,14 @@ static bool load_wav(const std::string & path, std::vector<int16_t> & out) {
         out[i] = (int16_t)(a + (b - a) * fr0);
     }
     return true;
+}
+/* scale a buffer so that its peak is `target` (0..1 of full scale); returns the peak (0..32767) after scaling */
+static unsigned norm(std::vector<int16_t> & b, float target) {
+    int pk = 0; for (size_t i = 0; i < b.size(); i++) { const int a = b[i] < 0 ? -(int)b[i] : (int)b[i]; if (a > pk) pk = a; }
+    if (pk < 16) return (unsigned)pk;
+    const float g = target * 32767.0f / (float)pk;
+    for (size_t i = 0; i < b.size(); i++) b[i] = to16((float)b[i] * g / 32767.0f);
+    return (unsigned)(pk * g);
 }
 static inline void logv(int kind, uint64_t a, uint64_t b) {
     if (S.lg) fprintf(S.lg, "V %s %llu %llu\n", KNAME[kind], (unsigned long long)a, (unsigned long long)b);
@@ -152,7 +162,7 @@ static void gen(int16_t * out, int n) {
     if (S.mode > 0 && !S.test) poll();
     if (S.test) test_step();
     if (S.boost) { for (int i = 0; i < n; i++) out[i] = 0; S.t += (uint64_t)n; return; }
-    const uint64_t now = S.t; const float gain = S.vol / 8.0f;
+    const uint64_t now = S.t; const float gain = S.vol / 4.0f;   /* vol 4 = unity on the normalised files, 8 = +6 dB */
     bool motor = false;
     if (S.mode == 2 && S.have[K_SPIN])
         for (int d = 0; d < 2; d++) if (S.act[d] && now < S.last_act[d] + (uint64_t)ms(MOTOR_HOLD_MS)) motor = true;
@@ -177,10 +187,19 @@ static void gen(int16_t * out, int n) {
                 logv(S.v_kind, S.v_start, e); S.v_on = false; S.pend_read = 0;
             }
         }
-        const int16_t v = to16(o * gain); out[i] = v; if (v) S.nz++;
+        float y = o * gain; const float ay = y < 0.0f ? -y : y;   /* soft knee above 0.8 */
+        if (ay > 0.8f) { const float c = 0.8f + 0.2f * tanhf((ay - 0.8f) * 5.0f); y = y < 0.0f ? -c : c; }
+        const int16_t v = to16(y); out[i] = v; if (v) S.nz++;
+        const unsigned av = (unsigned)(v < 0 ? -(int)v : (int)v); if (av > S.pk) S.pk = av;
+        S.sumsq += (double)v * (double)v; S.ns++;
     }
+    if (S.pk > S.pk_all) S.pk_all = S.pk;
     if (S.dumping) S.dump.insert(S.dump.end(), out, out + n);
     S.t += (uint64_t)n;
+}
+/* level of the window since the last call (peak 0..32767, rms), then reset */
+static void lvl_take(unsigned & pk, double & rms) {
+    pk = S.pk; rms = S.ns ? sqrt(S.sumsq / (double)S.ns) : 0.0; S.pk = 0; S.sumsq = 0.0; S.ns = 0;
 }
 static void flush() {
     if (S.lg) {
@@ -208,6 +227,10 @@ static void load_all(const std::string & resdir) {
     for (int i = 1; i < 5; i++) S.have[i] = !resdir.empty() && load_wav(resdir + "\\" + FNAME[i], S.wav[i]);
     for (int k = 0; k < 3; k++) S.hseek[k] = !resdir.empty() && load_wav(resdir + "\\" + sk[k], S.seekv[k]);
     S.have[K_SEEK] = S.hseek[0] || S.hseek[1] || S.hseek[2];
+    /* The recordings are quiet (clicks -6 .. -9 dBFS, spin -14): normalise so that vol 4 is clearly audible next to the game's
+       FM/SSG mix. One-shots peak at 0.7 full scale, the continuous spin loop at 0.25. */
+    for (int i = 1; i < 5; i++) if (S.have[i]) S.lpk[i] = norm(S.wav[i], i == K_SPIN ? 0.25f : 0.7f);
+    for (int k = 0; k < 3; k++) if (S.hseek[k]) S.lpk[k == 0 ? 0 : 4 + k] = norm(S.seekv[k], 0.7f);
 }
 #ifndef DSN_NO_MIXER
 /* disk activity = the file position of the floppy image moved since the last mixer call (needs bios_disk.h) */

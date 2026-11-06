@@ -8,14 +8,14 @@
 
 **게임을 고르고 바로 시작.** 설정 파일도, 매퍼 메뉴도 없습니다.
 
-![version](https://img.shields.io/badge/version-v0.6.0-ff4d6d)
+![version](https://img.shields.io/badge/version-v0.6.1-ff4d6d)
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-0078d4)
 ![engine](https://img.shields.io/badge/engine-DOSBox--X%20core-6c5ce7)
 ![license](https://img.shields.io/badge/license-GPL--2.0-2ea44f)
 
 [English](README.md) · 한국어
 
-**[⬇ v0.6.0 내려받기 (윈도 zip · 안드로이드 APK · 설명서)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
+**[⬇ v0.6.1 내려받기 (윈도 zip · 안드로이드 APK · 설명서)](https://github.com/ataho99/kyuhachi-x/releases/latest)**
 
 </div>
 
@@ -32,7 +32,7 @@
 | 기기 | 비고 |
 |---|---|
 | 윈도우 10 / 11 (x64) | `KyuhachiX.exe`, 폴더 하나로 동작하는 포터블. 레지스트리에 쓰지 않음 |
-| 안드로이드 | `KyuhachiX-v0.6.0-android.apk` (패키지 `io.github.ataho99.kyuhachix`). 레트로이드 포켓 노바에 맞춰 다듬었고 다른 패드 기기에서도 동작 |
+| 안드로이드 | `KyuhachiX-v0.6.1-android.apk` (패키지 `io.github.ataho99.kyuhachix`). 레트로이드 포켓 노바에 맞춰 다듬었고 다른 패드 기기에서도 동작 |
 
 ## 설치
 

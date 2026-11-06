@@ -54,9 +54,9 @@ struct Ui {
 
     int scope3() const { return scope; }
     void scope_step(int d) { int i = scope + d; if (i < 0) i = 0; if (i > 1) i = 1; scope = i; }   /* #587: 범위는 「전역」 / 「이 작품」 둘뿐 */
-    static unsigned fbit_of(const std::string & k) { static const char * const KN[23] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp", "phos" }; for (unsigned i = 0; i < 23; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
+    static unsigned fbit_of(const std::string & k) { static const char * const KN[25] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp", "phos", "dsnd", "dvol" }; for (unsigned i = 0; i < 25; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
     static unsigned fbits_all() { return (1u << 17) - 1u; }
-#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21) X(phos, 22)
+#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21) X(phos, 22) X(dsnd, 23) X(dvol, 24)
     Settings overlay(Settings s, int gi) const { if (gi >= 0 && gi < MAXG && ovm[gi]) { const Settings & o = t[gi];
 #define KH_X(f, b) if (ovm[gi] & (1u << b)) s.f = o.f;
         KH_FIELDS(KH_X)
@@ -78,7 +78,8 @@ struct Ui {
             if (scope == 0) { r.push_back(8); r.push_back(9); }
 #endif
             r.push_back(13); if (scope == 1) r.push_back(11); }   /* t662: 13 = phosphor page */
-        else { for (int i = 0; i <= 13; i++) { if (scope == 1 && (i == 3 || i >= 11)) continue; if (conf_grp && i != 0 && conf_grp_of(i) != conf_grp) continue; r.push_back(i); } if (scope == 0 && (!conf_grp || conf_grp == 2)) r.push_back(15); if (scope == 1) r.push_back(14); }   /* #639: 15 = FPS display (global only, after the overlay rows) */
+        else { for (int i = 0; i <= 13; i++) { const bool skip = (scope == 1 && (i == 3 || i >= 11)) || (conf_grp && i != 0 && conf_grp_of(i) != conf_grp); if (!skip) r.push_back(i); if (i == 3 && conf_grp == 1) { r.push_back(16); r.push_back(17); } }   /* #641: 16/17 = disk sound mode / volume */
+            if (scope == 0 && (!conf_grp || conf_grp == 2)) r.push_back(15); if (scope == 1) r.push_back(14); }   /* #639: 15 = FPS display (global only, after the overlay rows) */
         return r; }
     static unsigned indiv_bit(Scr s, int id);   /* build 9: own-value bit of a settings line (0 = none) */
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
@@ -221,7 +222,7 @@ struct Ui {
     void shr_open_make(int g, int menu_i); void shr_open_import(); void shr_preview(const std::string & code);
     void d_share(Canvas & c); void k_share(UKey k, Act & a); void d_shimp(Canvas & c); void k_shimp(UKey k, Act & a);
     void d_shprev(Canvas & c); void k_shprev(UKey k, Act & a);
-    static int conf_grp_of(int i) { return (i >= 1 && i <= 3) ? 1 : (i == 8 || (i >= 11 && i != 15)) ? 3 : 2; }
+    static int conf_grp_of(int i) { return (i >= 1 && i <= 3) || i == 16 || i == 17 ? 1 : (i == 8 || (i >= 11 && i != 15)) ? 3 : 2; }
     void leave_cfg() {   /* leaving S_SCREEN / S_CONF: back to the settings hub when it was opened from there */
         const bool sc = scr == S_SCREEN;
         if (sc && scr_from == S_SET) go(S_SET, 0);
@@ -639,7 +640,7 @@ struct Ui {
         if (cur >= 0 && cur < MAXG && cur < (int)games.size() && ovm[cur]) {
             const Settings t0 = overlay(g, cur); const Settings & g0 = g; const std::string & id = games[cur].id;
 #define VSR(f) if (t0.f != g0.f) { ValRow r; r.key = std::string("설정:" #f); r.val = std::to_string((int)t0.f); r.src = "settings.ini [" + id + "]"; r.cov = std::to_string((int)g0.f) + " (전역)"; vals.push_back(r); }
-            VSR(ratio) VSR(shader) VSR(curve) VSR(bleed) VSR(glow) VSR(scan) VSR(mask) VSR(bgm) VSR(se) VSR(device) VSR(pad) VSR(bmult) VSR(bmode) VSR(boot) VSR(bosd) VSR(bsound) VSR(kbbtn) VSR(kbshader) VSR(ovbtn)
+            VSR(ratio) VSR(shader) VSR(curve) VSR(bleed) VSR(glow) VSR(scan) VSR(mask) VSR(bgm) VSR(se) VSR(device) VSR(pad) VSR(bmult) VSR(bmode) VSR(boot) VSR(bosd) VSR(bsound) VSR(dsnd) VSR(dvol) VSR(kbbtn) VSR(kbshader) VSR(ovbtn)
 #undef VSR
         }
         sel = 0; scr = S_VALS;
@@ -829,7 +830,7 @@ struct Ui {
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; phos_pg = false; fnow_cur = -2; if (s == S_EXTRA) extra_sub = 0; }   /* build 5b-3: font-now cache reset / work menu back to its main list */
     void enter_conf_cfg() { cb_g = g; cb_cur = cur; cb_has_t = false; if (cur >= 0 && cur < MAXG) { cb_has_t = has_t[cur]; cb_t = t[cur]; } cb_scope = scope; cb_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; cb_fkr = font_kr; cb_fjp = font_jp; cb_has = true; }
-    static void conf_fields(Settings & d, const Settings & s) { d.bgm = s.bgm; d.se = s.se; d.device = s.device; d.bmult = s.bmult; d.bmode = s.bmode; d.bsound = s.bsound; d.boot = s.boot; d.bosd = s.bosd; d.ovbtn = s.ovbtn; }   /* 조작 설정(pad)은 하위 화면 [S_PAD] 몫이라 복원하지 않는다 */
+    static void conf_fields(Settings & d, const Settings & s) { d.bgm = s.bgm; d.se = s.se; d.device = s.device; d.bmult = s.bmult; d.bmode = s.bmode; d.bsound = s.bsound; d.dsnd = s.dsnd; d.dvol = s.dvol; d.boot = s.boot; d.bosd = s.bosd; d.ovbtn = s.ovbtn; }   /* 조작 설정(pad)은 하위 화면 [S_PAD] 몫이라 복원하지 않는다 */
     bool conf_restore() { if (!cb_has) return false; cb_has = false; conf_fields(g, cb_g); if (cb_cur >= 0 && cb_cur < MAXG) { if (cb_has_t) { has_t[cb_cur] = true; conf_fields(t[cb_cur], cb_t); } else has_t[cb_cur] = false; } if (cb_cur >= 0 && cb_cur < MAXG) { ov_set(cb_cur, cb_ovm); sync_t(cb_cur); } scope = cb_scope; font_kr = cb_fkr; font_jp = cb_fjp; return true; }
     void enter_screen_cfg() { pre_i = 0; phos_pg = false; bk_cur = cur; bk_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; backup = eff(); backup_has = true; bk_wmult = wmult; bk_winw = winw; bk_winh = winh; }
     static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }

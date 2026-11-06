@@ -138,10 +138,13 @@ static void kha_seed_assets(void) {
         { "kha/rhythm/2608_bd.wav", "res\\rhythm\\2608_bd.wav" }, { "kha/rhythm/2608_sd.wav", "res\\rhythm\\2608_sd.wav" }, { "kha/rhythm/2608_top.wav", "res\\rhythm\\2608_top.wav" },
         { "kha/rhythm/2608_hh.wav", "res\\rhythm\\2608_hh.wav" }, { "kha/rhythm/2608_tom.wav", "res\\rhythm\\2608_tom.wav" }, { "kha/rhythm/2608_rim.wav", "res\\rhythm\\2608_rim.wav" },
         { "kha/shaders/pc98_sharp.glsl", "res\\shaders\\pc98_sharp.glsl" }, { "kha/shaders/pc98_crt.glsl", "res\\shaders\\pc98_crt.glsl" },
+        { "kha/dsn/fdd_insert.wav", "res\\disk-noises\\fdd_insert.wav" }, { "kha/dsn/fdd_eject.wav", "res\\disk-noises\\fdd_eject.wav" }, { "kha/dsn/fdd_read.wav", "res\\disk-noises\\fdd_read.wav" },
+        { "kha/dsn/fdd_spin.wav", "res\\disk-noises\\fdd_spin.wav" }, { "kha/dsn/fdd_seek1.wav", "res\\disk-noises\\fdd_seek1.wav" }, { "kha/dsn/fdd_seek2.wav", "res\\disk-noises\\fdd_seek2.wav" },
+        { "kha/dsn/CREDITS.txt", "res\\disk-noises\\CREDITS.txt" },
         { "kha/flags.ini", "res\\flags.ini" }, { "kha/gamecontrollerdb.txt", "res\\gamecontrollerdb.txt" },
         { "kha/strings_ko.txt", "strings_ko.txt" }, { "kha/strings_en.txt", "strings_en.txt" }, { "kha/strings_ja.txt", "strings_ja.txt" },
         { "kha/gamedb.ini", "gamedb.ini" }, { "kha/gamedb_nk.tsv", "gamedb_nk.tsv" } };
-    plat::mkdir(gApp.exedir + "\\res"); plat::mkdir(gApp.exedir + "\\res\\fonts"); plat::mkdir(gApp.exedir + "\\res\\rhythm"); plat::mkdir(gApp.exedir + "\\res\\shaders");
+    plat::mkdir(gApp.exedir + "\\res"); plat::mkdir(gApp.exedir + "\\res\\fonts"); plat::mkdir(gApp.exedir + "\\res\\rhythm"); plat::mkdir(gApp.exedir + "\\res\\shaders"); plat::mkdir(gApp.exedir + "\\res\\disk-noises");
     int made = 0, have = 0, miss = 0;
     for (auto & p : T) {
         std::string dst = gApp.exedir + "\\" + p[1]; if (plat::exists(dst) && strncmp(p[1], "strings_", 8) != 0) { have++; continue; }   /* 4: 문구 파일은 APK 것으로 매번 갱신(사용자 덮어쓰기는 strings.txt) */

@@ -200,6 +200,7 @@ static void gh_apply_settings(const ui::Settings & s, bool vol) {
     { static const float bvt[4] = { 0.0f, 0.4f, 0.7f, 1.0f }, rvt[4] = { 0.0f, 0.015f, 0.025f, 0.04f }, gvt[4] = { 0.0f, 0.15f, 0.3f, 0.5f }; static const int pmt[4] = { 0, 40, 90, 160 };
       gApp.beamv = bvt[s.ph_beam()]; gApp.persms = pmt[s.ph_pers()]; gApp.breathv = rvt[s.ph_breath()]; gApp.glowpv = gvt[s.ph_glow()]; }   /* t662 (#635) */
     if (vol && gApp.boot_tick) gh_apply_volume(s);
+    if (gApp.boot_tick) dsn::apply(s.dsnd, s.dvol, gApp.dsnd_override, gApp.exedir + "\\res\\disk-noises", gApp.dsn_log, gApp.dsn_wav, gApp.dsn_test);   /* 641 */
 }
 /* ---- 배속 */
 static void gh_boost_update(void) {

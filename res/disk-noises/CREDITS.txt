@@ -1,0 +1,23 @@
+Disk drive sounds for Kyuhachi X "disk sound" (res\disk-noises\)
+All source recordings are CC0 1.0 (public domain dedication); no attribution is required, credits are given anyway.
+Originals are kept unmodified in H:\RETRO_SET\_자료\disk_noise_src\ (with sha256 in dl1.log). Conversion: mono, 22.05 kHz, 16-bit PCM.
+
+fdd_insert.wav  "Floppy disk (3.5"), input" by Joseph SARDIN, BigSoundBank.com, CC0 1.0
+                https://bigsoundbank.com/floppy-disk-3-5-input-s1395.html (sound 1395)
+                cut 0.012-1.426 s, peak -3 dBFS
+fdd_eject.wav   "Floppy disk (3.5"), output" by Joseph SARDIN, BigSoundBank.com, CC0 1.0
+                https://bigsoundbank.com/floppy-disk-3-5-output-s1397.html (sound 1397)
+                cut 0.000-0.962 s, peak -3 dBFS
+fdd_read.wav    "Floppy disk (3.5"), reading" by Joseph SARDIN, BigSoundBank.com, CC0 1.0
+                https://bigsoundbank.com/floppy-disk-3-5-reading-s1396.html (sound 1396, 24 s)
+                cut 7.25-7.85 s, peak -9 dBFS
+fdd_spin.wav    same source 1396, cut 19.05-22.05 s (steadiest part), 0.25 s loop crossfade -> 2.75 s seamless loop, peak -14 dBFS
+fdd_seek1.wav   same source 1396, cut 6.65-6.77 s (strongest single head click), peak -6 dBFS   (used for 1-2 track seeks)
+fdd_seek2.wav   same source 1396, cut 6.46-6.88 s (a run of 4 clicks), peak -6 dBFS             (used for longer seeks)
+fdd_seek3.wav   not provided (no clear long click run in the recordings); long seeks use fdd_seek2.wav
+
+Checked but NOT used (licenses verified CC0, available if wanted):
+  Wikimedia Commons "Floppy drive sounds.ogg" by AlepouTheFox, CC0, 27.6 s (format run: head steps, bad sector noise)
+  Freesound KRAFTWERK2K1 "reading_floppy_disc_1.wav", CC0
+NOT used (license unconfirmed): DOSBox Staging resources/disk-noises, MAME floppy samples, 86Box samples.
+Replace any file here with your own 16-bit PCM wav (same name) to change the sound; a missing file means that sound is not played.

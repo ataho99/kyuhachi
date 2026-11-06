@@ -153,6 +153,7 @@ struct AppState {
     unsigned ft_ms = 2000;   /* --frametest DIR : 처음 2초 프레임별 기록 */
     bool ft_done = false;
     int bsound_override = -1;   /* --bsound N 시험용 */
+    int dsnd_override = -1, dsn_test = 0; std::string dsn_log, dsn_wav;   /* 641: --dsnd N --dsnlog F --dsnwav F --dsntest */
     std::string nkdb_path;
     std::string gamefolder_acp;   /* NK DB(gamedb_nk.tsv) · 게임 폴더(시스템 문자열) */
     nk::Db nk_;

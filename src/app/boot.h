@@ -81,6 +81,7 @@ static bool gh_attach(int idx, const char * name, bool replace = false) {
     imageDiskList[idx] = img; imageDiskChange[idx] = true; img->Addref();
     if (idx >= 0 && idx < 4) { gApp.disk_fh[idx] = f; gApp.disk_wp[idx] = iscopy ? path : std::string(); gApp.disk_nm[idx] = name; }   /* 1b */
     if (idx <= 1) FDC_AssignINT13Disk((unsigned char)idx);
+    if (idx <= 1 && replace) dsn::media(idx);   /* 641: swap = eject + insert sound */
     else {
         signed char ide_index = -1; bool slave = false;
         IDE_Auto(ide_index, slave);

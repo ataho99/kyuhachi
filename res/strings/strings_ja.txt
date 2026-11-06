@@ -931,3 +931,10 @@ ph_pers=残光
 ph_prev=プレビュー
 ph_title=蛍光体
 preset_b3=OLED鮮やか
+snd_disk=ディスク音
+snd_dvol=ディスク音の音量
+dsnd_off=OFF
+dsnd_seek=シークのみ
+dsnd_on=ON
+desc_dsnd=フロッピーの動作音(シーク・読み込み・回転・挿入・排出)。シークのみ = ヘッドの音だけ。読み込み速度は変わりません。HDD の音はありません。
+desc_dvol=ディスク音の音量。音声ファイルは res/disk-noises フォルダで差し替えできます。

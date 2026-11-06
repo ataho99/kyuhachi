@@ -120,6 +120,7 @@ uint32_t GFX_Rmask = 0x00FF0000, GFX_Gmask = 0x0000FF00, GFX_Bmask = 0x000000FF,
 unsigned char GFX_Rshift = 16, GFX_Gshift = 8, GFX_Bshift = 0, GFX_bpp = 32;
 
 #include "app/state.h"   /* S9d */
+#include "app/disk_snd.h"   /* 641: floppy drive noise (after mixer.h and state.h) */
 #include "app/android_ext_decl.h"   /* t137 */
 #include "app/opts_log.h"   /* S9b */
 #include "app/res_prof.h"   /* S9b */

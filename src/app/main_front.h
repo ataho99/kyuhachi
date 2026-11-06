@@ -88,6 +88,10 @@ static int gh_main_args(int argc, char * argv[], std::string & id) {
         else if (a == "--frametest" && i + 1 < argc) gApp.ft_dir = argv[++i];
         else if (a == "--ftms" && i + 1 < argc) gApp.ft_ms = (unsigned)atoi(argv[++i]);
         else if (a == "--bsound" && i + 1 < argc) gApp.bsound_override = atoi(argv[++i]);
+        else if (a == "--dsnd" && i + 1 < argc) gApp.dsnd_override = atoi(argv[++i]);
+        else if (a == "--dsnlog" && i + 1 < argc) gApp.dsn_log = argv[++i];
+        else if (a == "--dsnwav" && i + 1 < argc) gApp.dsn_wav = argv[++i];
+        else if (a == "--dsntest") gApp.dsn_test = 1;
         else if (a == "--nkdb" && i + 1 < argc) gApp.nkdb_path = argv[++i];
         else if (a == "--addwork" && i + 1 < argc) gApp.addwork_cli = argv[++i];
         else if (a == "--gamefolder" && i + 1 < argc) gApp.gamefolder_cli = argv[++i];

@@ -930,3 +930,10 @@ ph_pers=잔광
 ph_prev=미리보기
 ph_title=형광체
 preset_b3=OLED 생생
+snd_disk=디스크 소리
+snd_dvol=디스크 소리 음량
+dsnd_off=끔
+dsnd_seek=시크만
+dsnd_on=켬
+desc_dsnd=디스크 읽는 소리(시크·읽기·회전·넣기·꺼냄). 시크만 = 헤드 소리만. 로딩 속도는 그대로입니다. 하드디스크 소리는 없습니다.
+desc_dvol=디스크 소리 음량. 소리 파일은 res/disk-noises 폴더에서 바꿀 수 있습니다.

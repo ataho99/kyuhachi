@@ -69,10 +69,22 @@ static FILE* kh_plog = NULL;
 static bool kh_axis_dir[2][4];     /* [pad-slot][L,R,U,D] stick->arrow state (pad 0 only used) */
 static int  kh_dpad_mouse[4];      /* L,R,U,D held (padmouse mode) */
 
+static unsigned kh_pl_lines = 0, kh_pl_drop = 0, kh_pl_win_n = 0, kh_pl_axis = 0; static double kh_pl_ms = 0;   /* #634 counters: lines written, lines dropped by the rate limit, lines in this 1 s window, axis events seen, ms spent writing */
+static Uint32 kh_pl_win_t0 = 0, kh_pl_flush_t = 0; static bool kh_dbg_pad = (getenv("KH_PADLOG_DEBUG") != NULL);   /* KH_PADLOG_DEBUG=1 turns the per-axis AXIS log back on */
+static void kh_plog_flush(void) { if (kh_plog) fflush(kh_plog); kh_pl_flush_t = SDL_GetTicks(); }
 static void kh_plogf(const char* fmt, ...) {
     if (!kh_plog) return;
+    const Uint32 now = SDL_GetTicks();
+    if (now - kh_pl_win_t0 >= 1000) {   /* 1 s window: at most 200 lines are written, the rest only counted */
+        if (kh_pl_win_n > 200) { fprintf(kh_plog, "  LOGDROP %u lines in the last second (rate limit 200/s)\n", kh_pl_win_n - 200); kh_pl_lines++; }
+        kh_pl_win_t0 = now; kh_pl_win_n = 0;
+    }
+    if (++kh_pl_win_n > 200) { kh_pl_drop++; return; }
+    const Uint64 t0 = SDL_GetPerformanceCounter();
     va_list va; va_start(va, fmt); vfprintf(kh_plog, fmt, va); va_end(va);
-    fputc('\n', kh_plog); fflush(kh_plog);
+    fputc('\n', kh_plog); kh_pl_lines++;
+    if (now - kh_pl_flush_t >= 1000) kh_plog_flush();   /* flushed about once a second (and at exit), not per line */
+    kh_pl_ms += (double)(SDL_GetPerformanceCounter() - t0) * 1000.0 / (double)SDL_GetPerformanceFrequency();
 }
 #define GPLOG(...) kh_plogf(__VA_ARGS__)
 
@@ -337,6 +349,13 @@ static void kh_release_all(void) {
 }
 /* per-frame: padmouse cursor motion */
 static void kh_input_tick(void) {
+    {   /* #634: periodic flush + one summary line every 5 s while axis events or drops happen */
+        static Uint32 st = 0; static unsigned l0 = 0, a0 = 0, d0 = 0; static double m0 = 0; const Uint32 now = SDL_GetTicks(); if (!st) st = now;
+        if (kh_plog && now - kh_pl_flush_t >= 1000) kh_plog_flush();
+        if (now - st >= 5000) { const double sec = (now - st) / 1000.0; const unsigned ax = kh_pl_axis - a0, dr = kh_pl_drop - d0, la = kh_pl_lines - l0; const double ms = kh_pl_ms - m0; st = now;
+            a0 = kh_pl_axis; d0 = kh_pl_drop; l0 = kh_pl_lines; m0 = kh_pl_ms;
+            if (ax || dr) { GPLOG("PADSTAT %.0fs: axis_ev=%u (%.0f/s) log_lines=%u dropped=%u log_write_ms=%.2f", sec, ax, ax / sec, la, dr, ms); l0 = kh_pl_lines; } }
+    }
     if (!kh_padmouse) return;
     float dx = (float)(kh_dpad_mouse[1] - kh_dpad_mouse[0]) * 4.0f;
     float dy = (float)(kh_dpad_mouse[3] - kh_dpad_mouse[2]) * 4.0f;
@@ -378,18 +397,20 @@ static void kh_stk_val(int side, int ix, Sint16 & v) {
     if (cut) {
         if (m >= 16000 && !kh_stk_sup[q]) {
             kh_stk_sup[q] = true;
-            GPLOG("  STICKFILTER %c axis %d value=%d -> 0 (%s)", side ? 'R' : 'L', ix, (int)v, kh_stk_en[side] ? "deadzone" : "off");
+            if (kh_stk_en[side]) { static Uint32 lt[4]; const Uint32 now = SDL_GetTicks(); if (now - lt[q] >= 1000) { lt[q] = now; GPLOG("  STICKFILTER %c axis %d value=%d -> 0 (deadzone)", side ? 'R' : 'L', ix, (int)v); } }   /* #634: role off is by design, no line; deadzone cuts at most once a second per axis */
         }
         v = 0;
     }
     if (kh_stk_en[side] == 2) { kh_stk_mv[side][ix] = (float)v / 32767.0f; v = 0; } else kh_stk_mv[side][ix] = 0.0f;   /* #624: mouse role keeps the value for the mouse, nobody else sees it */
     if (m < 4000) kh_stk_sup[q] = false;
 }
-static void kh_stk_ev(SDL_Event & e) {
-    if (e.type != SDL_CONTROLLERAXISMOTION) return;
+static bool kh_stk_ev(SDL_Event & e) {   /* #634: true = drop the event (its stick is switched off); a held direction is let go by kh_stk_set when the role changes */
+    if (e.type != SDL_CONTROLLERAXISMOTION) return false;
+    kh_pl_axis++;
     const int a = e.caxis.axis;
-    if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_LEFTY) kh_stk_val(0, a == SDL_CONTROLLER_AXIS_LEFTY ? 1 : 0, e.caxis.value);
-    else if (a == SDL_CONTROLLER_AXIS_RIGHTX || a == SDL_CONTROLLER_AXIS_RIGHTY) kh_stk_val(1, a == SDL_CONTROLLER_AXIS_RIGHTY ? 1 : 0, e.caxis.value);
+    if (a == SDL_CONTROLLER_AXIS_LEFTX || a == SDL_CONTROLLER_AXIS_LEFTY) { kh_stk_val(0, a == SDL_CONTROLLER_AXIS_LEFTY ? 1 : 0, e.caxis.value); return kh_stk_en[0] == 0; }
+    else if (a == SDL_CONTROLLER_AXIS_RIGHTX || a == SDL_CONTROLLER_AXIS_RIGHTY) { kh_stk_val(1, a == SDL_CONTROLLER_AXIS_RIGHTY ? 1 : 0, e.caxis.value); return kh_stk_en[1] == 0; }
+    return false;
 }
 static void kh_stk_set(int le, int re, int ld, int rd, int sp) {
     const int n[5] = { le < 0 ? 0 : le > 2 ? 2 : le, re < 0 ? 0 : re > 2 ? 2 : re, ld < 0 ? 0 : ld > 3 ? 3 : ld, rd < 0 ? 0 : rd > 3 ? 3 : rd, sp < 1 ? 1 : sp > 3 ? 3 : sp };

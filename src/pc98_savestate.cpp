@@ -35,6 +35,7 @@ const uint32_t kFormatVersion = 3;   /* t53a(SF/F1): v3 = v2 + 빌드ID 문자�
                                       * v2(r011): 헤더 뒤 THMB 항목(저장 순간 640x400 PNG) 추가, TLB(호스트 포인터) 제외는 paging 사본 몫 */
 const uint32_t kStateAbi = 1;        /* 컴포넌트 구성·바이트 배치가 바뀌는 빌드에서만 올린다. 빌드ID 는 정보용(불러오기 판정에 쓰지 않음) */
 
+bool OptionalComp(const std::string &n) { return n == "pc98_video"; }   /* #634: absent in state files written by Android builds before t661 */
 uint32_t g_crc_tab[256];
 bool g_crc_init = false;
 
@@ -228,7 +229,7 @@ bool ApplyImage(const uint8_t *buf, size_t len, const std::vector<Pc98StateDisk>
     /* t53a/F1: 컴포넌트 길이 표 비교 — 하나라도 어긋나면 아무것도 건드리기 전에 거부(상태 형식이 다른 저장). */
     for (CompMap::iterator it = m.begin(); it != m.end(); ++it) {
         std::map<std::string, std::string>::iterator f = entries.find(it->first);
-        if (f == entries.end()) { err = std::string("missing component entry: '") + it->first + "'"; return false; }
+        if (f == entries.end()) { if (OptionalComp(it->first)) continue; err = std::string("missing component entry: '") + it->first + "'"; return false; }
         /* 'Dos' is variable-length by design (open-file table), so equal length is not a format signal; the consumed-length check below still applies. */
         if (it->first != "Dos" && f->second.size() != snap[it->first].size()) {
             std::ostringstream o; o << "component length mismatch: '" << it->first << "' saved=" << f->second.size() << " current=" << snap[it->first].size() << " (saved by build '" << build << "')";
@@ -239,6 +240,7 @@ bool ApplyImage(const uint8_t *buf, size_t len, const std::vector<Pc98StateDisk>
     for (CompMap::iterator it = m.begin(); it != m.end(); ++it) {
         std::map<std::string, std::string>::iterator f = entries.find(it->first);
         if (f == entries.end()) {
+            if (OptionalComp(it->first)) { LOG_MSG("PC98_SaveState: component '%s' not in file (older state), kept as is", it->first.c_str()); continue; }
             Rollback(snap);
             err = std::string("missing component entry: '") + it->first + "' (rolled back)";
             return false;

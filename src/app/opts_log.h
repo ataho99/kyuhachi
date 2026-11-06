@@ -141,7 +141,7 @@ static std::string gh_mapfield(const std::string & map, const std::string & nm) 
 }
 static void gh_inj_run(const GInj & g, unsigned since) {
     const std::vector<std::string> & a = g.a; const std::string & c = a[0];
-    gh_log("INJECT t=%u %s%s%s%s%s%s", since, c.c_str(), a.size() > 1 ? " " : "", a.size() > 1 ? a[1].c_str() : "", a.size() > 2 ? " " : "", a.size() > 2 ? a[2].c_str() : "", a.size() > 3 ? " ..." : "");
+    static unsigned inj_ax = 0; if (!(c == "caxis" && (++inj_ax % 500) != 1)) gh_log("INJECT t=%u %s%s%s%s%s%s", since, c.c_str(), a.size() > 1 ? " " : "", a.size() > 1 ? a[1].c_str() : "", a.size() > 2 ? " " : "", a.size() > 2 ? a[2].c_str() : "", a.size() > 3 ? " ..." : "");
     if (c == "cbtn" && a.size() >= 3) { SDL_GameControllerButton b = SDL_GameControllerGetButtonFromString(a[1].c_str()); if (b == SDL_CONTROLLER_BUTTON_INVALID) { gh_log("INJECT cbtn 알 수 없는 이름 %s", a[1].c_str()); return; }
         bool d = a[2] != "0"; SDL_Event e; SDL_zero(e); e.type = d ? SDL_CONTROLLERBUTTONDOWN : SDL_CONTROLLERBUTTONUP; e.cbutton.which = gApp.vj ? SDL_JoystickInstanceID(gApp.vj) : 0; e.cbutton.button = (Uint8)b; e.cbutton.state = d ? SDL_PRESSED : SDL_RELEASED; SDL_PushEvent(&e); return; }
     if (c == "caxis" && a.size() >= 3) { SDL_GameControllerAxis x = SDL_GameControllerGetAxisFromString(a[1].c_str()); if (x == SDL_CONTROLLER_AXIS_INVALID) return; SDL_Event e; SDL_zero(e); e.type = SDL_CONTROLLERAXISMOTION; e.caxis.axis = (Uint8)x; e.caxis.value = (Sint16)atoi(a[2].c_str()); SDL_PushEvent(&e); return; }

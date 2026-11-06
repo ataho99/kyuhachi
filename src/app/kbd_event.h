@@ -234,7 +234,7 @@ static bool gh_game_event(const SDL_Event & e) {
         return false; }
     case SDL_CONTROLLERAXISMOTION: {
         /* r015: 트리거/오른쪽 스틱 축 이벤트를 로그에 남긴다(값이 4096 단위로 바뀔 때만). 배속 R2 임계값: 켜짐 > 16000, 꺼짐 < 8000 (SDL 트리거 범위 0..32767) */
-        { static int lastbin[6] = { -99, -99, -99, -99, -99, -99 }; int ax = e.caxis.axis; if (ax >= 2 && ax < 6 && ax != 0) { int bin = e.caxis.value / 4096; if (bin != lastbin[ax]) { lastbin[ax] = bin; GPLOG("AXIS %d(%s) value=%d", ax, SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)ax), (int)e.caxis.value); } } }
+        if (kh_dbg_pad) { static int lastbin[6] = { -99, -99, -99, -99, -99, -99 }; int ax = e.caxis.axis; if (ax >= 2 && ax < 6 && ax != 0) { int bin = e.caxis.value / 4096; if (bin != lastbin[ax]) { lastbin[ax] = bin; GPLOG("AXIS %d(%s) value=%d", ax, SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)ax), (int)e.caxis.value); } } }
         return false; }   /* 빌드 5a: 트리거(L2·R2)는 입력 층(kh_trigger)이 배정표대로 처리 */
     case SDL_KEYDOWN: case SDL_KEYUP: {
         bool d = e.type == SDL_KEYDOWN; SDL_Keycode k = e.key.keysym.sym;

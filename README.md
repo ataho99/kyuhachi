@@ -62,6 +62,29 @@ Upgrading from the old *Kyuhachi* (v0.5.x): on first run your saves are copied t
 
 Android usage is covered in [`docs/manual/안드로이드_사용설명서.md`](docs/manual/안드로이드_사용설명서.md) (Korean; also as `KyuhachiX-v0.6.0-manual-ko.zip` on the Releases page).
 
+## Controls
+
+All pad buttons and hotkeys can be remapped in **Settings → Controls**. Defaults (pad labels = Retroid Pocket Nova, retro layout):
+
+| Keyboard | Pad | Action |
+|---|---|---|
+| `Space` / `Esc` | `A` / `B` | Confirm / cancel |
+| `Enter` | `START` | Enter |
+| arrows | D-pad / left stick | Arrows |
+| `CAPS` | `Y` | Skip text |
+| `F12` | `X`, `SELECT+START` | Menu |
+| `F11` (hold) / `ScrollLock` | `R2` (hold) / `L3` | Fast forward (hold) / toggle |
+| `Alt+F5` / `Alt+F9` | `SELECT+R1` / `SELECT+L1` | Quick save / quick load |
+| `Alt+K` | `SELECT+X` | On-screen keyboard |
+| — | `SELECT+R3` | Screenshot |
+| — | `SELECT+R2` | Next disk |
+| `Alt+Enter` | — | Fullscreen |
+| `Alt+1` `2` `3` | — | Aspect ratio |
+| `Alt+S` / `Alt+↑` `↓` | — | Shader / CRT curve |
+| `Alt+[` `]` | — | Window scale |
+| `Alt+F` | — | FPS counter |
+| `Alt+M` / `Alt+P` | — | Mouse capture / resume auto input |
+
 ## Build from source
 
 Everything needed is in this repository except the DOSBox-X sources, which are pinned in `third_party/DOSBOX_X.lock`.

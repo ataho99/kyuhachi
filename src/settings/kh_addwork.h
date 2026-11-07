@@ -189,14 +189,14 @@ inline std::string block_reason_raw(const prof::Profile & p, const std::map<std:
     /* t48a (#615): 「마우스 필수」는 실행을 막는 사유에서 뺐다(마우스 지원됨). 화면에는 「장치: 마우스 필수」 표시만 남는다. */
     bool nodisk = true; for (auto & d : p.disk) if (!d.empty()) nodisk = false;
     if (nodisk && !g("cd").empty() && g("cd") != "-") return "";   /* t40: CD 이미지가 잡힌 작품 = 내장 DOS 로 D: 에 올려 실행 */
-    if (p.install_required && nodisk) { if (soft) *soft = true; return "설치 전용 작품 (설치 단계 미지원)"; }
+    if (p.install_required && nodisk) { if (soft) *soft = true; return khtr::tr("설치 전용 작품 (설치 단계 미지원)"); }
     if (g("curated") != "1") {
         std::string fl = "," + g("nk_flags") + ","; std::string md = g("nk_media");
-        if (md == "CD" || md == "CDFD" || fl.find(",cd,") != std::string::npos) { if (nodisk) return "CD 작품 (CD 미지원)"; }
+        if (md == "CD" || md == "CDFD" || fl.find(",cd,") != std::string::npos) { if (nodisk) return khtr::tr("CD 작품 (CD 미지원)"); }
         bool hd = !p.disk[2].empty() || !p.disk[3].empty();
-        if (fl.find(",inst,") != std::string::npos && !hd) { if (soft) *soft = true; return "하드 설치가 필요한 작품 (설치 단계 미지원)"; }
+        if (fl.find(",inst,") != std::string::npos && !hd) { if (soft) *soft = true; return khtr::tr("하드 설치가 필요한 작품 (설치 단계 미지원)"); }
     }
-    if (nodisk) { if (soft) *soft = true; return p.reason.empty() ? std::string("부팅할 수 있는 디스크가 없음") : p.reason; }
+    if (nodisk) { if (soft) *soft = true; return p.reason.empty() ? std::string(khtr::tr("부팅할 수 있는 디스크가 없음")) : p.reason; }
     return "";
 }
 inline std::string block_reason(const prof::Profile & p, const std::map<std::string, std::string> & kv) { bool s = false; std::string r = block_reason_raw(p, kv, &s); return s ? std::string() : r; }   /* 2d: 막는 사유(C2 CD 미지원 등)만 */
@@ -211,7 +211,7 @@ inline bool unzip_images(Ctx & c, const std::string & zipfile, const std::string
     (void)sig;
     zp::Zip z; if (!zp::open(zipfile, z, &err)) return false;
     std::vector<const zp::Entry *> im; for (auto & e : z.e) if (!e.isdir && img_ext(base_of(e.name)) && e.usize > 0) im.push_back(&e);
-    if (im.empty()) { err = "zip 안에 디스크 이미지가 없음"; return false; }
+    if (im.empty()) { err = khtr::tr("zip 안에 디스크 이미지가 없음"); return false; }
     struct It { const zp::Entry * e; std::string bn, sha; std::vector<uint8_t> buf; bool known; };
     std::vector<It> its; std::set<std::string> used; size_t nknown = 0; std::string kid;
     for (auto * e : im) {
@@ -230,8 +230,8 @@ inline bool unzip_images(Ctx & c, const std::string & zipfile, const std::string
         std::string dst = join(outdir, t.bn); uint64_t sz = 0, mt = 0;
         if (file_stat(dst, sz, mt) && sz == t.e->usize) { files.push_back(t.bn); continue; }
         if (t.known) { std::vector<uint8_t> b2; std::string er; if (!zp::extract(z, *t.e, b2, er)) { err = er; return false; } t.buf.swap(b2); }   /* 일부만 새로운 zip: 같은 작품 폴더에 모아 둔다 */
-        FILE * f = fopen(dst.c_str(), "wb"); if (!f) { err = "풀 폴더에 쓸 수 없음"; return false; }
-        bool ok = t.buf.empty() || fwrite(t.buf.data(), 1, t.buf.size(), f) == t.buf.size(); fclose(f); if (!ok) { err = "쓰기 실패 (디스크 공간?)"; return false; }
+        FILE * f = fopen(dst.c_str(), "wb"); if (!f) { err = khtr::tr("풀 폴더에 쓸 수 없음"); return false; }
+        bool ok = t.buf.empty() || fwrite(t.buf.data(), 1, t.buf.size(), f) == t.buf.size(); fclose(f); if (!ok) { err = khtr::tr("쓰기 실패 (디스크 공간?)"); return false; }
         files.push_back(t.bn);
     }
     std::sort(files.begin(), files.end()); return true;
@@ -268,7 +268,7 @@ inline const prof::DbGame * db_by_ignore(const std::vector<prof::DbGame> * db, c
 }
 inline std::string img_set_label(const std::string & title, const std::vector<prof::ImgInfo> & imgs) {
     bool hd = false; for (auto & i : imgs) if (i.fmt == prof::F_HDI || i.fmt == prof::F_NHD || i.fmt == prof::F_RAWHD || i.fmt == prof::F_VHD) hd = true;
-    return title + " (" + (hd ? "HDD" : "FD") + (imgs.size() > 1 || !hd ? " " + std::to_string(imgs.size()) + "장" : std::string()) + ")";
+    return title + " (" + (hd ? "HDD" : "FD") + (imgs.size() > 1 || !hd ? " " + std::to_string(imgs.size()) + khtr::tr("장") : std::string()) + ")";
 }
 /* 같은 작품의 다른 이미지를 이미 등록된 작품(tgt)에 「함께 있는 이미지」로 붙인다. 주 작품에 제작사·연도가 비어 있으면 상속 */
 inline void attach_companion(Ctx & c, const std::string & tgt, const std::string & label, const std::string & sig, const std::vector<std::string> & sha, const std::string & company, const std::string & year, const std::string & msrc) {
@@ -314,11 +314,11 @@ inline Result register_core(Ctx & c, const Work & w, const std::string & sig, co
         if (i.size < (96ull << 20)) i.sha1 = c.cache ? c.cache->sha1(path) : prof::sha1_file(path);
         prof::probe_boot(i); prof::fat_sig(i); imgs.push_back(i);
     }
-    if (imgs.empty()) { R.st = Result::SKIP; R.note = "이미지 형식을 알 수 없음"; return R; }
+    if (imgs.empty()) { R.st = Result::SKIP; R.note = khtr::tr("이미지 형식을 알 수 없음"); return R; }
     std::vector<std::string> shas; for (auto & i : imgs) if (!i.sha1.empty()) shas.push_back(i.sha1);
     {   /* r019 (#247-1): 이미지가 전부 이미 등록된 해시면 같은 작품 — 처음 등록한 경로만 남긴다 */
         size_t nk_ = 0; std::string kid; for (auto & i : imgs) { auto h = c.hashidx.find(i.sha1); if (!i.sha1.empty() && h != c.hashidx.end()) { nk_++; kid = h->second; } }
-        if (nk_ == imgs.size()) { R.st = Result::EXISTS; R.id = kid; R.note = "같은 이미지가 이미 등록됨 → " + kid; if (!dry) { ini_patch(join(join(c.games_dir, kid), "game.ini"), { { "sigs", sig, 1 } }); c.reg[sig] = kid; } return R; }
+        if (nk_ == imgs.size()) { R.st = Result::EXISTS; R.id = kid; R.note = std::string(khtr::tr("같은 이미지가 이미 등록됨")) + " → " + kid; if (!dry) { ini_patch(join(join(c.games_dir, kid), "game.ini"), { { "sigs", sig, 1 } }); c.reg[sig] = kid; } return R; }
     }
     static const std::vector<prof::DbGame> none; prof::Profile q = prof::resolve("", imgs, c.db ? *c.db : none, w.name);
     bool curated = q.src == "DB";
@@ -339,27 +339,27 @@ inline Result register_core(Ctx & c, const Work & w, const std::string & sig, co
         else if (g) { auto it = c.nkidx.find(g->gid); if (it != c.nkidx.end()) tgt = it->second; }
         std::string lab = img_set_label(g ? g->title : pretty(w.name), imgs);
         if (!tgt.empty()) {
-            R.st = Result::EXISTS; R.id = tgt; R.note = "같은 작품의 다른 이미지 → " + tgt + " 의 「함께 있는 이미지」로 붙임";
+            R.st = Result::EXISTS; R.id = tgt; R.note = khtr::fmt(khtr::tr("같은 작품의 다른 이미지 → %s 의 「함께 있는 이미지」로 붙임"), tgt.c_str());
             if (!dry) attach_companion(c, tgt, lab, sig, shas, maker, year, msrc);
             return R;
         }
         if (ig) {   /* 주 작품이 아직 없음: 주 작품을 등록할 때 붙인다 (이 묶음은 아직 등록된 것으로 치지 않아 다음 훑기에서도 다시 시도) */
-            R.st = Result::EXISTS; R.id = ig->id; R.note = "보조 이미지 — 주 작품(" + ig->id + ")이 등록되면 붙음";
+            R.st = Result::EXISTS; R.id = ig->id; R.note = khtr::fmt(khtr::tr("보조 이미지 — 주 작품(%s)이 등록되면 붙음"), ig->id.c_str());
             if (!dry) { Ctx::Pend pd; pd.dbid = ig->id; pd.label = lab; pd.sig = sig; pd.sha = shas; pd.company = maker; pd.year = year; pd.msrc = msrc; c.pend.push_back(pd); }
             return R;
         }
     }
     std::string id = make_id(curated ? q.dbhit_id : std::string(), g ? g->gid : std::string(), title, sig, c.ids);
-    std::string jshort = curated ? std::string("확인됨 (DB 일치)") : r.shortt, judge = curated ? std::string("DB 일치 — ") + (q.title.empty() ? q.reason : q.title) : r.text;
+    std::string jshort = curated ? std::string(khtr::tr("확인됨 (DB 일치)")) : r.shortt, judge = curated ? khtr::fmt(khtr::tr("DB 일치 — %s"), (q.title.empty() ? q.reason : q.title).c_str()) : r.text;
     R.judge = judge; R.id = id; R.title = title; R.grade = curated ? "A" : std::string(1, r.grade); R.jshort = jshort; R.metasrc = msrc; R.year = year; R.maker = maker;
     R.block = block_reason(q, std::map<std::string, std::string>());
     {   /* 등록 시점 판정에 쓸 kv (실행 불가는 목록을 만들 때 다시 계산) */
         std::map<std::string, std::string> kv; if (g) { kv["nk_flags"] = g->flags; kv["nk_media"] = g->media; } if (curated) kv["curated"] = "1";
         for (auto & k : q.kv) kv[k.first] = k.second; R.block = block_reason(q, kv);
     }
-    if (dry) { R.st = Result::ADDED; R.note = R.block.empty() ? "등록 가능" : "등록하되 실행 불가: " + R.block; return R; }
-    std::string d = join(c.games_dir, id); make_dir(c.games_dir); if (!make_dir(d)) { R.st = Result::SKIP; R.note = "games 폴더에 쓸 수 없음"; return R; }
-    FILE * f = fopen(join(d, "game.ini").c_str(), "wb"); if (!f) { R.st = Result::SKIP; R.note = "game.ini 를 쓸 수 없음"; return R; }
+    if (dry) { R.st = Result::ADDED; R.note = R.block.empty() ? std::string(khtr::tr("등록 가능")) : std::string(khtr::tr("등록하되 실행 불가")) + ": " + R.block; return R; }
+    std::string d = join(c.games_dir, id); make_dir(c.games_dir); if (!make_dir(d)) { R.st = Result::SKIP; R.note = khtr::tr("games 폴더에 쓸 수 없음"); return R; }
+    FILE * f = fopen(join(d, "game.ini").c_str(), "wb"); if (!f) { R.st = Result::SKIP; R.note = khtr::tr("game.ini 를 쓸 수 없음"); return R; }
     auto U = [](const std::string & s) { return acp_to_u8(s); };   /* game.ini 는 UTF-8 (BOM 없음) */
     fprintf(f, "; PC-98 PLAYER 자동 등록 (r019) -- 직접 고쳐도 됩니다. UTF-8. auto=1 은 자동 등록 표시.\n[game]\nauto=1\ntitle=%s\nimgdir=%s\nsrcdir=%s\nsig=%s\n", title.c_str(), U(w.dir).c_str(), U(srcpath).c_str(), sig.c_str());
     { std::string sv; for (auto & h : shas) sv += (sv.empty() ? "" : ",") + h; if (!sv.empty()) fprintf(f, "sha1s=%s\n", sv.c_str()); }
@@ -384,16 +384,16 @@ inline Result register_core(Ctx & c, const Work & w, const std::string & sig, co
     c.reg[sig] = id; c.ids.insert(lower(id));
     for (auto & h : shas) c.hashidx[h] = id; if (curated && !q.dbhit_id.empty()) c.dbidx[q.dbhit_id] = id; if (g) c.nkidx[g->gid] = id;
     if (curated && !q.dbhit_id.empty()) for (size_t pi = 0; pi < c.pend.size();) { if (c.pend[pi].dbid == q.dbhit_id) { auto & pd = c.pend[pi]; attach_companion(c, id, pd.label, pd.sig, pd.sha, pd.company, pd.year, pd.msrc); c.pend.erase(c.pend.begin() + pi); } else pi++; }
-    R.st = Result::ADDED; R.note = R.block.empty() ? "등록함" : "등록함 (실행 불가: " + R.block + ")"; return R;
+    R.st = Result::ADDED; R.note = R.block.empty() ? std::string(khtr::tr("등록함")) : std::string(khtr::tr("등록함 (실행 불가")) + ": " + R.block + ")"; return R;
 }
 inline Result register_work(Ctx & c, const Work & w, bool dry = false) {
     if (!dry && c.on_dir) c.on_dir(w.dir);
     Result R; std::string sig = signature(w);
-    { auto it = c.reg.find(sig); if (it != c.reg.end()) { R.st = Result::EXISTS; R.id = it->second; R.note = "이미 등록됨"; return R; } }
+    { auto it = c.reg.find(sig); if (it != c.reg.end()) { R.st = Result::EXISTS; R.id = it->second; R.note = khtr::tr("이미 등록됨"); return R; } }
     if (!w.zip.empty()) {
         Work w2 = w; std::string err, ex; std::vector<std::string> fl;
         std::string kid; if (!unzip_images(c, w.zip, sig, ex, fl, err, &kid)) { R.st = Result::SKIP; R.note = "zip: " + err; return R; }
-        if (!kid.empty()) { R.st = Result::EXISTS; R.id = kid; R.note = "zip 안 이미지가 이미 등록됨 → " + kid; if (!dry) { ini_patch(join(join(c.games_dir, kid), "game.ini"), { { "sigs", sig, 1 } }); c.reg[sig] = kid; } return R; }
+        if (!kid.empty()) { R.st = Result::EXISTS; R.id = kid; R.note = std::string(khtr::tr("zip 안 이미지가 이미 등록됨")) + " → " + kid; if (!dry) { ini_patch(join(join(c.games_dir, kid), "game.ini"), { { "sigs", sig, 1 } }); c.reg[sig] = kid; } return R; }
         w2.dir = ex; w2.files = fl; w2.zip.clear();
         return register_core(c, w2, sig, w.zip, dry);
     }

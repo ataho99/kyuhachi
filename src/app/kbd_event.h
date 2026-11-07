@@ -91,7 +91,7 @@ static bool gh_kb_geom(int & ww, int & wh, int & dw, int & dh, int & rx, int & r
     if (!gApp.win || gApp.fbw <= 0 || gApp.fbh <= 0) return false;
     SDL_GetWindowSize(gApp.win, &ww, &wh); SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
     if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) return false;
-    gl_rect(dw, dh, gApp.fbw, gApp.fbh, (int)gApp.fit, rx, ry, rw, rh); return rw > 0 && rh > 0;
+    gl_rect(dw, dh, gApp.fbw, gApp.fbh, gh_fit_eff(), rx, ry, rw, rh); return rw > 0 && rh > 0;
 }
 static bool gh_kb_curved(void) { return (int)gApp.shader == (int)SH_CRT && (int)gApp.fit != (int)FIT_INT && gApp.curve > 0.0f && gApp.kbshader != 0; }   /* GL 스레드와 같은 조건: crt 셰이더 + 곡면 > 0 (정수배는 nearest 로 바뀌어 곡면 없음) */
 static void gh_kb_warp(double & u, double & v) {   /* 화면 uv(0..1) → 프레임 uv. pc98_crt_t42.glsl 의 warp() 와 같은 식 */
@@ -106,7 +106,7 @@ static bool gh_kb_win2virt(int mx, int my, int & vx, int & vy) {
 static bool gh_menu_win2virt(int mx, int my, int & vx, int & vy) {   /* t48b: 메뉴 프레임(640x400, 창 맞춤 gl_rect) 위의 창 좌표 → 가상 좌표. 곡면이면 셰이더 warp 와 같은 식 */
     if (!gApp.win) return false; int ww = 0, wh = 0, dw = 0, dh = 0, rx, ry, rw, rh; SDL_GetWindowSize(gApp.win, &ww, &wh); SDL_GL_GetDrawableSize(gApp.win, &dw, &dh);
     if (ww <= 0 || wh <= 0 || dw <= 0 || dh <= 0) return false;
-    gl_rect(dw, dh, 640, 400, (int)gApp.fit, rx, ry, rw, rh); if (rw <= 0 || rh <= 0) return false;
+    gl_rect(dw, dh, 640, 400, gh_fit_eff(), rx, ry, rw, rh); if (rw <= 0 || rh <= 0) return false;
     double u = ((double)mx * dw / ww - rx) / rw, v = ((double)my * dh / wh - ry) / rh;
     if ((int)gApp.shader == (int)SH_CRT && (int)gApp.fit != (int)FIT_INT && gApp.curve > 0.0f) gh_kb_warp(u, v);
     vx = (int)(u * 640.0 + (u < 0 ? -0.5 : 0.5)); vy = (int)(v * 400.0 + (v < 0 ? -0.5 : 0.5)); return true;

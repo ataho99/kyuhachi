@@ -6,9 +6,9 @@ inline void Ui::d_conf(Canvas & c) {
     rbox(c, 16, 24, 288, 296, WH, phr_("동작 환경 설정"));
     const std::vector<int> ri = rowids(S_CONF);
     const bool own = scope == 1 && cur >= 0 && cur < MAXG; const bool ind = own && ovm[cur] != 0u;
-    static const unsigned rb[18] = { 0u, 1u << 7, 1u << 8, 0u, (1u << 9) | (31u << 17), 1u << 10, 1u << 11, 1u << 14, 1u << 12, 1u << 13, 1u << 15,  0u, 0u, 0u, 0u, 0u, 1u << 23, 1u << 24 };
+    static const unsigned rb[19] = { 0u, 1u << 7, 1u << 8, 0u, (1u << 9) | (31u << 17), 1u << 10, 1u << 11, 1u << 14, 1u << 12, 1u << 13, 1u << 15,  0u, 0u, 0u, 0u, 0u, 1u << 23, 1u << 24, 1u << 25 };
     std::vector<std::string> n;
-    { const std::string nm[18] = { phr_("적용 범위"), phr_("BGM 음량"), phr_("효과음 음량"), KH_SNDLABEL, phr_("조작 설정"), phr_("배속 배율"), phr_("배속 방식"), phr_("배속 중 소리"), phr_("부팅 시퀀스"), phr_("배속 표시"), phr_("오버레이 버튼 표시"), phr_("한글 글꼴"), phr_("일본어 글꼴"), phr_("언어 / Language / 言語"), phr_("indiv_reset"), "", phr_("snd_disk"), phr_("snd_dvol") };
+    { const std::string nm[19] = { phr_("적용 범위"), phr_("BGM 음량"), phr_("효과음 음량"), KH_SNDLABEL, phr_("조작 설정"), phr_("배속 배율"), phr_("배속 방식"), phr_("배속 중 소리"), phr_("부팅 시퀀스"), phr_("배속 표시"), phr_("오버레이 버튼 표시"), phr_("한글 글꼴"), phr_("일본어 글꼴"), phr_("언어 / Language / 言語"), phr_("indiv_reset"), "", phr_("snd_disk"), phr_("snd_dvol"), phr_("CPU 속도") };
       for (int id : ri) n.push_back(id == 15 ? std::string("FPS / Speed") : ((own && (ovm[cur] & rb[id])) ? std::string("● ") + nm[id] : nm[id])); }
     const int rs = (sel >= 0 && sel < (int)ri.size()) ? ri[sel] : 0;
     items(c, 40, 44, 256, n, sel, 19);
@@ -27,10 +27,12 @@ inline void Ui::d_conf(Canvas & c) {
 #endif
     }
     text(c, 344, ry(4), s.pad == 1 ? phr_("조작 설정 (서양식)") : phr_("조작 설정 (일본식)"), row(4) ? K : WH, row(4) ? WH : K);   /* t48e (#646): 고정 글자 → 조작 설정 화면 입구 */
-    const char * bm[] = { "x2", "x3", "x4", "x6", "x8" }; choices(c, 344, ry(5), bm, 5, s.bmult, WH, row(5));
+    const char * bm[] = { "x2", "x3", "x4", "x6", "x8" };
+    const char * cs[] = { phr_("표준"), phr_("빠름"), phr_("매우 빠름"), phr_("최대") }; choices(c, 344, ry(5), bm, 5, s.bmult, WH, row(5));
     const char * bk[] = { phr_("홀드"), phr_("토글"), phr_("둘 다") }; choices(c, 344, ry(6), bk, 3, s.bmode, WH, row(6));
     const char * bs[] = { phr_("끔"), phr_("빠르게"), phr_("음높이 유지") }; choices(c, 344, ry(7), bs, 3, s.bsound, WH, row(7));
     { const char * ds[] = { phr_("dsnd_off"), phr_("dsnd_seek"), phr_("dsnd_on") }; choices(c, 344, ry(16), ds, 3, s.dsnd, WH, row(16)); }   /* #641 */
+    choices(c, 344, ry(18), cs, 4, s.cpuspd, WH, row(18));
     { char b2[8]; snprintf(b2, sizeof b2, "%d", s.dvol); barv(c, 340, ry(17), 232, s.dvol / 8.0, "OFF", "MAX", WH, row(17)); text(c, 590, ry(17), b2, WH, K); }
     const char * bt[] = { phr_("켬"), phr_("끔") }; choices(c, 344, ry(8), bt, 2, s.boot, WH, row(8));
     { const char * bo[] = { phr_("끔"), phr_("켬") }; choices(c, 344, ry(9), bo, 2, s.bosd, WH, row(9)); }
@@ -46,7 +48,7 @@ inline void Ui::d_conf(Canvas & c) {
 #else
     static const char * dd[] = { "desc_scope", "desc_bgm", "desc_se", "desc_snddev", "desc_pad", "desc_bmult", "desc_bmode", "desc_bsound", "desc_boot", "desc_bosd", "desc_ovbtn", "desc_fontkr", "desc_fontjp", "desc_lang", "desc_indiv_reset", "desc_fps", "desc_dsnd", "desc_dvol" };
 #endif
-    std::string dt = dkey(phr_(rs == 15 ? "desc_fps" : dd[rs]));
+    std::string dt = dkey(phr_(rs == 18 ? "desc_cpuspd" : rs == 15 ? "desc_fps" : dd[rs]));
     if (ind) dt = std::string(phr_("indiv_has")) + "  ·  " + dt;
     desc_mq(c, 328, 44, dt, phr_("↑↓:선택, ←→:값, ○:결정, ×:뒤로, △:출하 시 설정"));
     if (scope == 0 && (rs == 11 || rs == 12)) { const std::string & fl = font_now(); if (!fl.empty()) text(c, 344, 288, fit(fl, 270), CY, K); }   /* build 5b-3: font now applied to the current work */

@@ -263,7 +263,7 @@ static void gh_ui_init_games(void) {
           e.g.company = kvs("company"); e.g.year = kvs("year"); e.g.genre = kvs("genre"); e.g.patch = kvs("patch"); e.g.devices = kvs("devices");
           if (e.g.devices.empty()) { std::string dv; auto add = [&](const char * s) { if (!dv.empty()) dv += " · "; dv += s; }; std::string mo = kvs("mouse"), so = kvs("sound"), jo = kvs("joystick");
               if (so.find("86") != std::string::npos) add(phr_("86 보드")); if (so.find("rhythm") != std::string::npos) add(phr_("리듬 WAV"));
-              if (mo == "required") { std::map<std::string, std::string> kk = p.kv; kk["__id"] = d; add(aw::mouse_released(kk) ? phr_("마우스 지원(시험)") : "마우스 필수"); } else if (mo == "pointer") add(phr_("마우스 지원")); else if (mo == "optional") add(phr_("마우스 선택"));
+              if (mo == "required") { std::map<std::string, std::string> kk = p.kv; kk["__id"] = d; add(aw::mouse_released(kk) ? phr_("마우스 지원(시험)") : phr_("마우스 필수")); } else if (mo == "pointer") add(phr_("마우스 지원")); else if (mo == "optional") add(phr_("마우스 선택"));
               if (jo.find("opn") != std::string::npos) add(phr_("OPN 조이스틱")); e.g.devices = dv; }
           std::string demo = kvs("demo"); e.g.has_demo = !demo.empty();
           {   /* r017: 판정 등급 · 출처 · 실행 불가 사유(목록을 만들 때마다 계산 — 지원이 늘면 다시 등록하지 않아도 풀린다) */
@@ -516,13 +516,13 @@ static int gh_touch_fl(double v) { int i = (int)v; return (v < (double)i) ? i - 
 static bool gh_touch_pos(float fx, float fy, int & vx, int & vy) {   /* finger (window 0..1) to menu canvas (640x400); outside the frame gives out-of-range values */
     if (gApp.use_gl && gApp.win) {   /* t57a: GL output -- same rectangle the render thread draws into (gl_rect) */
         int dw = 0, dh = 0, x = 0, y = 0, rw = 0, rh = 0; SDL_GL_GetDrawableSize(gApp.win, &dw, &dh); if (dw <= 0 || dh <= 0) return false;
-        gl_rect(dw, dh, gApp.pub_w > 0 ? gApp.pub_w : 640, gApp.pub_h > 0 ? gApp.pub_h : 400, gApp.fit, x, y, rw, rh); if (rw <= 0 || rh <= 0) return false;
+        gl_rect(dw, dh, gApp.pub_w > 0 ? gApp.pub_w : 640, gApp.pub_h > 0 ? gApp.pub_h : 400, gh_fit_eff(), x, y, rw, rh); if (rw <= 0 || rh <= 0) return false;
         vx = gh_touch_fl(((double)fx * dw - x) * 640.0 / rw); vy = gh_touch_fl(((double)fy * dh - y) * 400.0 / rh); return true;
     }
     int ow = 0, oh = 0; if (!gApp.ren || SDL_GetRendererOutputSize(gApp.ren, &ow, &oh) != 0 || ow <= 0 || oh <= 0) return false;
     double sx = ow / 640.0, sy = oh / 480.0, sc = sx < sy ? sx : sy, ox = (ow - 640.0 * sc) / 2.0, oy = (oh - 480.0 * sc) / 2.0;
     double lx = ((double)fx * ow - ox) / sc, ly = ((double)fy * oh - oy) / sc;
-    vx = gh_touch_fl(lx); vy = (gApp.fit == FIT_1610) ? gh_touch_fl(ly - 40.0) : gh_touch_fl(ly * 400.0 / 480.0); return true;
+    vx = gh_touch_fl(lx); vy = (gh_fit_eff() == FIT_1610) ? gh_touch_fl(ly - 40.0) : gh_touch_fl(ly * 400.0 / 480.0); return true;
 }
 static void gh_touch_feed(const SDL_Event & e) {
     static bool dn = false, mv = false; static SDL_FingerID fid = 0; static float x0 = 0, y0 = 0; static int ay = 0;

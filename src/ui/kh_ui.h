@@ -54,9 +54,9 @@ struct Ui {
 
     int scope3() const { return scope; }
     void scope_step(int d) { int i = scope + d; if (i < 0) i = 0; if (i > 1) i = 1; scope = i; }   /* #587: 범위는 「전역」 / 「이 작품」 둘뿐 */
-    static unsigned fbit_of(const std::string & k) { static const char * const KN[25] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp", "phos", "dsnd", "dvol" }; for (unsigned i = 0; i < 25; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
+    static unsigned fbit_of(const std::string & k) { static const char * const KN[26] = { "ratio", "shader", "curve", "bleed", "glow", "scan", "mask", "bgm", "se", "pad", "bmult", "bmode", "boot", "bosd", "bsound", "ovbtn", "fpsdisp", "sk_l", "sk_r", "dz_l", "dz_r", "sk_sp", "phos", "dsnd", "dvol", "cpuspd" }; for (unsigned i = 0; i < 25; i++) if (k == KN[i]) return 1u << i; return 0u; }   /* #587: 개별 값을 줄 단위로 */
     static unsigned fbits_all() { return (1u << 17) - 1u; }
-#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21) X(phos, 22) X(dsnd, 23) X(dvol, 24)
+#define KH_FIELDS(X) X(ratio, 0) X(shader, 1) X(curve, 2) X(bleed, 3) X(glow, 4) X(scan, 5) X(mask, 6) X(bgm, 7) X(se, 8) X(pad, 9) X(bmult, 10) X(bmode, 11) X(boot, 12) X(bosd, 13) X(bsound, 14) X(ovbtn, 15) X(fpsd, 16) X(stk_l, 17) X(stk_r, 18) X(dz_l, 19) X(dz_r, 20) X(stk_sp, 21) X(phos, 22) X(dsnd, 23) X(dvol, 24) X(cpuspd, 25)
     Settings overlay(Settings s, int gi) const { if (gi >= 0 && gi < MAXG && ovm[gi]) { const Settings & o = t[gi];
 #define KH_X(f, b) if (ovm[gi] & (1u << b)) s.f = o.f;
         KH_FIELDS(KH_X)
@@ -79,7 +79,8 @@ struct Ui {
 #endif
             r.push_back(13); if (scope == 1) r.push_back(11); }   /* t662: 13 = phosphor page */
         else { for (int i = 0; i <= 13; i++) { const bool skip = (scope == 1 && (i == 3 || i >= 11)) || (conf_grp && i != 0 && conf_grp_of(i) != conf_grp); if (!skip) r.push_back(i); if (i == 3 && conf_grp == 1) { r.push_back(16); r.push_back(17); } }   /* #641: 16/17 = disk sound mode / volume */
-            if (scope == 0 && (!conf_grp || conf_grp == 2)) r.push_back(15); if (scope == 1) r.push_back(14); }   /* #639: 15 = FPS display (global only, after the overlay rows) */
+            if (scope == 0 && (!conf_grp || conf_grp == 2)) r.push_back(15); if (scope == 1) r.push_back(14);
+            if (!conf_grp || conf_grp == 3) r.push_back(18); }   /* #639: 15 = FPS display (global only, after the overlay rows) */
         return r; }
     static unsigned indiv_bit(Scr s, int id);   /* build 9: own-value bit of a settings line (0 = none) */
     int rowidx(Scr sc, int id) const { std::vector<int> r = rowids(sc); for (size_t i = 0; i < r.size(); i++) if (r[i] == id) return (int)i; return 0; }
@@ -231,7 +232,7 @@ struct Ui {
     }
     void pad_jump(int pb) { if (scr == S_PAD && pb >= 0 && pb < PAD_N) sel = pb + 2; }   /* a pad press on L2 R2 L3 R3 moves the cursor to that button */
     static std::string pad_show_s(const std::string & v) {   /* short label for the layout panel */
-        if (v == "fn:boost_hold") return phr_("fn_boost_hold_s"); if (v == "fn:boost_toggle") return phr_("fn_boost_toggle_s"); return pad_show(v); }
+        if (v == "fn:boost_hold") return phr_("fn_boost_hold_s"); if (v == "fn:boost_toggle") return phr_("fn_boost_toggle_s"); if (v == "fn:next_disk") return phr_("fn_next_disk_s"); if (v == "fn:fps") return phr_("fn_fps_s"); return pad_show(v); }
     enum { PAD_N = 16, PAD_FN_N = 10, HOT_N = 6 };   /* 빌드 5a: 배정 가능 버튼 = 16 (옛 7 + 북 · 십자 4 · L2 R2 · L3 R3) */
     static const char * pad_key(int i) { static const char * const K[PAD_N + 8] = { "btn_b", "btn_a", "btn_x", "btn_start", "btn_leftshoulder", "btn_rightshoulder", "btn_back", "btn_y", "btn_dpup", "btn_dpdown", "btn_dpleft", "btn_dpright", "btn_lefttrigger", "btn_righttrigger", "btn_leftstick", "btn_rightstick", "btn_ext0", "btn_ext1", "btn_ext2", "btn_ext3", "btn_ext4", "btn_ext5", "btn_ext6", "btn_ext7" }; return K[i < 0 ? 0 : i >= PAD_N + 8 ? PAD_N + 7 : i]; }
     static const char * pad_fn_name(int q) { static const char * const N[PAD_FN_N] = { "", "menu", "boost_hold", "boost_toggle", "quick_save", "quick_load", "osk", "screenshot", "next_disk", "fps" }; return N[q < 0 || q >= PAD_FN_N ? 0 : q]; }   /* kh_input12.h FN_* 순서와 같게 */
@@ -323,12 +324,14 @@ struct Ui {
     }
     struct Hit { int x, y, w, h, i, sel; };   /* t55a: touch hit-test rows (rect, index, selection at draw time) */
     std::vector<Hit> hits;
+    /* t677 (#662): 선택 막대 높이를 줄 간격에 맞춘다(간격 24 이상이면 종전 22 그대로, 그보다 좁으면 간격-2, 최소 16). */
+    static int gh_bar_h(int pitch) { int h = pitch - 2; if (h > 22) h = 22; if (h < 16) h = 16; return h; }
     void items(Canvas & c, int x, int y, int w, const std::vector<std::string> & a, int sel, int pitch, const std::vector<bool> * dim = NULL) {
         for (size_t i = 0; i < a.size(); i++) {
-            int yy = y + (int)i * pitch; bool d = dim && (*dim)[i]; { Hit ht = { x - 6, yy - 3, w, 22, (int)i, sel }; hits.push_back(ht); }
-            if ((int)i == sel) c.rect(x - 6, yy - 3, w, 22, d ? GY : WH);
-            c.clip(x, yy - 3, w - 12, 22);   /* r018: 글자가 막대·상자 밖으로 나가지 않게 */
-            if ((int)i == sel) text(c, x, yy, a[i], K, d ? GY : WH); else text(c, x, yy, a[i], d ? GY : CY, K);
+            int yy = y + (int)i * pitch; bool d = dim && (*dim)[i]; int bh = gh_bar_h(pitch), by = yy - (bh - 16) / 2; { Hit ht = { x - 6, by, w, bh, (int)i, sel }; hits.push_back(ht); }
+            if ((int)i == sel) c.rect(x - 6, by, w, bh, d ? GY : WH);
+            c.clip(x, by, w - 12, bh);   /* r018: 글자가 막대·상자 밖으로 나가지 않게 */
+            if ((int)i == sel) text(c, x, yy, fit(a[i], w - 12), K, d ? GY : WH); else text(c, x, yy, fit(a[i], w - 12), d ? GY : CY, K);
             c.unclip();
         }
     }
@@ -344,7 +347,7 @@ struct Ui {
         else { const char * m = phr_("저장 없음"); text(c, x + (w - tw(m)) / 2, y + h / 2 - 8, m, GY, K); }   /* r018: 표본 그림 대신 빈 칸 (나중에 타이틀 화면 캡처로 채움) */
     }
     static void menu_names(std::vector<std::string> & v) { v = { phr_("게임 시작"), phr_("작품 선택"), phr_("mm_settings"), phr_("세이브 관리"), phr_("부가"), phr_("끝내기") }; }
-    static std::string play_str(int s) { char b[48]; if (s >= 3600) snprintf(b, sizeof b, "%d시간 %02d분", s / 3600, (s / 60) % 60); else snprintf(b, sizeof b, "%d분", s / 60); return b; }
+    static std::string play_str(int s) { char b[48]; if (s >= 3600) snprintf(b, sizeof b, phr_("%d시간 %02d분"), s / 3600, (s / 60) % 60); else snprintf(b, sizeof b, phr_("%d분"), s / 60); return b; }
     /* 확인 창: 화면 가운데, 뒤 화면 어둡게. 반환 = 창 왼쪽 위 x,y */
     void confirm_box(Canvas & c, int w, int h, const char * title, int & bx, int & by) {
         dim(c); bx = (c.w - w) / 2; by = (c.h - h) / 2; c.rect(bx, by, w, h, K); rbox(c, bx, by, w, h, YL, title);
@@ -462,14 +465,16 @@ struct Ui {
         int n = (int)r.size(); int top = s - nvis / 2; if (top > n - nvis) top = n - nvis; if (top < 0) top = 0;
         for (int k = 0; k < nvis && top + k < n; k++) {
             int i = top + k, yy = y + k * pitch; bool d = dm && (*dm)[i]; uint32_t cc = (col && (*col)[i]) ? (*col)[i] : CY;
-            if (i == s) c.rect(x - 6, yy - 3, w, 22, d ? GY : WH);
-            c.clip(x, yy - 3, w - 12, 22); if (i == s) text(c, x, yy, r[i], K, d ? GY : WH); else text(c, x, yy, r[i], d ? GY : cc, K); c.unclip();
+            int bh = gh_bar_h(pitch), by = yy - (bh - 16) / 2;
+            if (i == s) c.rect(x - 6, by, w, bh, d ? GY : WH);
+            c.clip(x, by, w - 12, bh); if (i == s) text(c, x, yy, fit(r[i], w - 12), K, d ? GY : WH); else text(c, x, yy, fit(r[i], w - 12), d ? GY : cc, K); c.unclip();
         }
         if (top > 0) text(c, x + w - 30, y - 18, "↑", CY, K); if (top + nvis < n) text(c, x + w - 30, y + nvis * pitch - 4, "↓", CY, K);
     }
     void d_pick(Canvas & c);
     void d_sort(Canvas & c);
-    std::string ent_line(const UiGame & g, int ei, int w) { const UiEnt & e = g.ents[ei]; std::string t = e.label; if (!e.tag.empty()) t += "  [" + e.tag + "]"; return fit(t, w); }
+    static std::string tag_disp(const std::string & t) { return (t == "자동" || t == "수정됨" || t == "내 것") ? std::string(phr_(t.c_str())) : t; }   /* t672: display only (internal compare values stay Korean) */
+    std::string ent_line(const UiGame & g, int ei, int w) { const UiEnt & e = g.ents[ei]; std::string t = phr_(e.label.c_str()); if (!e.tag.empty()) t += "  [" + tag_disp(e.tag) + "]"; return fit(t, w); }
     void d_ent(Canvas & c);
     void d_entmenu(Canvas & c);
     /* t49a (#845): 실행 순서 = 항목의 next= 사슬. 후보: 없음 → (정의 없는 작품이면 기본 실행) → 같은 폴더의 다른 항목들 */
@@ -617,7 +622,7 @@ struct Ui {
         { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 258, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
         text(c, 156, 278, phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."), WH, K);
         text(c, 156, 298, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
-        char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
+        char wb[192]; if (wmult) snprintf(wb, sizeof wb, phr_("창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]"), wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, phr_("창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]"), winw, winh);
         static std::string wd; wd = wb;
         static const char * dd[] = { phr_("적용 범위: 전역은 모든 작품, 이 작품은 고른 작품만."), phr_("화면 비율: 4:3 은 원래 비율, 정수배는 또렷한 배율."), phr_("셰이더: sharp 는 또렷, crt 는 주사선과 마스크, nearest 는 원본."), phr_("모니터 곡면: crt 셰이더에서 화면 가장자리를 둥글게 보이게 합니다."), phr_("번짐: 색 어긋남·가로 번짐·밝은 곳 번짐을 함께 줍니다 (0 = 끔)."), phr_("주사선 세기: 가로줄 무늬의 진하기입니다."), phr_("마스크: 화소 배열 무늬의 진하기입니다.") };
         desc(c, 324, 44, { fit(sel < 7 ? std::string(dd[sel]) : wd, 560) });
@@ -640,7 +645,7 @@ struct Ui {
         if (cur >= 0 && cur < MAXG && cur < (int)games.size() && ovm[cur]) {
             const Settings t0 = overlay(g, cur); const Settings & g0 = g; const std::string & id = games[cur].id;
 #define VSR(f) if (t0.f != g0.f) { ValRow r; r.key = std::string("설정:" #f); r.val = std::to_string((int)t0.f); r.src = "settings.ini [" + id + "]"; r.cov = std::to_string((int)g0.f) + " (전역)"; vals.push_back(r); }
-            VSR(ratio) VSR(shader) VSR(curve) VSR(bleed) VSR(glow) VSR(scan) VSR(mask) VSR(bgm) VSR(se) VSR(device) VSR(pad) VSR(bmult) VSR(bmode) VSR(boot) VSR(bosd) VSR(bsound) VSR(dsnd) VSR(dvol) VSR(kbbtn) VSR(kbshader) VSR(ovbtn)
+            VSR(ratio) VSR(shader) VSR(curve) VSR(bleed) VSR(glow) VSR(scan) VSR(mask) VSR(bgm) VSR(se) VSR(device) VSR(pad) VSR(bmult) VSR(bmode) VSR(boot) VSR(bosd) VSR(bsound) VSR(dsnd) VSR(dvol) VSR(cpuspd) VSR(kbbtn) VSR(kbshader) VSR(ovbtn)
 #undef VSR
         }
         sel = 0; scr = S_VALS;
@@ -830,7 +835,7 @@ struct Ui {
     int & curSel() { if (scr == S_MAIN) return mainsel; if (scr == S_PICK) return pick; if (scr == S_SAVE) return slotsel; if (scr == S_START) return startsel; if (scr == S_SWAP) return swapdrv; if (scr == S_SWAPI) return swapsel; return sel; }
     void go(Scr s, int selv = 0) { scr = s; sel = selv; phos_pg = false; fnow_cur = -2; if (s == S_EXTRA) extra_sub = 0; }   /* build 5b-3: font-now cache reset / work menu back to its main list */
     void enter_conf_cfg() { cb_g = g; cb_cur = cur; cb_has_t = false; if (cur >= 0 && cur < MAXG) { cb_has_t = has_t[cur]; cb_t = t[cur]; } cb_scope = scope; cb_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; cb_fkr = font_kr; cb_fjp = font_jp; cb_has = true; }
-    static void conf_fields(Settings & d, const Settings & s) { d.bgm = s.bgm; d.se = s.se; d.device = s.device; d.bmult = s.bmult; d.bmode = s.bmode; d.bsound = s.bsound; d.dsnd = s.dsnd; d.dvol = s.dvol; d.boot = s.boot; d.bosd = s.bosd; d.ovbtn = s.ovbtn; }   /* 조작 설정(pad)은 하위 화면 [S_PAD] 몫이라 복원하지 않는다 */
+    static void conf_fields(Settings & d, const Settings & s) { d.bgm = s.bgm; d.se = s.se; d.device = s.device; d.bmult = s.bmult; d.bmode = s.bmode; d.bsound = s.bsound; d.dsnd = s.dsnd; d.dvol = s.dvol; d.cpuspd = s.cpuspd; d.boot = s.boot; d.bosd = s.bosd; d.ovbtn = s.ovbtn; }   /* 조작 설정(pad)은 하위 화면 [S_PAD] 몫이라 복원하지 않는다 */
     bool conf_restore() { if (!cb_has) return false; cb_has = false; conf_fields(g, cb_g); if (cb_cur >= 0 && cb_cur < MAXG) { if (cb_has_t) { has_t[cb_cur] = true; conf_fields(t[cb_cur], cb_t); } else has_t[cb_cur] = false; } if (cb_cur >= 0 && cb_cur < MAXG) { ov_set(cb_cur, cb_ovm); sync_t(cb_cur); } scope = cb_scope; font_kr = cb_fkr; font_jp = cb_fjp; return true; }
     void enter_screen_cfg() { pre_i = 0; phos_pg = false; bk_cur = cur; bk_ovm = (cur >= 0 && cur < MAXG) ? ovm[cur] : 0u; backup = eff(); backup_has = true; bk_wmult = wmult; bk_winw = winw; bk_winh = winh; }
     static int clampi(int v, int a, int b) { return v < a ? a : v > b ? b : v; }

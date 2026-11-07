@@ -295,4 +295,6 @@ struct AppState {
     unsigned int tex_gl = 0;
 };
 static AppState gApp;
+/* t676 (#661): 작품별 16:10 이어도 메뉴가 열려 있는 동안은 메뉴를 꽉 찬 4:3 으로 그린다(닫으면 원래 화면비). 그리기·터치·마우스 좌표가 같은 값을 쓴다. */
+static inline int gh_fit_eff() { return (gApp.menu_open && (int)gApp.fit == (int)FIT_1610) ? (int)FIT_43 : (int)gApp.fit; }
 #define GH_QUITSET() (gh_log("QUIT-SET %s:%d", __FILE__, __LINE__), gApp.quit = true)   /* t139: quit 세우는 곳 사유 로그(항상) */

@@ -8,8 +8,9 @@ inline void Ui::d_add(Canvas & c) {
     std::vector<bool> dm = { false, false, false, !hasgf, !hasgf, add_new.empty() };
     items(c, 40, 48, 256, n, sel, 26, &dm);
     rbox(c, 320, 24, 304, 224, WH, phr_("인포메이션"));
+    const int gfx = std::max(80, tw(phr_("게임 폴더")) + 12);   /* t672 (#656): 라벨이 길면 값 칸을 오른쪽으로 */
     text(c, 344, 44, phr_("게임 폴더"), CY, K);
-    text(c, 344 + 80, 44, hasgf ? fit(gamefolder, 304 - 24 - 80 - 16) : std::string(phr_("(없음)")), hasgf ? WH : GY, K);
+    text(c, 344 + gfx, 44, hasgf ? fit(gamefolder, 304 - 24 - gfx - 16) : std::string(phr_("(없음)")), hasgf ? WH : GY, K);
     int yy = 72; if (add_log.empty()) text(c, 344, yy, phr_("아직 추가한 작품이 없습니다."), GY, K);
     for (size_t i = 0; i < add_log.size() && i < 8; i++) { text(c, 344, yy, fit(add_log[i], 304 - 48), i == 0 ? YL : WH, K); yy += 20; }
     static const char * dd[] = { phr_("고른 이미지 파일들을 한 작품으로 등록합니다 (여러 장 가능)."), phr_("폴더 안의 이미지를 찾아 등록합니다. 하위 폴더는 작품마다 따로."), phr_("이 폴더를 켤 때마다 훑어 새 작품을 자동으로 등록합니다."), phr_("게임 폴더를 지금 다시 훑습니다."), phr_("게임 폴더 지정을 풀고 자동 등록을 멈춥니다 (등록된 작품은 남음)."), phr_("방금 추가한 작품마다 한글판 / 원판 일본어 / 자동을 고릅니다.") };

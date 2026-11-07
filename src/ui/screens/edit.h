@@ -6,12 +6,12 @@ inline void Ui::d_edit(Canvas & c) {
     const char * lab[] = { phr_("이름"), phr_("디스크 A"), phr_("디스크 B"), phr_("디스크 C"), phr_("디스크 D"), "CD", phr_("부팅 대상"), phr_("자동 입력"), phr_("교체 목록"), phr_("글꼴"), phr_("마우스"), phr_("설치"), phr_("실행 파일"), phr_("실행 인자") };
     std::vector<std::string> v(14);
     v[0] = ed_name; const char * dk[] = { "disk_a", "disk_b", "disk_c", "disk_d", "cd" }; for (int i = 0; i < 5; i++) v[1 + i] = disk_label(kv_get(dk[i]));
-    { std::string b = kv_get("boot"); v[6] = b.empty() ? "자동" : b; }
+    { std::string b = kv_get("boot"); v[6] = b.empty() ? std::string(phr_("자동")) : b; }
     { std::string s = kv_get("bootkeys"); v[7] = s.empty() ? std::string(phr_("없음")) : std::to_string((int)ent::parse_steps(s).size()) + phr_("단계"); }
     { std::string s = kv_get("swap"); int n = 0; if (!s.empty()) { n = 1; for (char ch : s) if (ch == ',') n++; } v[8] = std::to_string(n) + phr_("장"); }
     v[9] = font_label(kv_get("font"), kv_get("font_kind")); v[10] = mouse_label(kv_get("mouse"));
     v[11] = kv_get("install") == "hdd_new" ? phr_("HDD 새로 만들기 (") + (kv_get("hdd_mb").empty() ? std::string("40") : kv_get("hdd_mb")) + "MB)" : phr_("아님");
-    { std::string x = kv_get("dosexe"); if (x.empty()) v[12] = "자동"; else if (x == "*") v[12] = phr_("DOS 프롬프트"); else { x[0] = (char)toupper((unsigned char)x[0]); v[12] = x; } }   /* 2b */
+    { std::string x = kv_get("dosexe"); if (x.empty()) v[12] = phr_("자동"); else if (x == "*") v[12] = phr_("DOS 프롬프트"); else { x[0] = (char)toupper((unsigned char)x[0]); v[12] = x; } }   /* 2b */
     { std::string s = kv_get("dosargs"); v[13] = s.empty() ? std::string(phr_("없음")) : s; }
     for (int i = 0; i < 14; i++) {
         int yy = 42 + i * 19; bool sl = i == sel; if (sl) c.rect(30, yy - 3, 580, 19, WH);

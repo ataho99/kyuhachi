@@ -167,7 +167,7 @@ static void gh_publish(const uint32_t * px, int w, int h) {
     if (!gApp.headless && !gApp.use_gl && gApp.ren && gApp.win) {
         static SDL_Texture * mt = NULL; static int mw = 0, mh = 0;
         if (!mt || mw != w || mh != h) { if (mt) SDL_DestroyTexture(mt); mt = SDL_CreateTexture(gApp.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, w, h); mw = w; mh = h; }
-        if (mt) { SDL_UpdateTexture(mt, NULL, px, w * 4); SDL_RenderSetLogicalSize(gApp.ren, w, w * 3 / 4); SDL_RenderClear(gApp.ren); SDL_Rect d; d.x = 0; d.w = w; if (gApp.fit == FIT_1610) { d.h = h; d.y = (w * 3 / 4 - h) / 2; } else { d.y = 0; d.h = w * 3 / 4; } SDL_RenderCopy(gApp.ren, mt, NULL, &d); SDL_RenderPresent(gApp.ren); }
+        if (mt) { SDL_UpdateTexture(mt, NULL, px, w * 4); SDL_RenderSetLogicalSize(gApp.ren, w, w * 3 / 4); SDL_RenderClear(gApp.ren); SDL_Rect d; d.x = 0; d.w = w; if (gh_fit_eff() == FIT_1610) { d.h = h; d.y = (w * 3 / 4 - h) / 2; } else { d.y = 0; d.h = w * 3 / 4; } SDL_RenderCopy(gApp.ren, mt, NULL, &d); SDL_RenderPresent(gApp.ren); }
         return;
     }
 #endif

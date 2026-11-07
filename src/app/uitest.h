@@ -347,6 +347,12 @@ if (tk == "blocks") { for (auto & gg : U.games) gh_log("uikeys: BLOCKS %s block=
                    (!b1.empty() && b2.empty() && !b3.empty() && !b4.empty() && !b5.empty() && b6.empty()) ? "OK" : "FAIL");
         }
         ui::Settings dflt; gh_log("UITEST default bsound=%d (2 = 음높이 유지) %s", dflt.bsound, dflt.bsound == 2 ? "OK" : "FAIL");
+#if defined(__ANDROID__)
+        gh_log("UITEST default ovbtn=%d (and=1) %s", dflt.ovbtn, dflt.ovbtn == 1 ? "OK" : "FAIL");
+#else
+        gh_log("UITEST default ovbtn=%d (win=0) %s", dflt.ovbtn, dflt.ovbtn == 0 ? "OK" : "FAIL");
+#endif
+        gh_log("UITEST default shim=%d (2=dot) %s", dflt.shim, dflt.shim == 2 ? "OK" : "FAIL");
     }
     { /* 배속 OSD: 게임 화면 + 오른쪽 위 ▶▶ x3 (+ 다른 안내가 겹칠 때) */
         ov::sample_picture(c, 0, 0, 640, 400); gApp.boost_on = true; gApp.bosd_on = true; gApp.boost_xv = 3; gh_boost_osd_draw(c, "화면 정수배", true);

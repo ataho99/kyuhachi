@@ -139,8 +139,11 @@ static void kha_seed_assets(void) {
         { "kha/rhythm/2608_hh.wav", "res\\rhythm\\2608_hh.wav" }, { "kha/rhythm/2608_tom.wav", "res\\rhythm\\2608_tom.wav" }, { "kha/rhythm/2608_rim.wav", "res\\rhythm\\2608_rim.wav" },
         { "kha/shaders/pc98_sharp.glsl", "res\\shaders\\pc98_sharp.glsl" }, { "kha/shaders/pc98_crt.glsl", "res\\shaders\\pc98_crt.glsl" },
         { "kha/dsn/fdd_insert.wav", "res\\disk-noises\\fdd_insert.wav" }, { "kha/dsn/fdd_eject.wav", "res\\disk-noises\\fdd_eject.wav" }, { "kha/dsn/fdd_read.wav", "res\\disk-noises\\fdd_read.wav" },
-        { "kha/dsn/fdd_spin.wav", "res\\disk-noises\\fdd_spin.wav" }, { "kha/dsn/fdd_seek1.wav", "res\\disk-noises\\fdd_seek1.wav" }, { "kha/dsn/fdd_seek2.wav", "res\\disk-noises\\fdd_seek2.wav" },
+        { "kha/dsn/fdd_spin.wav", "res\\disk-noises\\fdd_spin.wav" },
+        { "kha/dsn/hdd_spin.wav", "res\\disk-noises\\hdd_spin.wav" }, { "kha/dsn/hdd_spinup.wav", "res\\disk-noises\\hdd_spinup.wav" }, { "kha/dsn/fdd_seek1.wav", "res\\disk-noises\\fdd_seek1.wav" }, { "kha/dsn/fdd_seek2.wav", "res\\disk-noises\\fdd_seek2.wav" },
+        { "kha/dsn/hdd_seek1.wav", "res\\disk-noises\\hdd_seek1.wav" }, { "kha/dsn/hdd_seek2.wav", "res\\disk-noises\\hdd_seek2.wav" },
         { "kha/dsn/CREDITS.txt", "res\\disk-noises\\CREDITS.txt" },
+        { "kha/dsn/CREDITS_hdd.txt", "res\\disk-noises\\CREDITS_hdd.txt" },
         { "kha/flags.ini", "res\\flags.ini" }, { "kha/gamecontrollerdb.txt", "res\\gamecontrollerdb.txt" },
         { "kha/strings_ko.txt", "strings_ko.txt" }, { "kha/strings_en.txt", "strings_en.txt" }, { "kha/strings_ja.txt", "strings_ja.txt" },
         { "kha/gamedb.ini", "gamedb.ini" }, { "kha/gamedb_nk.tsv", "gamedb_nk.tsv" } };

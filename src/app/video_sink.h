@@ -270,7 +270,7 @@ static int SDLCALL gl_thread(void *) {
             glBindTexture(GL_TEXTURE_2D, gApp.tex_gl);
             if (cw != tw || ch != th) { glTexImage2D(GL_TEXTURE_2D, 0, GH_INTFMT, cw, ch, 0, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.rbuf, (size_t)cw * ch, sw)); tw = cw; th = ch; }
             else if (nf) glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, cw, ch, GH_PIXFMT, GL_UNSIGNED_BYTE, gh_up(gApp.rbuf, (size_t)cw * ch, sw));
-            int fit = gApp.fit, sh = gApp.shader;
+            int fit = gh_fit_eff(), sh = gApp.shader;
             if (fit == FIT_INT) sh = SH_NEAREST;
             const GProg & P = (sh == SH_CRT && gApp.phos_gl && (gApp.beamv > 0.0f || gApp.breathv > 0.0f || gApp.glowpv > 0.0f)) ? gApp.prog_ph : gApp.prog[sh];
             int x, y, rw, rh; gl_rect(dw, dh, cw, ch, fit, x, y, rw, rh);

@@ -4,7 +4,9 @@ inline void Ui::d_pick(Canvas & c) {
     titlebar(c, phr_("작품 선택"));
     std::string bt = std::string(phr_("작품 선택  ")) + (sortfav ? "★" : "") + sort_name(sortm) + (reorder ? phr_("  [순서 이동]") : "");
     rbox(c, 16, 24, 288, 224, WH, bt.c_str());
-    { int x = 30, nun = 0; for (size_t q = 0; q < games.size(); q++) if (games[q].variant_of.empty() && games[q].lang.empty()) nun++; for (int t = 0; t < 4; t++) { std::string nm = tab_name(t); if (t == TAB_UN && nun > 0) nm += "(" + std::to_string(nun) + ")"; int w = tw(nm) + 12; if (t == tab) { c.rect(x - 4, 42, w, 21, WH); text(c, x + 2, 45, nm, K, WH); } else text(c, x + 2, 45, nm, CY, K); x += w + 4; } }
+    { int x = 30, nun = 0; for (size_t q = 0; q < games.size(); q++) if (games[q].variant_of.empty() && games[q].lang.empty()) nun++; std::string nms[4]; int tot = 0; for (int t = 0; t < 4; t++) { nms[t] = tab_name(t); if (t == TAB_UN && nun > 0) nms[t] += "(" + std::to_string(nun) + ")"; tot += tw(nms[t]) + 16; }   /* t672 (#656): 탭 줄이 266 px 를 넘으면 짧은 이름 */
+      if (tot > 266) { static const char * sk[4] = { "tab_s_kp", "tab_s_orig", "tab_s_un", "tab_s_all" }; for (int t = 0; t < 4; t++) { const char * sn = phr_(sk[t]); if (strcmp(sn, sk[t]) != 0) { nms[t] = sn; if (t == TAB_UN && nun > 0) nms[t] += "(" + std::to_string(nun) + ")"; } } }
+      for (int t = 0; t < 4; t++) { const std::string & nm = nms[t]; int w = tw(nm) + 12; if (t == tab) { c.rect(x - 4, 42, w, 21, WH); text(c, x + 2, 45, nm, K, WH); } else text(c, x + 2, 45, nm, CY, K); x += w + 4; } }
     int nv = (int)vis.size(), n = nv + 1;
     if (pick != pick_seen) { pick_seen = pick; pick_since = ts_ms; }
     const int VIS = 7, PT = 24, LX = 40, LWD = 256, AVAIL = 236, Y0 = 70; int top = pick - 3; if (top > n - VIS) top = n - VIS; if (top < 0) top = 0;

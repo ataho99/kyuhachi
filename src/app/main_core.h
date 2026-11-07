@@ -11,6 +11,11 @@ static void gh_main_conf() {
         {   /* 작품별 cycles / 글꼴 / extra (프로필 > 공통) */
             std::string c;
             if (!gApp.prof_.cycles.empty()) { bool num = true; for (char ch : gApp.prof_.cycles) if (ch < '0' || ch > '9') num = false; c += std::string("[cpu]\ncycles=") + (num ? "fixed " : "") + gApp.prof_.cycles + "\n"; }
+            else { int ci = gApp.ui_.effective(gApp.cur_game).cpuspd;
+                if (ci < 0 || ci > 3) ci = 0;
+                static const char * const CP[4] = { "fixed 3000",
+                    "fixed 12000", "fixed 24000", "max" };
+                c += std::string("[cpu]\ncycles=") + CP[ci] + "\n"; }
             {   /* r020 (#247정정): 글꼴은 이름(kr_shinsun · kr_gulim · kr_dotum · jp_default → res\fonts\<이름>.bmp)으로 지정한다. 옛 파일 경로 지정도 읽는다. 보조 zip 은 더 뒤지지 않는다 */
                 auto ex = [](const std::string & p) { return plat::exists(p.c_str()); };
                 std::string f0 = gApp.prof_.font; bool soft = false;

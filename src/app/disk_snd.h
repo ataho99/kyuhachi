@@ -13,7 +13,7 @@
    fdd_seek3.wav (short / medium / long seek) fdd_read.wav fdd_insert.wav
    fdd_eject.wav fdd_spin.wav (16-bit PCM mono/stereo, any rate; fdd_spin.wav must loop seamlessly). A missing file means
    that sound is simply not played. Sources and licenses: CREDITS.txt in that folder.
-   HDD noise: placeholder only (not played). */
+    HDD noise: dedicated hdd_seek1/2.wav (near / far-or-chained), hdd_spin.wav (2 s hold), hdd_spinup.wav (once after 10 s idle). */
 #include <vector>
 #include <string>
 #include <stdint.h>
@@ -25,7 +25,10 @@ static const int RATE = 22050;
 enum Kind { K_SEEK = 0, K_READ = 1, K_INS = 2, K_EJE = 3, K_N = 4, K_SPIN = 4 };
 static const char * const KNAME[5] = { "seek", "read", "insert", "eject", "spin" };
 static const char * const FNAME[5] = { "fdd_seek.wav", "fdd_read.wav", "fdd_insert.wav", "fdd_eject.wav", "fdd_spin.wav" };
-static const int GAP_MS[K_N] = { 60, 120, 400, 400 };   /* min quiet time between two voices of the same kind */
+static const int GAP_MS[K_N] = { 60, 120, 400, 400 };
+static const int HDD_SEEK_GAP_MS = 240;
+static const int HDD_MOTOR_HOLD_MS = 2000;
+static const int HDD_SPINUP_IDLE_MS = 10000;   /* min quiet time between two voices of the same kind */
 static const int ANY_GAP_MS = 30;                        /* min quiet time between any two voices */
 static const int MOTOR_HOLD_MS = 1500;                   /* motor stays on this long after the last access */
 static const int SEEK_CAP = 80;
@@ -40,14 +43,24 @@ struct St {
     uint64_t any_end = 0; bool any_ended = false;
     float spin_g = 0.0f; size_t spin_pos = 0; uint64_t spin_start = 0; bool spin_run = false;
     std::vector<int16_t> wav[5]; bool have[5] = { false, false, false, false, false };
-    std::vector<int16_t> seekv[3]; bool hseek[3] = { false, false, false };   /* fdd_seek1..3.wav: short / medium / long seek */
+    std::vector<int16_t> seekv[3]; bool hseek[3] = { false, false, false };
+    std::vector<int16_t> hseekv[2]; bool hhseek[2] = { false, false };
+    std::vector<int16_t> hspin; bool hhave_spin = false;
+    std::vector<int16_t> hspinup; bool hhave_spinup = false;
+    int hpend = 0, hpend_n = 0, hcyl[4] = { 0, 0, 0, 0 };
+    bool h_on = false; size_t h_pos = 0; const std::vector<int16_t> * h_buf = NULL;
+    uint64_t h_start = 0, h_end = 0, hlast = 0; bool h_ended = false, hact = false, hfirst = true;
+    float hspin_g = 0.0f; size_t hspin_pos = 0; uint64_t hspin_start = 0; bool hspin_run = false;
+    bool hsup_on = false; size_t hsup_pos = 0; uint64_t hsup_start = 0;
+    unsigned hmerged = 0, hst_seek = 0, hst_spin = 0, hst_up = 0;   /* fdd_seek1..3.wav: short / medium / long seek */
     unsigned ev[7] = { 0, 0, 0, 0, 0, 0, 0 }; unsigned started[5] = { 0, 0, 0, 0, 0 }; unsigned merged = 0, dropped = 0;
     unsigned calls = 0; unsigned long long nz = 0;
     unsigned pk = 0, pk_all = 0; double sumsq = 0.0; unsigned long long ns = 0;
     unsigned lpk[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };   /* file peaks after norm: 0 seek1 1 read 2 ins 3 eje 4 spin 5 seek2 6 seek3 */
     FILE * lg = NULL; std::vector<int16_t> dump; bool dumping = false; std::string wavpath;
     int test = 0; unsigned tc = 0;
-    const void * ip[2] = { NULL, NULL }; long long lpos[2] = { -1, -1 }; unsigned polled = 0, chg = 0;   /* image poll */
+    const void * ip[6] = { NULL, NULL, NULL, NULL, NULL, NULL };
+    long long lpos[6] = { -1, -1, -1, -1, -1, -1 }; unsigned polled = 0, chg = 0;   /* image poll */
 };
 static St S;
 static inline int16_t to16(float v) { v *= 32767.0f; return (int16_t)(v > 32767.0f ? 32767 : v < -32767.0f ? -32767 : v); }
@@ -127,6 +140,40 @@ static void do_seek(int d, int c) {
     int dl = c - S.cyl[d]; if (dl < 0) dl = -dl; S.cyl[d] = c;
     if (dl > 0) { if (S.pend_seek > 0 || S.v_on) S.merged++; S.pend_seek += dl; if (S.pend_seek > SEEK_CAP) S.pend_seek = SEEK_CAP; }
 }
+/* #664c HDD path (slots 2..5 only): seeks merge, restart after HDD_SEEK_GAP_MS. */
+static inline bool hdd_gap_ok(uint64_t now) {
+    if (!S.h_ended) return true;
+    return now >= S.h_end + (uint64_t)ms(HDD_SEEK_GAP_MS);
+}
+static void hdd_seek(int dl) {   /* dl >= 0; dl == 0 is a chained read without cyl move */
+    if (!S.hhseek[0] && !S.hhseek[1]) return;
+    if (S.hpend_n > 0 || S.h_on) S.hmerged++;
+    S.hpend += dl; S.hpend_n++; if (S.hpend > SEEK_CAP) S.hpend = SEEK_CAP;
+}
+static void hdd_ev(int slot, int cyl) {   /* one HDD move seen by poll; FDD state untouched */
+    const int h = slot - 2; if (h < 0 || h > 3) return;
+    if (S.mode == 0 || !S.ch || S.boost) return;
+    S.ev[2]++;
+    const uint64_t now = S.t;
+    if (S.mode == 2) {
+        if (S.hhave_spinup && !S.hsup_on && (S.hfirst || now >= S.hlast + (uint64_t)ms(HDD_SPINUP_IDLE_MS))) {
+            S.hsup_on = true; S.hsup_pos = 0; S.hsup_start = now; S.hst_up++;
+        }
+        S.hlast = now; S.hact = true; S.hfirst = false;
+    }
+    int dl = cyl - S.hcyl[h]; if (dl < 0) dl = -dl; S.hcyl[h] = cyl;
+    hdd_seek(dl);
+}
+static void hdd_try(uint64_t now) {   /* near (<=2 tracks, single) -> seek1, else seek2 */
+    if (S.h_on || S.mode < 1) return;
+    if (S.hpend_n == 0 || !hdd_gap_ok(now)) return;
+    const int want = (S.hpend <= 2 && S.hpend_n <= 1) ? 0 : 1; int use = -1;
+    for (int k = want; k >= 0 && use < 0; k--) if (S.hhseek[k]) use = k;
+    for (int k = want + 1; k < 2 && use < 0; k++) if (S.hhseek[k]) use = k;
+    if (use < 0) { S.hpend = 0; S.hpend_n = 0; return; }
+    S.h_buf = &S.hseekv[use]; S.h_on = !S.h_buf->empty();
+    S.h_pos = 0; S.h_start = now; S.hpend = 0; S.hpend_n = 0; if (S.h_on) S.hst_seek++;
+}
 static void hook(int ev, int drive, int cyl, int nbytes) {
     if (S.mode == 0 || !S.ch || S.boost) return;
     const int d = drive & 1; if (ev >= 1 && ev <= 6) S.ev[ev]++;
@@ -162,11 +209,13 @@ static void gen(int16_t * out, int n) {
     if (S.mode > 0 && !S.test) poll();
     if (S.test) test_step();
     if (S.boost) { for (int i = 0; i < n; i++) out[i] = 0; S.t += (uint64_t)n; return; }
-    const uint64_t now = S.t; const float gain = S.vol / 4.0f;   /* vol 4 = unity on the normalised files, 8 = +6 dB */
+    const uint64_t now = S.t; const float gain = S.vol < 4 ? S.vol * S.vol / 16.0f : S.vol / 4.0f;   /* t678: 1..3 squared */
     bool motor = false;
     if (S.mode == 2 && S.have[K_SPIN])
         for (int d = 0; d < 2; d++) if (S.act[d] && now < S.last_act[d] + (uint64_t)ms(MOTOR_HOLD_MS)) motor = true;
+    const bool hmotor = S.mode == 2 && S.hhave_spin && S.hact && now < S.hlast + (uint64_t)ms(HDD_MOTOR_HOLD_MS);
     if (!S.v_on) try_start(now);
+    if (!S.h_on) hdd_try(now);
     const float up = 1.0f / (0.30f * RATE), dn = 1.0f / (0.50f * RATE);
     for (int i = 0; i < n; i++) {
         float o = 0.0f;
@@ -185,6 +234,28 @@ static void gen(int16_t * out, int n) {
                 const uint64_t e = now + (uint64_t)i + 1; S.end_t[S.v_kind] = e; S.ended[S.v_kind] = true;
                 S.any_end = e; S.any_ended = true;
                 logv(S.v_kind, S.v_start, e); S.v_on = false; S.pend_read = 0;
+            }
+        }
+        if (hmotor) { S.hspin_g += up; if (S.hspin_g > 1.0f) S.hspin_g = 1.0f; }
+        else { S.hspin_g -= dn; if (S.hspin_g < 0.0f) S.hspin_g = 0.0f; }
+        if (S.hspin_g > 0.0f && !S.hspin.empty()) {
+            if (!S.hspin_run) { S.hspin_run = true; S.hspin_start = now + (uint64_t)i; S.hst_spin++; }
+            o += (float)S.hspin[S.hspin_pos % S.hspin.size()] * (1.0f / 32768.0f) * S.hspin_g; S.hspin_pos++;
+        } else if (S.hspin_run) {
+            S.hspin_run = false;
+            if (S.lg) fprintf(S.lg, "V hddspin %llu %llu\n", (unsigned long long)S.hspin_start,
+ (unsigned long long)(now + (uint64_t)i));
+        }
+        if (S.hsup_on) {
+            o += (float)S.hspinup[S.hsup_pos] * (1.0f / 32768.0f); S.hsup_pos++;
+            if (S.hsup_pos >= S.hspinup.size()) S.hsup_on = false;
+        }
+        if (S.h_on) {
+            o += (float)(*S.h_buf)[S.h_pos] * (1.0f / 32768.0f); S.h_pos++;
+            if (S.h_pos >= S.h_buf->size()) {
+                S.h_end = now + (uint64_t)i + 1; S.h_ended = true;
+                if (S.lg) fprintf(S.lg, "V hddseek %llu %llu\n", (unsigned long long)S.h_start, (unsigned long long)S.h_end);
+                S.h_on = false;
             }
         }
         float y = o * gain; const float ay = y < 0.0f ? -y : y;   /* soft knee above 0.8 */
@@ -221,24 +292,35 @@ static void flush() {
 }
 static void reset_voices() {
     S.v_on = false; S.pend_seek = S.pend_read = S.pend_ins = S.pend_eje = 0; S.act[0] = S.act[1] = false;
+    S.h_on = false; S.hpend = 0; S.hpend_n = 0; S.hsup_on = false; S.hact = false;
+    S.hspin_g = 0.0f; S.hspin_run = false; S.hfirst = true;
 }
 static void load_all(const std::string & resdir) {
     static const char * const sk[3] = { "fdd_seek1.wav", "fdd_seek2.wav", "fdd_seek3.wav" };
     for (int i = 1; i < 5; i++) S.have[i] = !resdir.empty() && load_wav(resdir + "\\" + FNAME[i], S.wav[i]);
     for (int k = 0; k < 3; k++) S.hseek[k] = !resdir.empty() && load_wav(resdir + "\\" + sk[k], S.seekv[k]);
     S.have[K_SEEK] = S.hseek[0] || S.hseek[1] || S.hseek[2];
+    static const char * const hfn[4] = { "hdd_seek1.wav", "hdd_seek2.wav", "hdd_spin.wav", "hdd_spinup.wav" };
+    for (int k = 0; k < 2; k++) S.hhseek[k] = !resdir.empty() && load_wav(resdir + "\\" + hfn[k], S.hseekv[k]);
+    S.hhave_spin = !resdir.empty() && load_wav(resdir + "\\" + hfn[2], S.hspin);
+    S.hhave_spinup = !resdir.empty() && load_wav(resdir + "\\" + hfn[3], S.hspinup);
     /* The recordings are quiet (clicks -6 .. -9 dBFS, spin -14): normalise so that vol 4 is clearly audible next to the game's
        FM/SSG mix. One-shots peak at 0.7 full scale, the continuous spin loop at 0.25. */
     for (int i = 1; i < 5; i++) if (S.have[i]) S.lpk[i] = norm(S.wav[i], i == K_SPIN ? 0.25f : 0.7f);
+    for (int k = 0; k < 2; k++) if (S.hhseek[k]) norm(S.hseekv[k], 0.7f);
+    if (S.hhave_spin) norm(S.hspin, 0.25f);
+    if (S.hhave_spinup) norm(S.hspinup, 0.7f);
     for (int k = 0; k < 3; k++) if (S.hseek[k]) S.lpk[k == 0 ? 0 : 4 + k] = norm(S.seekv[k], 0.7f);
 }
 #ifndef DSN_NO_MIXER
 /* disk activity = the file position of the floppy image moved since the last mixer call (needs bios_disk.h) */
 static void poll() {
-    for (int d = 0; d < 2; d++) {
+    /* #664c: HDD-boot games read slots 2..5 (same imageDiskList); watch all 6. */
+    for (int d = 0; d < 6; d++) {
         imageDisk * im = imageDiskList[d];
         if ((const void *)im != S.ip[d]) {
-            const bool had = S.ip[d] != NULL; S.ip[d] = im; S.lpos[d] = -1; if (had && im) media(d); continue;
+            const bool had = S.ip[d] != NULL; S.ip[d] = im; S.lpos[d] = -1; if (had && im && d < 2) media(d);
+            if (had && im && d >= 2) { S.hlast = S.t; S.hact = true; } continue;
         }
         if (!im || !im->diskimg) continue;
         S.polled++;
@@ -250,7 +332,7 @@ static void poll() {
         if (bpc && p >= (long long)im->image_base) {
             cyl = (int)(((uint64_t)p - im->image_base) / bpc); if (im->cylinders && cyl >= (int)im->cylinders) cyl = (int)im->cylinders - 1;
         }
-        hook(2, d, cyl, 512);
+        if (d >= 2) hdd_ev(d, cyl); else hook(2, d, cyl, 512);
     }
 }
 #else

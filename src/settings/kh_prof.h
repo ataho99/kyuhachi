@@ -10,6 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <set>
+#include "settings/kh_tr.h"
 
 namespace prof {
 
@@ -520,24 +521,24 @@ inline Profile auto_profile(std::vector<ImgInfo> imgs, const std::string & id) {
         (i.hdd ? hd : fd).push_back(&i);
     }
     int dh = 0, df = 0; hd = collapse_dups(hd, dh); fd = collapse_dups(fd, df);
-    std::string dupnote = (dh + df) ? " · 중복 " + std::to_string(dh + df) + "장 묶음" : std::string();
+    std::string dupnote = (dh + df) ? " · " + khtr::fmt(khtr::tr("중복 %d장 묶음"), dh + df) : std::string();
     if (!hd.empty()) {
         // 가장 큰 HDD 하나(여러 개면 이름순 첫 번째) 를 C 로, 둘째는 D
         std::sort(hd.begin(), hd.end(), [](ImgInfo * a, ImgInfo * b) { return a->base < b->base; });
         p.disk[2] = hd[0]->base; if (hd.size() > 1) p.disk[3] = hd[1]->base;
         p.bootletter = 'C';
-        p.reason = "HDD 있음 → C 부팅" + dupnote;
+        p.reason = std::string(khtr::tr("HDD 있음 → C 부팅")) + dupnote;
         if (!fd.empty()) {   /* 2c: HDD+FD auto bundle: best FD -> A only, all FDs -> swap list, boot stays C */
             auto sc = [](ImgInfo * a, ImgInfo * b) { int x = sys_score(*a), y = sys_score(*b); return x != y ? x > y : a->base < b->base; };
             std::sort(fd.begin(), fd.end(), sc); p.disk[0] = fd[0]->base;
             if (fd.size() > 1) for (auto * x : fd) p.swap.push_back(x->base);
-            p.reason += " + FD " + std::to_string(fd.size()) + "개 (A 부착" + (fd.size() > 1 ? ", 전부 교체 목록" : "") + ")";
+            p.reason += " + " + khtr::fmt(fd.size() > 1 ? khtr::tr("FD %d개 (A 부착, 전부 교체 목록)") : khtr::tr("FD %d개 (A 부착)"), (int)fd.size());
         }
         return p;
     }
     if (!fd.empty()) {
         { bool anyboot = false; for (auto * x : fd) if (x->boot_ok) anyboot = true;   /* t43j (#323 C4): 첫 섹터가 비었거나 전부 FF 인 디스크뿐 = 추가 시나리오·데이터 디스크만 든 세트 — 부팅시키지 않고 사유를 보인다 */
-          if (!anyboot) { p.reason = "부팅할 수 있는 디스크가 없음 — 첫 섹터가 비어 있거나 전부 FF 인 데이터 디스크뿐 (본편 디스크가 필요한 추가 디스크)" + dupnote; return p; } }
+          if (!anyboot) { p.reason = std::string(khtr::tr("부팅할 수 있는 디스크가 없음 — 첫 섹터가 비어 있거나 전부 FF 인 데이터 디스크뿐 (본편 디스크가 필요한 추가 디스크)")) + dupnote; return p; } }
         std::sort(fd.begin(), fd.end(), [](ImgInfo * a, ImgInfo * b) { int sa = sys_score(*a), sb = sys_score(*b); if (sa != sb) return sa > sb; return a->base < b->base; });
         /* B = A 와 같은 번호가 아닌 디스크 중 점수 최고. 같은 번호(설치 전/후 등)는 뒤로 */
         std::string an = disk_no(fd[0]->base);
@@ -546,11 +547,11 @@ inline Profile auto_profile(std::vector<ImgInfo> imgs, const std::string & id) {
         p.disk[0] = fd[0]->base; p.bootletter = 'A';
         if (fd.size() >= 2) p.disk[1] = fd[1]->base;
         for (size_t k = 2; k < fd.size(); k++) p.swap.push_back(fd[k]->base);
-        p.reason = std::string("FD ") + std::to_string(fd.size()) + "개 → 부팅 점수 최고 = A" + (fd[0]->has_sys ? "(DOS 시스템 디스크)" : "") + (fd.size() >= 2 ? ", 다음 = B" : "") + (fd.size() > 2 ? ", 나머지 교체 목록" : "") + dupnote;
+        p.reason = khtr::fmt(khtr::tr("FD %d개 → 부팅 점수 최고 = A"), (int)fd.size()) + (fd[0]->has_sys ? khtr::tr("(DOS 시스템 디스크)") : "") + (fd.size() >= 2 ? std::string(", ") + khtr::tr("다음 = B") : std::string()) + (fd.size() > 2 ? std::string(", ") + khtr::tr("나머지 교체 목록") : std::string()) + dupnote;
         if (fd[0]->nosys_boot) {   /* t43 (#315 A1): 부트섹터가 「시스템 없음」 — 이 디스크는 스스로 부팅하지 못한다 → 내장 DOS 에 A:/B: 로 장착하고 실행 파일을 찾는다 */
             std::vector<std::string> ra = dos_runlist(*fd[0]), rb; if (fd.size() >= 2) rb = dos_runlist(*fd[1]);
             if (ra.empty() && rb.empty() && fd.size() > 2) {   /* t45x β: A·B 후보 0 이면 교체 목록(swap)에서 실행 파일이 든 첫 디스크를 B 로 올린다(정렬 순서 첫째) */
-                for (size_t k = 2; k < fd.size(); k++) { std::vector<std::string> rk = dos_runlist(*fd[k]); if (rk.empty()) continue; std::swap(fd[1], fd[k]); p.disk[1] = fd[1]->base; p.swap.clear(); for (size_t m = 2; m < fd.size(); m++) p.swap.push_back(fd[m]->base); rb = rk; p.reason += " → swap 에서 실행 디스크 승격: " + fd[1]->base + "(t45x β)"; break; } }
+                for (size_t k = 2; k < fd.size(); k++) { std::vector<std::string> rk = dos_runlist(*fd[k]); if (rk.empty()) continue; std::swap(fd[1], fd[k]); p.disk[1] = fd[1]->base; p.swap.clear(); for (size_t m = 2; m < fd.size(); m++) p.swap.push_back(fd[m]->base); rb = rk; p.reason += " → " + std::string(khtr::tr("swap 에서 실행 디스크 승격")) + ": " + fd[1]->base + "(t45x β)"; break; } }
             const std::vector<std::string> & use = !ra.empty() ? ra : rb; std::string j; for (auto & x : use) { if (!j.empty()) j += ","; j += x; }
             p.kv["dosfd"] = "1"; p.kv["dosdrv"] = fd.size() >= 2 && ra.empty() ? "b" : "a"; p.kv["dosrun"] = j;
             {   /* t43n (#343): 실행 후보가 여럿이면 선택 규칙으로 하나 고른다 — dosrunsz = 이름:크기 목록, dospick = 고른 이름 */
@@ -562,7 +563,7 @@ inline Profile auto_profile(std::vector<ImgInfo> imgs, const std::string & id) {
                     if (dirs.empty() || dirs.size() >= 4) continue; std::string bd, bp; int cnt = 0;
                     for (auto & d : dirs) { std::vector<RunEnt> es; for (auto & e : fx.dir(d.cl)) if (!e.dir && is_exec_name(e.name)) { RunEnt x; x.name = e.name; x.size = e.size; es.push_back(x); }
                         if (es.empty()) continue; std::string pk = dos_pick(es, fd[k]->base); if (pk.empty()) continue; cnt++; bd = d.name; bp = pk; }
-                    if (cnt == 1) { p.kv["dosdrv"] = k == 0 ? "a" : "b"; p.kv["dosrun"] = bp; p.kv["dossub"] = bd; p.kv["dospick"] = bp; p.kv["dosrunsz"] = bd + "\\" + bp; j = bp; p.reason += " → 하위폴더 " + bd + "\\" + bp + " 자동 실행(t43s R2)"; break; }
+                    if (cnt == 1) { p.kv["dosdrv"] = k == 0 ? "a" : "b"; p.kv["dosrun"] = bp; p.kv["dossub"] = bd; p.kv["dospick"] = bp; p.kv["dosrunsz"] = bd + "\\" + bp; j = bp; p.reason += " → " + khtr::fmt(khtr::tr("하위폴더 %s 자동 실행(t43s R2)"), (bd + "\\" + bp).c_str()); break; }
                 }
                 if (!p.kv.count("dossub")) { std::string ia0 = inst_pick(ra), ib0 = inst_pick(rb); if (ia0.empty() && ib0.empty() && !p.kv.count("doshdd")) p.kv["dosdata"] = "1"; }   /* t43s R5: 실행도 설치기도 없음 = 데이터 전용 가능성 */
             }
@@ -581,18 +582,18 @@ inline Profile auto_profile(std::vector<ImgInfo> imgs, const std::string & id) {
                             if (a2) { p.kv["dosinstargs"] = "@F @H"; p.kv["bootkeys"] = "9000:type=y~,16000:type=y~"; } else if (a1) { p.kv["dosinstargs"] = "@H:"; p.kv["bootkeys"] = "9000:type=y~,16000:type=y~"; } }
                     } }
             }
-            p.reason += std::string(" → 부트섹터에 DOS 시스템 없음: 내장 DOS 에 A: 장착") + (j.empty() ? "(실행 파일 못 찾음 — 목록만)" : (use.size() == 1 ? "(실행 1개: 자동 실행)" : "(실행 여럿: 목록)"));
+            p.reason += " → " + std::string(khtr::tr("부트섹터에 DOS 시스템 없음: 내장 DOS 에 A: 장착")) + (j.empty() ? khtr::tr("(실행 파일 못 찾음 — 목록만)") : (use.size() == 1 ? khtr::tr("(실행 1개: 자동 실행)") : khtr::tr("(실행 여럿: 목록)")));
         }
         return p;
     }
     if (!cd.empty()) {
         std::sort(cd.begin(), cd.end(), [](ImgInfo * a, ImgInfo * b) { int pa = cd_pri(*a), pb = cd_pri(*b); if (pa != pb) return pa < pb; return a->base < b->base; });
         p.kv["cd"] = cd[0]->base; p.install_required = false;
-        p.reason = "CD 이미지 → cd= 로 잡음(내장 DOS 의 D:): " + cd[0]->base;
+        p.reason = std::string(khtr::tr("CD 이미지 → cd= 로 잡음(내장 DOS 의 D:)")) + ": " + cd[0]->base;
         return p;
     }
-    if (!bad.empty()) { p.reason = std::string("미지원 형식만 있음: ") + fmt_name(bad[0]->fmt); return p; }
-    p.reason = "이미지 없음"; return p;
+    if (!bad.empty()) { p.reason = std::string(khtr::tr("미지원 형식만 있음")) + ": " + fmt_name(bad[0]->fmt); return p; }
+    p.reason = khtr::tr("이미지 없음"); return p;
 }
 
 /* ---------------------------------------------------------------- INI (game.ini / gamedb.ini) */
@@ -731,7 +732,7 @@ inline Profile resolve(const std::string & dir, const std::vector<ImgInfo> & img
         Profile q = p; q.src = "DB"; apply_ini_section(q, d->g);
         for (auto & kv : d->ov) q.ov[kv.first] = kv.second;
         for (auto & kv : d->pad) q.pad[kv.first] = kv.second;
-        q.reason = "DB 일치: " + d->id; p = q; st.step(p, "DB");
+        q.reason = std::string(khtr::tr("DB 일치")) + ": " + d->id; p = q; st.step(p, "DB");
         p.dbhit_id = d->id; { auto tt = d->g.find("title"); p.dbhit_title = (tt == d->g.end() || tt->second.empty()) ? d->id : tt->second; }
     }
     Ini gi; if (ini_load(dir + "/game.ini", gi) && gi.count("game")) {

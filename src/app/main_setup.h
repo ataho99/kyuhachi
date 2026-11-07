@@ -40,7 +40,7 @@ static void gh_main_input_init(std::string & id) {
         gh_log("T627 first boot UI language: locale='%s' -> lang=%d (saved)", l0.c_str(), lp_);
     }
     if (gApp.cli_lang >= 0 && gApp.cli_lang <= 2) gApp.ui_.lang = gApp.cli_lang;   /* t52g 시험: --lang N */
-    phr_set_lang(gApp.ui_.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", gApp.ui_.lang, phr_loaded_count, phr_("게임 시작"));
+    khtr::fn() = phr_; phr_set_lang(gApp.ui_.lang); gh_log("T52G lang=%d (0 ko / 1 en / 2 ja) 문구 %d줄 · 게임 시작 -> [%s]", gApp.ui_.lang, phr_loaded_count, phr_("게임 시작"));
     kh_western = gApp.ui_.g.pad == 1;   /* t48e: 시작 메뉴용(게임 시작 때 작품별 값으로 다시 정함) */
     if (gApp.uitest_dir.empty()) {   /* r017: 게임 폴더 · 작품 추가(시험용 CLI) */
         gh_nk_load_once();

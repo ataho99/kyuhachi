@@ -36,7 +36,7 @@ file(WRITE ${GEN}/kh_version.h.tmp "/* kh_version.h -- single source of the vers
 #define KH_VER_PATCH 2
 #define KH_VER_BUILD ${KH_VER_BUILD_N}
 #define KH_BUILD \"${KH_BUILD}\"
-#define KH_VERSION \"0.6.4-${KH_BUILD}\"
+#define KH_VERSION \"0.6.5-${KH_BUILD}\"
 #endif
 ")
 file(WRITE ${GEN}/gensei_build_id.h.tmp "#define GENSEI_BUILD_ID \"r024${KH_BUILD}\"\n")

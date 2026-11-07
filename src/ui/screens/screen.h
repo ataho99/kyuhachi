@@ -22,7 +22,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     const char * rt[] = { "4:3", "16:10", phr_("정수배") }; choices(c, 344, Y(1), rt, 3, s.ratio, WH, row(1));
     const char * sh[] = { "sharp", "nearest" }; choices(c, 344, Y(2), sh, 2, s.shader == 2 ? 1 : 0, WH, row(2));
     char b[16]; const int fxv[4] = { s.scan, s.mask, s.bleed, s.glow };
-    for (int i = 0; i < 4; i++) { int y = Y(3 + i); if (fxv[i] <= 0) snprintf(b, sizeof b, "끔"); else snprintf(b, sizeof b, "%d%%", fxv[i] * 10); barv(c, 340, y, 232, fxv[i] / 10.0, phr_("끔"), phr_("최대"), WH, row(3 + i)); text(c, 578, y, b, WH, K); }
+    for (int i = 0; i < 4; i++) { int y = Y(3 + i); if (fxv[i] <= 0) snprintf(b, sizeof b, "%s", phr_("끔")); else snprintf(b, sizeof b, "%d%%", fxv[i] * 10); barv(c, 340, y, 232, fxv[i] / 10.0, phr_("끔"), phr_("최대"), WH, row(3 + i)); text(c, 578, y, b, WH, K); }
     snprintf(b, sizeof b, "%.2f", s.curve_f()); barv(c, 340, Y(7), 232, s.curve / 10.0, phr_("평면"), phr_("최대"), WH, row(7)); text(c, 578, Y(7), b, WH, K);
 #if !defined(__ANDROID__)
     if (scope == 0) { const char * wm[] = { "x1", "x2", "x3", "x4", "x5", phr_("사용자 지정") }; unsigned dmk = 0; for (int i = 0; i < WMN; i++) if (i + 1 > wmax) dmk |= 1u << i;
@@ -37,7 +37,7 @@ inline void Ui::d_screen(Canvas & c) {   /* t48c (#624·#625): 필터 1줄 + 효
     { std::string sf = gm && gm->lastslot >= 0 ? phr_("  마지막 저장 (") + gm->slot[gm->lastslot].stamp + ")" : std::string(); text(c, 156, 266, gm && gm->lastslot >= 0 ? fit_title(gm->title, 440 - tw(sf)) + sf : std::string(phr_("표본 화면")), CY, K); }
     text(c, 156, 286, rs == 0 && scope == 0 ? dkey(phr_("scr_allglobal_off")) : (ind ? std::string(phr_("indiv_has")) : std::string(phr_("값을 바꾸면 이 화면에도 바로 적용됩니다."))), WH, K);
     text(c, 156, 306, dkey(phr_("{○}:확정   {×}:바꾸기 전 값으로 되돌림")), WH, K);
-    char wb[96]; if (wmult) snprintf(wb, sizeof wb, "창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]", wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, "창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]", winw, winh);
+    char wb[192]; if (wmult) snprintf(wb, sizeof wb, phr_("창 x%d (%dx%d) · 회색 = 모니터에 안 들어감 · Alt+[ ]"), wmult, 640 * wmult, 480 * wmult); else snprintf(wb, sizeof wb, phr_("창 사용자 지정 %dx%d · 테두리로 끈 크기 · Alt+[ ]"), winw, winh);
     static std::string wd; wd = wb;
     static const char * dd[] = { "desc_scope", "desc_ratio", "desc_filter", "desc_scan", "desc_mask", "desc_bleed", "desc_glow", "desc_curve" };
     desc_mq(c, 324, 44, rs < 8 ? dkey(phr_(dd[rs])) : rs == 13 ? dkey(phr_("desc_phos")) : rs == 12 ? dkey(phr_("desc_preset")) : rs == 11 ? dkey(phr_("desc_indiv_reset")) : rs == 9 ? dkey(phr_("desc_fullscr")) : wd);
@@ -96,6 +96,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
                 if (sel == 1) s.bgm = clampi(s.bgm + d, 0, 8);
                 if (sel == 2) s.se = clampi(s.se + d, 0, 8);
                 if (sel == 5) s.bmult = clampi(s.bmult + d, 0, 4);
+                if (sel == 18) s.cpuspd = clampi(s.cpuspd + d, 0, 3);
                 if (sel == 6) s.bmode = clampi(s.bmode + d, 0, 2);
                 if (sel == 7) s.bsound = clampi(s.bsound + d, 0, 2);
                 if (sel == 16) s.dsnd = clampi(s.dsnd + d, 0, 2);   /* #641 */
@@ -104,7 +105,7 @@ inline Act Ui::k_screen_conf(UKey k, Act & a) {
                 a.t = A_APPLY;
             }
             dirty = true; (void)nrow;
-        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; e.phos = def.phos; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; if (conf_grp == 1) { e.dsnd = def.dsnd; e.dvol = def.dvol; } e.ovbtn = def.ovbtn; if (scope == 0) g.fpsd = def.fpsd; } dirty = true; a.t = A_APPLY; }
+        } else if (k == UK_TRI) { Settings def; Settings & e = eff(); if (scr_s) { e.ratio = def.ratio; e.shader = def.shader; e.curve = def.curve; e.bleed = def.bleed; e.glow = def.glow; e.scan = def.scan; e.mask = def.mask; e.phos = def.phos; } else { e.bgm = def.bgm; e.se = def.se; e.bmult = def.bmult; e.cpuspd = def.cpuspd; e.bmode = def.bmode; e.boot = def.boot; e.bosd = def.bosd; e.bsound = def.bsound; if (conf_grp == 1) { e.dsnd = def.dsnd; e.dvol = def.dvol; } e.ovbtn = def.ovbtn; if (scope == 0) g.fpsd = def.fpsd; } dirty = true; a.t = A_APPLY; }
         else if (k == UK_CANCEL) { if (!scr_s) { cb_has = false; a.t = A_APPLY; dirty = true; }   /* t52i: × = 뒤로. 값은 바뀐 순간부터 저장 대상 */ if (scr_s && backup_has) { eff() = backup; if (bk_cur >= 0 && bk_cur < MAXG) { ov_set(bk_cur, bk_ovm); sync_t(bk_cur); } backup_has = false; a.t = A_APPLY; if (wmult != bk_wmult || winw != bk_winw || winh != bk_winh) { wmult = bk_wmult; winw = bk_winw; winh = bk_winh; a.t = A_WINMULT; a.arg = wmult; } } leave_cfg(); }
         else if (k == UK_OK) { backup_has = false; cb_has = false; dirty = true; a.t = A_APPLY; leave_cfg(); }
         break; }

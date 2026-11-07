@@ -10,6 +10,7 @@
 #if defined(__ANDROID__)
 #include "ksx_hangul_tab.h"
 #endif
+#include "jis_sjis_tab.h"
 #endif
 #include "platform/plat.h" /* S3: platform layer */
 #include "text/kh_phrase.h"   /* t52a (#49): windows.h 와 그 앞의 LEAN_AND_MEAN 정의 뒤에 둔다 */
@@ -68,14 +69,28 @@ static bool jp_cp_ok(uint32_t cp) {
     if (!g_jp_on) return false;
     return (cp >= 0x3000 && cp <= 0x30FF) || (cp >= 0xFF01 && cp <= 0xFF5E);
 }
+#if !defined(_WIN32)
+static unsigned sjis_of(uint32_t cp) {
+    if (cp > 0xFFFF) return 0;
+    int lo = 0, hi = kSjisN - 1;
+    while (lo <= hi) { int m = (lo + hi) >> 1; if (kSjisCp[m] == cp) return kSjisCode[m]; if (kSjisCp[m] < cp) lo = m + 1; else hi = m - 1; }
+    return 0;
+}
+#endif
 /* 글자 → 16x16(32 B) 글리프. 없거나 빈 칸이면 NULL(→ 기존 경로). tmp = 호출한 쪽의 32 B 임시 칸 */
 static const uint8_t * jp_glyph(uint32_t cp, uint8_t * tmp) {
     if (!g_jp_bmpd && !g_jp_fx.ok) return NULL;
     if (!jp_cp_ok(cp)) return NULL;
+#if defined(_WIN32)
     char mb[4] = { 0, 0, 0, 0 }; bool used = false;
     int n = plat::wchar_to_cp(932, (wchar_t)cp, mb, 4, &used);
     if (n != 2 || used) return NULL;
     int s1 = (uint8_t)mb[0], s2 = (uint8_t)mb[1];
+#else
+    /* t672 (#656): bionic has no CP932 iconv -> every kanji came out blank on Android. Use the embedded table (jis_sjis_tab.h). */
+    unsigned sj = sjis_of(cp); if (!sj) return NULL;
+    int s1 = (int)(sj >> 8), s2 = (int)(sj & 255);
+#endif
     if (!((s1 >= 0x81 && s1 <= 0x9F) || (s1 >= 0xE0 && s1 <= 0xEA))) return NULL;
     const uint8_t * r = NULL;
     if (g_jp_bmpd) {

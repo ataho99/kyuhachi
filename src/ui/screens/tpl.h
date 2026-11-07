@@ -2,7 +2,7 @@
 /* screens/tpl.h -- S8c: S_TPL screen. Code moved unchanged from kh_ui.h (members of struct Ui, defined out of line). */
 inline void Ui::d_tpl(Canvas & c) {
     titlebar(c, ""); rbox(c, 16, 24, 288, 296, WH, phr_("새 실행 방법"));
-    std::vector<std::string> r; for (int i = 0; i < 8; i++) r.push_back(std::to_string(i + 1) + " " + ent::TPLS[i].label); r.push_back(phr_("- 지금 배치 복제")); r.push_back(phr_("shr_in"));
+    std::vector<std::string> r; for (int i = 0; i < 8; i++) r.push_back(std::to_string(i + 1) + " " + phr_(ent::TPLS[i].label)); r.push_back(phr_("- 지금 배치 복제")); r.push_back(phr_("shr_in"));
     items(c, 40, 46, 256, r, sel, 26);
     rbox(c, 320, 24, 304, 296, WH, phr_("설명"));
     static const char * dd[10][4] = {

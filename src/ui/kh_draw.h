@@ -203,8 +203,9 @@ static int choicesd(Canvas & c, int x, int y, const char * const * arr, int n, i
 }
 
 /* ---- OSD(화면 구석 1~2초) */
-static void osd_draw(Canvas & c, const std::string & s, bool right, int y = 8) {
-    if (s.empty() || !g_font_ok) return;
+static void osd_draw(Canvas & c, const std::string & s0, bool right, int y = 8) {
+    if (s0.empty() || !g_font_ok) return;
+    const std::string s = tw(s0) + 16 > c.w - 16 ? fit(s0, c.w - 32) : s0;   /* t673 (#658): 화면 밖으로 나가던 긴 안내를 … 로 줄임 */
     int w = tw(s) + 16, x = right ? c.w - w - 8 : 8;
     c.rect(x, y, w, 24, K); c.rect(x, y, w, 1, WH); c.rect(x, y + 23, w, 1, WH); c.rect(x, y, 1, 24, WH); c.rect(x + w - 1, y, 1, 24, WH);
     text(c, x + 8, y + 4, s, WH, K);

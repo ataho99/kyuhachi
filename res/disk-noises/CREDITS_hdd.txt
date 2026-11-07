@@ -1,0 +1,25 @@
+HDD drive sounds for Kyuhachi X "disk sound" (samples2\ -> res\disk-noises\hdd_*)
+All source recordings are CC0 1.0 (public domain dedication); no attribution is required, credits are given anyway.
+Originals are kept unmodified in H:\RETRO_SET\PC98_PLAYER\work\20261105_큐하치\muse_hdd\src_orig\ (sha256 below). Conversion: mono, 22.05 kHz, 16-bit PCM (python soundfile+scipy, resample_poly 44100->22050, no ffmpeg/sox on this machine).
+Cut points are the same seconds as the preview run (samples\report.md); re-verified on the full-quality originals with 10 ms RMS curves (click at 20.98 s, click run 6.92/7.09/7.62 s, steady -25 dB RMS 38-44 s, spin-up click 2.52 s).
+
+hdd_seek1.wav  "Conner Cougar - 4500rpm - BB" by Klerrp, Freesound, CC0 1.0
+               https://freesound.org/people/Klerrp/sounds/155880/
+               file 155880_klerrp_conner_4500rpm.wav, cut 20.93-21.05 s (one isolated head click + decay, 0.12 s), peak -6 dBFS
+hdd_seek2.wav  same source 155880, file 155880_klerrp_conner_4500rpm.wav, cut 6.90-7.70 s (run of clicks, 0.80 s), peak -6 dBFS
+hdd_spin.wav   "Old Hard Drive Spin Up and Spin Down" by Exacom, Freesound, CC0 1.0
+               https://freesound.org/people/Exacom/sounds/554672/
+               file 554672_exacom_spinupdown.wav, cut 40.0-43.0 s (steadiest part), 0.25 s equal-power loop crossfade -> 2.75 s seamless loop, peak -14 dBFS
+hdd_spinup.wav same source 554672, file 554672_exacom_spinupdown.wav, cut 2.30-7.30 s (silence -> click -> spin-up whine to steady, 5.0 s), peak -6 dBFS
+
+Checked but NOT used:
+  SamsterBirdies "Hard-drive spin-up/spin-down" (WD Blue 1TB 7200RPM), CC0 1.0
+  https://freesound.org/people/SamsterBirdies/sounds/567609/
+  file 567609_samsterbirdies_spinupdown.flac (kept in src_orig\, sha256 below)
+  Reason: spin-up/down sections usable, but seek clicks absent and steady-spin part shorter/noisier than Exacom; kept as spare.
+Replace any file here with your own 16-bit PCM wav (same name) to change the sound; a missing file means that sound is not played.
+
+sha256 (src_orig\, full-quality originals):
+ae2b4e09e5e1cb59a661d9e5d2b1431445d780654ee61bce266eaaa67905146d  155880_klerrp_conner_4500rpm.wav
+53f9a4923cc66f47e5e0d75410b31516de61cfde407f1c5cd59157063dc716be  554672_exacom_spinupdown.wav
+b65da78db83b77066c350b891cf09e96ab4e06569b50e40f39c069fd7190d554  567609_samsterbirdies_spinupdown.flac

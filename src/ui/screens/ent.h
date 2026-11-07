@@ -5,7 +5,7 @@ inline void Ui::d_ent(Canvas & c) {
     rbox(c, 16, 24, 288, 224, WH, ttl_suf(g, phr_("실행 방법"), 256).c_str());
     std::vector<int> v = vents(entg); std::vector<std::string> r; std::vector<uint32_t> col; int di = def_ent(entg);
     if (v.empty()) { r.push_back(phr_("기본 (자동 판정)")); col.push_back(0); }
-    for (int i : v) { const UiEnt & e = g.ents[i]; std::string mk = (i == di) ? "★ " : "  "; r.push_back(mk + fit(e.label + (e.tag.empty() ? std::string() : "  [" + e.tag + "]"), 200) + (ent_warn(entg, i) ? " ※" : "")); col.push_back(ent_warn(entg, i) ? OR : 0); }
+    for (int i : v) { const UiEnt & e = g.ents[i]; std::string mk = (i == di) ? "★ " : "  "; r.push_back(mk + fit(std::string(phr_(e.label.c_str())) + (e.tag.empty() ? std::string() : "  [" + tag_disp(e.tag) + "]"), 200) + (ent_warn(entg, i) ? " ※" : "")); col.push_back(ent_warn(entg, i) ? OR : 0); }
     r.push_back(phr_("+ 새 실행 방법")); col.push_back(YL);
     r.push_back(phr_("언어: ") + lang_label(g)); col.push_back(CY);   /* t44a (#494) */
     r.push_back(phr_("표시 제목: ") + fit(g.title, 150)); col.push_back(CY);   /* t49a (#809) */
@@ -28,12 +28,12 @@ inline void Ui::d_ent(Canvas & c) {
         const char * dn[] = { "A", "B", "C", "D" }; const char * dk[] = { "disk_a", "disk_b", "disk_c", "disk_d" };
         for (int q = 0; q < 4; q++) { auto it = e->kv.find(dk[q]); if (it != e->kv.end() && it->second != "-" && !it->second.empty()) ln((std::string(phr_("디스크")) + dn[q]).c_str(), disk_label(it->second)); }
         { auto it = e->kv.find("cd"); if (it != e->kv.end() && !it->second.empty() && it->second != "-") ln("CD", disk_label(it->second)); }
-        { auto it = e->kv.find("boot"); std::string b = it == e->kv.end() ? std::string("자동") : it->second; auto ft = e->kv.find("font"); auto fk = e->kv.find("font_kind"); ln(phr_("부팅"), b + phr_("   글꼴 ") + (ft != e->kv.end() ? ft->second : fk != e->kv.end() ? (fk->second == "jp" ? std::string(phr_("일본어")) : std::string(phr_("한글"))) : std::string(phr_("목록 기본")))); }
+        { auto it = e->kv.find("boot"); std::string b = it == e->kv.end() ? std::string(phr_("자동")) : it->second; auto ft = e->kv.find("font"); auto fk = e->kv.find("font_kind"); ln(phr_("부팅"), b + phr_("   글꼴 ") + (ft != e->kv.end() ? ft->second : fk != e->kv.end() ? (fk->second == "jp" ? std::string(phr_("일본어")) : std::string(phr_("한글"))) : std::string(phr_("목록 기본")))); }
         { auto it = e->kv.find("bootkeys"); auto sk = e->kv.find("swap"); int bn = it != e->kv.end() ? (int)ent::parse_steps(it->second).size() : 0, sn = 0; if (sk != e->kv.end()) { std::string s = sk->second; if (!s.empty()) { sn = 1; for (char ch : s) if (ch == ',') sn++; } } ln(phr_("자동입력"), std::to_string(bn) + phr_("단계   교체 ") + std::to_string(sn) + phr_("장")); }
         if (ent_warn(entg, v[sel])) ln(phr_("경고"), e->warn_msg, OR);
     } else if (e) { text(c, 340, 44, phr_("항목 정의가 없는 작품입니다."), WH, K); text(c, 340, 64, phr_("자동 판정한 배치로 실행합니다."), WH, K); text(c, 340, 96, dkey(phr_("{□}:이 배치를 복사해 편집")), CY, K); }
     else { text(c, 340, 44, phr_("새 실행 방법을 만듭니다."), WH, K); text(c, 340, 64, phr_("템플릿 8종 또는 현재 항목 복제."), WH, K); }
-    desc(c, 264, 64, { fit(msg.empty() ? std::string(phr_("실행 방법: 이 작품을 실행하는 디스크 구성입니다. 원본 이미지는 바뀌지 않습니다.")) : msg, 560), fit(std::string(phr_("DB·game.ini 항목을 고치면 user.ini 에 덮어쓰기가 저장되고 원본은 그대로입니다.")), 560) });
+    desc(c, 264, 64, { fit(msg.empty() ? std::string(phr_("실행 방법: 이 작품을 실행할 디스크 구성 (원본 이미지는 그대로)")) : msg, 560), fit(std::string(phr_("DB·game.ini 항목을 고치면 user.ini 에 따로 저장, 원본은 그대로")), 560) });
     helpline(c, phr_("↑↓:선택, ○:이걸로 정함, □:편집, △:메뉴, ×:뒤로"));
 }
 inline void Ui::k_ent(UKey k, Act & a) {

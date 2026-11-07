@@ -146,7 +146,7 @@ void RENDER_EndUpdate(bool abort) {
 
 #if defined(__ANDROID__)
         /* Android: fixed 4:3 outer frame; inner picture 4:3 (stretched) or 16:10 (letterboxed) by gApp.fit */
-        { SDL_Rect d; d.x = 0; d.w = gApp.fbw; if (gApp.fit == FIT_43) { d.y = 0; d.h = gApp.fbw * 3 / 4; } else { d.h = gApp.fbh; d.y = (gApp.fbw * 3 / 4 - d.h) / 2; } SDL_RenderCopy(gApp.ren, gApp.tex, NULL, &d); }
+        { SDL_Rect d; d.x = 0; d.w = gApp.fbw; if (gh_fit_eff() == FIT_43) { d.y = 0; d.h = gApp.fbw * 3 / 4; } else { d.h = gApp.fbh; d.y = (gApp.fbw * 3 / 4 - d.h) / 2; } SDL_RenderCopy(gApp.ren, gApp.tex, NULL, &d); }
 #else
         SDL_RenderCopy(gApp.ren, gApp.tex, NULL, NULL);
 #endif

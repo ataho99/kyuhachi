@@ -32,7 +32,7 @@ static bool gh_font_init(const std::string & exedir) {
     if (fl_) { gh_log("T52G UI 글꼴 .fnt 읽음: %s", ov::g_font_src.c_str()); return true; }
     gh_log("WARN: UI 글꼴 파일을 %s 에서 찾지 못함 -> 내장 글꼴 사용", exedir.c_str());
     ov::font_load_mem(emb_font_sb, emb_font_sb_n, emb_font_db, emb_font_db_n); gApp.builtin_res_font = true;
-    gh_osd(phr_("글꼴 파일이 없어 내장 글꼴로 실행합니다 (run\\res\\fonts · run\\res\\shaders 폴더를 확인하세요)"), 12000); return ov::g_font_ok;
+    gh_osd(phr_("글꼴 파일 없음 → 내장 글꼴로 실행 (run\\res\\fonts 확인)"), 12000); return ov::g_font_ok;
 }
 static void gh_fps_draw(ov::Canvas & oc) {   /* FPS / speed display: frames per second of the host + emulated-time / wall-time ratio, refreshed once a second */
     static Uint32 t0 = 0; static unsigned long long f0 = 0; static unsigned p0 = 0; static char buf[48] = "FPS --";
